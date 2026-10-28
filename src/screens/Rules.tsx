@@ -23,7 +23,7 @@ export function Rules({ onBack }: { onBack: () => void }) {
         <p>Vor dem Duell entscheidet ein <b>Münzwurf</b>: Wer gewinnt, wählt, wer beginnt. Tipp: Wer die <b>letzte</b> Karte legt, hat oft einen Vorteil.</p>
 
         <h2>Klassen, Effekte und Gelände</h2>
-        <p>Jede Karte gehört zu einer <b>Klasse</b> (Symbol im Zahnrad oben links): {CLASSES.map((c) => `${CLASS_INFO[c].icon} ${CLASS_INFO[c].label}`).join(' · ')}. Jede Klasse außer Krieger und Magier hat ein <b>Element</b>: 🌿 Natur → 🌲 Wald, 🔥 Feuer → 🌋 Lava, ❄️ Frost → ❄️ Eis, 🌑 Schatten → 🌑 Schatten.</p>
+        <p>Jede Karte gehört zu einer <b>Klasse</b> (Symbol im Zahnrad oben links): {CLASSES.map((c) => `${CLASS_INFO[c].icon} ${CLASS_INFO[c].label}`).join(' · ')}. Jede Klasse hat ein <b>Element</b>: 🌿 Natur → 🌲 Wald, 🔥 Feuer → 🌋 Lava, ❄️ Frost → ❄️ Eis, 🌑 Schatten → 🌑 Schatten, 🔮 Magier → ᚱ Runenfeld, ⚔️ Krieger → ⚔️ Schlachtfeld.</p>
         <p>Manche Karten haben einen <b>Spezialeffekt</b> – erkennbar am <b style={{ color: 'var(--accent)' }}>goldenen Symbol</b> unten rechts (große Ansicht: Effekttext auf dem Pergament). Effekte gelten nur im laufenden Duell; im nächsten Duell ist alles wieder normal.</p>
         <ul>
           {EFFECT_IDS.map((id) => <li key={id}>{CLASS_INFO[EFFECTS[id].cls].icon} <b>{EFFECTS[id].name}</b>: {EFFECTS[id].text}</li>)}

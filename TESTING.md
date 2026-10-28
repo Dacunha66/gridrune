@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Version 1.15 – Runenfeld und Schlachtfeld
+
+Neu: Zwei Geländearten, damit jede Klasse ein Element hat – ᚱ Runenfeld (Magier, blau) und ⚔️ Schlachtfeld (Krieger, rot). Gleiche Regel wie bei allen Elementen: +1 auf alle Werte, nie mehr. Im Arena-Editor als Pinsel wählbar; Ranglisten-Regeln unverändert (spiegelgleich, höchstens 8 Geländefelder, jedes Gelände 0× oder ≥ 2×). Bestehende Arenen unverändert. Supabase-Änderung (neue Geländearten und Arena-Status „Nur Kampagne“) als Migration 005 vorbereitet, noch nicht ausgeführt.
+
+**Automatische Tests:** 183, alle bestanden (neu: Magier auf Runenfeld und Krieger auf Schlachtfeld +1, Krieger nur dort).
+
+**Browser:** Arena-Editor (iPhone): neue Pinsel, Felder in Blau mit ᚱ und Rot mit ⚔️, spiegelgleiche Arena ohne Ranglisten-Hinweis, 0 Fehler.
+
 ## Version 1.14 – Gelände gibt höchstens +1
 
 Auf deinen Wunsch: Gelände gibt nie mehr als +1. Liegt eine Karte auf dem Gelände ihres Elements, zählt nur der Element-Bonus (+1 auf alle Werte); Geländeeffekte (Wurzelkraft, Flammenherz, Frostpanzer, Schattenmantel) wirken dort nicht zusätzlich. Effekttexte, Effekt-Vorschau im Admin, Regeln und Kampagnen-Prüfung („Effekt auslösen“ mit Geländeeffekt wird als nicht erreichbar gemeldet) angepasst.

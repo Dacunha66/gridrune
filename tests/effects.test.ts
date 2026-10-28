@@ -266,14 +266,22 @@ describe('Element: Klasse auf ihrem Gelände', () => {
       expect(values(applyMove(setup({}, [card.id], { 5: other }), { handIndex: 0, cell: 5 }), 5)).toEqual([card.top, card.right, card.bottom, card.left]);
     }
   });
-  it('Krieger und Magier haben kein Element', () => {
-    for (const c of ['krieger', 'magier'] as CardClass[]) {
+  it('Magier auf dem Runenfeld, Krieger auf dem Schlachtfeld: +1 auf alle Werte', () => {
+    for (const [c, t] of [['magier', 'runen'], ['krieger', 'schlacht']] as [CardClass, Terrain][]) {
       const card = BUILTIN_CARDS.find((x) => x.cls === c && !x.effect)!;
-      for (const t of ['wald', 'lava', 'eis', 'schatten'] as Terrain[]) {
-        expect(values(applyMove(setup({}, [card.id], { 5: t }), { handIndex: 0, cell: 5 }), 5)).toEqual([card.top, card.right, card.bottom, card.left]);
-      }
+      const base = [card.top, card.right, card.bottom, card.left];
+      expect(values(applyMove(setup({}, [card.id], { 5: t }), { handIndex: 0, cell: 5 }), 5), `${c} auf ${t}`).toEqual(base.map((v) => Math.min(10, v + 1)));
+      const other: Terrain = t === 'runen' ? 'schlacht' : 'runen';
+      expect(values(applyMove(setup({}, [card.id], { 5: other }), { handIndex: 0, cell: 5 }), 5)).toEqual(base);
     }
     expect(cls('c03')).toBe('krieger');
+  });
+  it('Krieger bekommen nur auf dem Schlachtfeld einen Bonus', () => {
+    // p05 is a plain Krieger test card.
+    expect(values(applyMove(setup({}, ['p05'], { 5: 'schlacht' }), { handIndex: 0, cell: 5 }), 5)).toEqual([6, 6, 6, 6]);
+    for (const t of ['wald', 'lava', 'eis', 'schatten', 'runen'] as Terrain[]) {
+      expect(values(applyMove(setup({}, ['p05'], { 5: t }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
+    }
   });
   it('wirkt auch bei der Verteidigung und erscheint in der Aufschlüsselung', () => {
     // Enemy Moosling (Natur, links 6) on Wald defends with 7: a 7 does not capture it, on a normal field it would.

@@ -14,12 +14,14 @@ export const CLASS_INFO: Record<CardClass, { label: string; icon: string; focus:
   schatten: { label: 'Schatten', icon: '🌑', focus: 'Schwächung und Überraschung' },
 };
 
-export type Terrain = 'normal' | 'wald' | 'lava' | 'eis' | 'schatten';
+export type Terrain = 'normal' | 'wald' | 'lava' | 'eis' | 'schatten' | 'runen' | 'schlacht';
 
-export const TERRAINS: Terrain[] = ['normal', 'wald', 'lava', 'eis', 'schatten'];
+export const TERRAINS: Terrain[] = ['normal', 'wald', 'lava', 'eis', 'schatten', 'runen', 'schlacht'];
 
-/** Element of a class: on its own terrain a card gets +1 on all values (Krieger and Magier have none). */
-export const CLASS_TERRAIN: Partial<Record<CardClass, Exclude<Terrain, 'normal'>>> = { natur: 'wald', feuer: 'lava', frost: 'eis', schatten: 'schatten' };
+/** Element of a class: on its own terrain a card gets +1 on all values. */
+export const CLASS_TERRAIN: Record<CardClass, Exclude<Terrain, 'normal'>> = {
+  natur: 'wald', feuer: 'lava', frost: 'eis', schatten: 'schatten', magier: 'runen', krieger: 'schlacht',
+};
 /** Bonus on all four values for a card on the terrain of its class. */
 export const ELEMENT_BONUS = 1;
 
@@ -29,6 +31,8 @@ export const TERRAIN_INFO: Record<Terrain, { label: string; icon: string }> = {
   lava: { label: 'Lava', icon: '🌋' },
   eis: { label: 'Eis', icon: '❄️' },
   schatten: { label: 'Schatten', icon: '🌑' },
+  runen: { label: 'Runenfeld', icon: 'ᚱ' },
+  schlacht: { label: 'Schlachtfeld', icon: '⚔️' },
 };
 
 export type EffectId =

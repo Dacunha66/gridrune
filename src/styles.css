@@ -1124,3 +1124,16 @@ label.btn.disabled { opacity: .45; }
 .cell.element-here { box-shadow: inset 0 0 0 3px #4ade80, 0 0 12px rgba(74, 222, 128, .6); animation: element-pulse 1.4s ease-in-out infinite; }
 @keyframes element-pulse { 50% { box-shadow: inset 0 0 0 3px #86efac, 0 0 18px rgba(74, 222, 128, .9); } }
 .reduced-motion .cell.element-here { animation: none; }
+
+/* Runenfeld (Magier) and Schlachtfeld (Krieger) */
+.cell.terrain-runen { --terrain: #38bdf8; background: #102a43; }
+.cell.terrain-schlacht { --terrain: #f43f5e; background: #3b1219; }
+.terrain-chip.terrain-runen { --terrain: #38bdf8; }
+.terrain-chip.terrain-schlacht { --terrain: #f43f5e; }
+.mini-cell.terrain-runen { background: #38bdf8; }
+.mini-cell.terrain-schlacht { background: #f43f5e; }
+.board.has-art .cell.terrain-runen { background: rgb(16 42 67 / max(0.35, var(--cell-alpha, 1))); }
+.board.has-art .cell.terrain-schlacht { background: rgb(59 18 25 / max(0.35, var(--cell-alpha, 1))); }
+.terrain-mini .tm-runen { background: #0c4a6e; }
+.terrain-mini .tm-schlacht { background: #881337; }
+.cell.terrain-runen .terrain-icon { font-family: 'Cinzel', serif; font-weight: 700; color: #7dd3fc; }
