@@ -15,6 +15,7 @@ import { GameSettings, defaultSettings } from '../game/settings';
 import { BalanceView, RunnerSettingsView } from './AdminBalance';
 import { ArenaView } from './AdminArenas';
 import { DesignerView } from './AdminDesigns';
+import { CampaignView } from './AdminCampaign';
 import { Design, DesignState } from '../game/designs';
 import { CLASSES, CLASS_INFO, CardClass, EFFECTS, EffectId, effectPreview, effectsForClass } from '../game/effects';
 
@@ -32,8 +33,10 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs';
-const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer' };
+type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign';
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor' };
+/** Tab to come back to (e.g. after testing a mission). */
+let lastTab: Tab = 'cards';
 
 type SortKey = 'id' | 'name' | 'rarity' | 'updated';
 
@@ -44,14 +47,18 @@ const STATUS_HINT: Record<CardStatus, string> = {
   disabled: 'Vorübergehend aus dem Spiel genommen – nicht gelöscht. Spieler behalten sie; jederzeit wieder aktivierbar.',
 };
 
-export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onBack }: Props) {
+export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCampaignChange, onTestCampaign, onBack }: Props) {
   const [access, setAccess] = useState<'checking' | 'denied' | 'ok'>('checking');
   const [db, setDb] = useState<Db | null>(null);
   const [assets, setAssets] = useState<Assets | null>(null);
   const [records, setRecords] = useState<CardRecord[] | null>(null);
   const [editing, setEditing] = useState<{ draft: CardRecord; original: CardRecord | null } | null>(null);
   const [toast, setToast] = useState('');
-  const [tab, setTab] = useState<Tab>('cards');
+  const [tab, setTabState] = useState<Tab>(lastTab);
+  const setTab = (t: Tab) => {
+    lastTab = t;
+    setTabState(t);
+  };
   const [settings, setSettings] = useState<GameSettings | null>(null);
   const changeRef = useRef(onCatalogChange);
   changeRef.current = onCatalogChange;
@@ -85,6 +92,15 @@ export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onBa
       unsub?.();
     };
   }, []);
+
+  // Keep the chosen tab visible in the swipeable tab row.
+  useEffect(() => {
+    try {
+      document.querySelector('.admin-tab.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+    } catch {
+      /* old browsers */
+    }
+  }, [tab, records]);
 
   useEffect(() => {
     if (!toast) return;
@@ -167,6 +183,7 @@ export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onBa
       )}
       {tab === 'arenas' && records && records.length > 0 && <ArenaView db={db!} onToast={setToast} />}
       {tab === 'designs' && records && records.length > 0 && <DesignerView db={db!} assets={assets} onToast={setToast} onDesignsChange={onDesignsChange} />}
+      {tab === 'campaign' && records && records.length > 0 && <CampaignView db={db!} assets={assets} onToast={setToast} onCampaignChange={onCampaignChange} onTest={onTestCampaign} />}
       {toast && <div className="admin-toast" role="status">{toast}</div>}
     </main>
   );

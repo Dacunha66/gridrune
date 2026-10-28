@@ -317,7 +317,7 @@ function DesignEditor({ db, initial, state, onToast, onPublish, onClose }: {
   );
 }
 
-function Slider({ label, min, max, step, value, format, onChange }: {
+export function Slider({ label, min, max, step, value, format, onChange }: {
   label: string; min: number; max: number; step: number; value: number; format: (v: number) => string; onChange: (v: number) => void;
 }) {
   return (
@@ -432,7 +432,7 @@ function DuelPreview({ device, board, page, editKind, fit, onFit }: {
 }
 
 /** One finger moves the picture, two fingers zoom (pointer events work for touch, pen and mouse). */
-function usePanZoom(fit: ImageFit, onFit: (f: ImageFit) => void, scale: number, design: Design | null) {
+export function usePanZoom(fit: ImageFit, onFit: (f: ImageFit) => void, scale: number, design: { imageW: number; imageH: number } | null) {
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const start = useRef<{ dist: number; zoom: number } | null>(null);
   const fitRef = useRef(fit);

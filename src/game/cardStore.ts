@@ -223,6 +223,34 @@ export async function saveOpponent(db: Db, o: Opponent): Promise<void> {
   await db.collection(OPPONENTS_COLLECTION).doc(o.id).set(opponentToDoc(o));
 }
 
+/**
+ * Copy of a campaign picture for the game: scaled down only as far as it still covers target (w × h),
+ * so the editor can pick any part without blur. PNG stays PNG (transparency), everything else becomes JPEG.
+ */
+export async function prepareCoverImage(file: Blob, target: { w: number; h: number }): Promise<{ blob: Blob; type: string; w: number; h: number }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('image_decode'));
+      el.src = url;
+    });
+    const s = Math.min(1, Math.max(target.w / img.naturalWidth, target.h / img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * s));
+    const h = Math.max(1, Math.round(img.naturalHeight * s));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+    const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode'))), type, 0.86));
+    return { blob, type, w, h };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export async function deleteCardRecord(db: Db, id: string): Promise<void> {
   await db.collection(CARDS_COLLECTION).doc(id).delete();
 }

@@ -36,6 +36,19 @@ Dein Fortschritt wird **nur in diesem Browser auf diesem Gerät** gespeichert (l
 - iPhone und iPad haben **getrennte** Spielstände.
 - Wenn du in Safari die **Website-Daten löschst** oder im **privaten Modus** spielst, ist der Fortschritt weg.
 
+### Kampagne
+
+Im Hauptmenü unter **🗺️ Kampagne**: Welten mit je 10 Missionen (Tutorial, normal, spezial, Elite, Boss), die nacheinander freigeschaltet werden. Jede Mission hat 3 Sterne-Ziele; der erste Stern ist immer der Sieg, alle weiteren brauchen ebenfalls einen Sieg. Erreichte Sterne gehen nie verloren. Vor dem Duell wählst du 8 Karten aus deinem Deck; bei Missionen mit Klassenregel füllen gewöhnliche Leihkarten fehlende Plätze. Belohnungen sind vorerst nur eine **Vorschau** – sie werden mit den Spielerkonten (Netlify + Supabase-Login) aktiviert. Der Kampagnen-Fortschritt wird bis dahin nur auf diesem Gerät gespeichert.
+
+**Kampagnen-Editor (Admin):** Reiter „Kampagnen-Editor“ in der Kartenverwaltung.
+- *Welten:* Name, Beschreibung, Kachel- und Kartenbild, Reihenfolge, Status (Entwurf/veröffentlicht/deaktiviert), Freischaltung (nach Welt X und/oder N Sternen), Sterne-Meilensteine.
+- *Missionen:* Typ, Ablauf (Duell oder Lauf + Duell), Gegner, Arena, Kartenregel (nur Klasse X), 3 Sterne-Ziele mit Belohnung, Belohnung für den ersten Sieg, Tipps, Icon, Position auf der Weltkarte (antippen), Duplizieren, Testen.
+- *Gegner:* Name, Symbol/Avatar, KI-Stärke, bevorzugte Klassen, Deck aus genau 8 bestehenden Karten, Boss-Texte, Porträt und Hintergrund.
+- *Prüfen:* zeigt fehlende Karten, unvollständige Missionen, unerreichbare Ziele und unerfüllbare Bedingungen.
+- Missionen werden nie gelöscht, nur deaktiviert – so bleibt der Spieler-Fortschritt immer gültig. Wird ein Ziel geändert, behalten Spieler ihre bereits verdienten Sterne.
+
+Empfohlene Bildgrößen: Weltkarte und Boss-Hintergrund 1290 × 2796 px, Welt-Kachel 1200 × 675 px, Missions-Icon und Gegner-Avatar 512 × 512 px, Boss-Porträt 1024 × 1365 px (JPEG/WebP, am besten unter 2 MB).
+
 ### Collection League (Testmodus)
 Im Hauptmenü **🏆 Collection League**: Liga-Deck bauen (20 Karten, max. 2 gleiche, max. 1 legendäre, 1 mystische, 4 epische), dann ein Match gegen den Computer: Lauf mit je 2 Deckkarten + 1 neutraler Entdeckung pro Tor, danach 2 Runden mit getauschtem Start, bei 1:1 ein Entscheidungsduell. In jedem Duell blockiert ein **Fels** ein Feld (fair, kein Unentschieden). Testmodus: keine Belohnung, keine Wertung. Hintergründe: [BALANCING.md](BALANCING.md).
 
