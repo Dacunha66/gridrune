@@ -9,7 +9,7 @@ import { CELL_COUNT } from '../game/battle';
 import { Db, deleteArena, describeError, saveArena } from '../game/cardStore';
 import { TERRAINS, TERRAIN_INFO, Terrain } from '../game/effects';
 
-const STATUS_LABEL: Record<ArenaStatus, string> = { draft: 'Entwurf', active: 'Aktiv', disabled: 'Deaktiviert' };
+const STATUS_LABEL: Record<ArenaStatus, string> = { draft: 'Entwurf', active: 'Aktiv', campaign: 'Nur Kampagne', disabled: 'Deaktiviert' };
 
 export function ArenaView({ db, onToast }: { db: Db; onToast: (m: string) => void }) {
   const [saved, setSaved] = useState<Arena[] | null>(null);

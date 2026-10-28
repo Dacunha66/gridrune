@@ -498,6 +498,7 @@ button { font: inherit; color: inherit; }
 .status-pill { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 .status-active { background: #166534; color: #dcfce7; }
 .status-draft { background: #713f12; color: #fef3c7; }
+.status-campaign { background: #14532d; color: #bbf7d0; box-shadow: inset 0 0 0 1px #4ade80; }
 .status-disabled { background: #3f3f46; color: #e4e4e7; }
 .admin-toast {
   position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 70;
@@ -540,6 +541,7 @@ label.btn.disabled { opacity: 0.5; }
 .rarity-seg-mythic.active { border-color: var(--mythic); }
 .status-seg-active.active { background: #166534; border-color: #4ade80; }
 .status-seg-draft.active { background: #713f12; border-color: #fbbf24; }
+.status-seg-campaign.active { background: #14532d; border-color: #86efac; }
 .status-seg-disabled.active { background: #3f3f46; border-color: #a1a1aa; }
 /* Values laid out like on the card: top, left/right, bottom. */
 .value-cross {

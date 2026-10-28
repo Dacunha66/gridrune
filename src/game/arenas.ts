@@ -5,8 +5,9 @@ import { TERRAINS, TERRAIN_INFO, Terrain, isTerrain } from './effects';
 import { Rng } from './rng';
 import { deriveRng } from './league';
 
-export type ArenaStatus = 'draft' | 'active' | 'disabled';
-export const ARENA_STATUSES: ArenaStatus[] = ['draft', 'active', 'disabled'];
+/** campaign = only used where a campaign mission names it (never picked at random). */
+export type ArenaStatus = 'draft' | 'active' | 'campaign' | 'disabled';
+export const ARENA_STATUSES: ArenaStatus[] = ['draft', 'active', 'campaign', 'disabled'];
 
 export interface Arena {
   id: string;
@@ -39,6 +40,9 @@ export const BUILTIN_ARENAS: readonly Arena[] = [
   { id: 'a04', name: 'Frostsee', cells: layout({ eis: [4, 6, 9, 11] }), status: 'active', ranked: true, updatedAt: '' },
   { id: 'a05', name: 'Schattenhain', cells: layout({ schatten: [2, 7, 8, 13] }), status: 'active', ranked: true, updatedAt: '' },
   { id: 'a06', name: 'Grenzland', cells: layout({ wald: [0, 15], lava: [5, 10], eis: [3, 12], schatten: [6, 9] }), status: 'active', ranked: true, updatedAt: '' },
+  // Campaign arenas (Flüsterwald): only terrain that already exists, no new rules.
+  { id: 'a07', name: 'Mooslichtung', cells: layout({ wald: [0, 3, 5, 10, 12, 15] }), status: 'campaign', ranked: false, updatedAt: '' },
+  { id: 'a08', name: 'Herz des Waldes', cells: layout({ wald: [1, 2, 5, 6, 9, 10, 13, 14] }), status: 'campaign', ranked: false, updatedAt: '' },
 ];
 
 export const CLASSIC_ARENA = BUILTIN_ARENAS[0];

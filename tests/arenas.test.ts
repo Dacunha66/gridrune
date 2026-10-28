@@ -46,11 +46,13 @@ describe('Arena-Vorlagen', () => {
   });
 
   it('gespeicherte Arenen ersetzen oder ergänzen die eingebauten', () => {
-    setArenas([{ ...CLASSIC_ARENA, name: 'Neu', status: 'disabled' }, { ...CLASSIC_ARENA, id: 'a07', name: 'Sieben' }]);
+    setArenas([{ ...CLASSIC_ARENA, name: 'Neu', status: 'disabled' }, { ...CLASSIC_ARENA, id: 'a20', name: 'Zwanzig' }]);
     expect(ARENAS.find((a) => a.id === 'a01')!.status).toBe('disabled');
-    expect(ARENAS.map((a) => a.id)).toContain('a07');
-    expect(nextArenaId(ARENAS.map((a) => a.id))).toBe('a08');
+    expect(ARENAS.map((a) => a.id)).toContain('a20');
+    expect(nextArenaId(ARENAS.map((a) => a.id))).toBe('a21');
     for (let i = 0; i < 50; i++) expect(pickArena(createRng(i)).id).not.toBe('a01');
+    // Campaign arenas are never picked at random.
+    for (let i = 0; i < 200; i++) expect(['a07', 'a08']).not.toContain(pickArena(createRng(i)).id);
     setArenas([]);
   });
 
@@ -60,7 +62,7 @@ describe('Arena-Vorlagen', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 300; i++) seen.add(leagueArena(`s${i}`, 1, list).id);
     expect(seen.has('a09')).toBe(false);
-    expect(seen.size).toBe(BUILTIN_ARENAS.length);
+    expect(seen.size).toBe(BUILTIN_ARENAS.filter((a) => a.status === 'active' && a.ranked).length);
     expect(leagueArena('abc', 1, [])).toBe(CLASSIC_ARENA);
   });
 
