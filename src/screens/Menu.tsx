@@ -9,7 +9,7 @@ interface Props {
   /** Owner/Editor of the game page: may open the card administration. */
   isAdmin: boolean;
   onPlay: () => void;
-  onNavigate: (screen: 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league') => void;
+  onNavigate: (screen: 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'campaign') => void;
   onToggleReducedMotion: () => void;
 }
 
@@ -33,6 +33,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
 
       <nav className="menu-buttons">
         <button type="button" className="btn btn-primary btn-big" onClick={onPlay}>▶ Spielen</button>
+        <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}>🗺️ Kampagne</button>
         <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Collection League <span className="btn-sub">Test</span></button>
         <button type="button" className="btn" onClick={() => onNavigate('shop')}>🛒 Shop <span className="btn-sub">🪙 {save.coins}</span></button>
         <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>

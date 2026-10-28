@@ -1,3 +1,4 @@
+import { CampaignContent } from '../game/campaign';
 import { ChangeEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
@@ -24,6 +25,10 @@ interface Props {
   onSettingsChange: (settings: GameSettings) => void;
   /** Called after a design was published, so the game shows it right away. */
   onDesignsChange: (designs: Design[], state: DesignState) => void;
+  /** Called after campaign content was saved, so the game uses it right away. */
+  onCampaignChange: (content: CampaignContent) => void;
+  /** Plays a mission in test mode (drafts visible, nothing saved). */
+  onTestCampaign: (missionId?: string) => void;
   onBack: () => void;
 }
 

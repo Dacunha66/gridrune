@@ -3,7 +3,7 @@ import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import {
-  BOARD_SIZE, BattleState, Breakdown, HandCard, Outcome, Side, applyMove, blickTargets, cellBreakdown, coinToss, cpuChoosesFirst, createBattle, isGameOver,
+  BOARD_SIZE, BattleState, Breakdown, HandCard, Move, Outcome, Side, applyMove, blickTargets, cellBreakdown, coinToss, cpuChoosesFirst, createBattle, isGameOver,
   other, outcome, score, totalMoves,
 } from '../game/battle';
 import { Arena, pickArena } from '../game/arenas';
@@ -12,7 +12,7 @@ import { getCard } from '../game/cards';
 import { CardInspect } from '../components/CardInspect';
 import { BoardArt } from '../components/DesignArt';
 import { ACTIVE, layoutVars } from '../game/designs';
-import { chooseCpuMove, drawCpuHand } from '../game/ai';
+import { AiOptions, chooseCpuMove, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
 
@@ -20,8 +20,8 @@ interface Props {
   picks: Pick[];
   unlocked: string[];
   reducedMotion: boolean;
-  /** `first` = who actually started (after the coin toss). */
-  onEnd: (outcome: Outcome, score: { player: number; cpu: number }, first: Side) => void;
+  /** `first` = who actually started (after the coin toss); `record` = start position and every move (campaign goals). */
+  onEnd: (outcome: Outcome, score: { player: number; cpu: number }, first: Side, record: DuelRecord) => void;
   onQuit: () => void;
   /** League round: fixed opponent hand, rock cells, given or tossed start. Without it: adventure duel. */
   setup?: BattleSetup;
@@ -38,6 +38,16 @@ export interface BattleSetup {
   label: string;
   tossRng: Rng;
   finishLabel: string;
+  /** Computer strength (campaign); default = the classic opponent. */
+  ai?: AiOptions;
+  /** Marker on discovery cards in the hand (default "Neutral"). */
+  badgeText?: string;
+}
+
+/** A finished duel that can be replayed exactly: start position (after the toss) and all moves. */
+export interface DuelRecord {
+  start: BattleState;
+  moves: Move[];
 }
 
 const TERRAIN_EFFECTS = new Set(['wurzelkraft', 'flammenherz', 'frostpanzer', 'schattenmantel']);
@@ -67,9 +77,11 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
   const arena = useMemo(() => setup?.arena ?? pickArena(rng), [setup, rng]);
   // Board picture and grid layout chosen in the board designer (only looks – the 16 cells stay the same).
   const [boardDesign] = useState(() => ACTIVE.board);
-  const [state, setState] = useState<BattleState>(() =>
+  const [initial] = useState<BattleState>(() =>
     createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells),
   );
+  const [state, setState] = useState<BattleState>(initial);
+  const record = useRef<DuelRecord>({ start: initial, moves: [] });
   /** Hand card shown large while it is held. */
   const [preview, setPreview] = useState<{ id: string; mod: number } | null>(null);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,20 +153,25 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
     if (phase !== 'play' || over || state.turn !== 'cpu') return;
     const delay = reducedMotion ? 450 : state.lastClashes.length > 0 || state.lastEvents.length > 0 ? 1250 : 800;
     const t = setTimeout(() => {
-      setState((s) => (s.turn === 'cpu' && !isGameOver(s) ? applyMove(s, chooseCpuMove(s, rng)) : s));
+      const move = chooseCpuMove(state, rng, setup?.ai);
+      record.current.moves.push(move);
+      setState(applyMove(state, move));
     }, delay);
     return () => clearTimeout(t);
-  }, [state, over, rng, reducedMotion, phase]);
+  }, [state, over, rng, reducedMotion, phase, setup?.ai]);
 
   const start = useCallback((first: Side) => {
     starter.current = first;
+    record.current = { start: { ...initial, turn: first }, moves: [] };
     setState((s) => ({ ...s, turn: first }));
     setPhase('play');
     setBanner(first === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!');
-  }, []);
+  }, [initial]);
 
   function play(handIndex: number, cell: number, target?: number) {
-    setState(applyMove(state, { handIndex, cell, target }));
+    const move: Move = target === undefined ? { handIndex, cell } : { handIndex, cell, target };
+    record.current.moves.push(move);
+    setState(applyMove(state, move));
     setHandOrigin(handOrigin.filter((_, i) => i !== handIndex));
     setSelected(null);
     setTargeting(null);
@@ -180,7 +197,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
   function finish() {
     if (ended.current) return;
     ended.current = true;
-    onEnd(outcome(state), sc, starter.current);
+    onEnd(outcome(state), sc, starter.current, record.current);
   }
 
   const result = over && !animating ? outcome(state) : null;
@@ -321,7 +338,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
                 mod={mod}
                 size="sm"
                 badge={discoveryIndexes.has(handOrigin[i]) ? 'discovery' : null}
-                badgeText={setup ? 'Neutral' : unlocked.includes(id) ? '★' : 'NEU'}
+                badgeText={setup ? setup.badgeText ?? 'Neutral' : unlocked.includes(id) ? '★' : 'NEU'}
                 selected={selected === i}
                 onClick={() => {
                   if (pressedLong.current) return;

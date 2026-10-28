@@ -14,16 +14,21 @@ import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
 import { CARDS, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
-import { getDb, isAdmin, loadArenas, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings } from './game/cardStore';
+import { getDb, isAdmin, loadArenas, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings } from './game/cardStore';
 import { ACTIVE, Design, DesignState, setActiveDesigns } from './game/designs';
 import { PageArt } from './components/DesignArt';
 import { setArenas } from './game/arenas';
 import { GameSettings, setGameSettings } from './game/settings';
 import { Admin } from './screens/Admin';
 import { League } from './screens/League';
+import { Campaign } from './screens/Campaign';
+import { CampaignContent, mergeContent, setCampaign } from './game/campaign';
+import { CampaignProgress, loadProgress, writeProgress } from './game/campaignProgress';
 
 export type Screen =
   | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' }
+  /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
+  | { name: 'campaign'; preview?: boolean; missionId?: string }
   | { name: 'runner'; runId: number; deck: string[] }
   | { name: 'battle'; picks: Pick[] }
   | { name: 'result'; outcome: Outcome; reward: Reward; score: { player: number; cpu: number } };
@@ -58,7 +63,7 @@ export function App() {
   screenRef.current = screen.name;
 
   const applyRecords = useCallback((records: CardRecord[]) => {
-    if (screenRef.current === 'runner' || screenRef.current === 'battle' || screenRef.current === 'league') {
+    if (screenRef.current === 'runner' || screenRef.current === 'battle' || screenRef.current === 'league' || screenRef.current === 'campaign') {
       pendingRecords.current = records;
       return;
     }
@@ -72,6 +77,17 @@ export function App() {
     setCatalogVersion((v) => v + 1);
   }, []);
 
+  // Campaign content (built-in world plus the admin's saved worlds, missions, opponents) and this device's progress.
+  const [campaign, setCampaignState] = useState<CampaignContent>(() => mergeContent({}));
+  const applyCampaign = useCallback((content: CampaignContent) => {
+    setCampaign(content);
+    setCampaignState(content);
+  }, []);
+  const [campaignProgress, setCampaignProgress] = useState<CampaignProgress>(() => loadProgress());
+  useEffect(() => {
+    writeProgress(campaignProgress);
+  }, [campaignProgress]);
+
   // Published designs (board picture, page background). A running duel keeps the board it started with.
   const [pageDesign, setPageDesign] = useState<Design | null>(null);
   const applyDesigns = useCallback((designs: Design[], state: DesignState) => {
@@ -84,9 +100,10 @@ export function App() {
     let alive = true;
     (async () => {
       const db = await getDb();
-      const [records, settings, arenas, designs, designState] = await Promise.all([
-        loadCardRecords(db), loadGameSettings(db), loadArenas(db), loadDesigns(db), loadDesignState(db),
+      const [records, settings, arenas, designs, designState, savedCampaign] = await Promise.all([
+        loadCardRecords(db), loadGameSettings(db), loadArenas(db), loadDesigns(db), loadDesignState(db), loadCampaign(db),
       ]);
+      if (alive && savedCampaign) applyCampaign(mergeContent(savedCampaign));
       if (alive && designs && designState) applyDesigns(designs, designState);
       if (alive && settings) setGameSettings(settings);
       // Arenas are picked when a duel starts, so they can be applied right away.
@@ -98,7 +115,7 @@ export function App() {
     return () => {
       alive = false;
     };
-  }, [applyRecords, applyDesigns]);
+  }, [applyRecords, applyDesigns, applyCampaign]);
 
   // Only cards that are in play right now (the database may have changed since the deck was built).
   const startRun = () => setScreen({ name: 'runner', runId: Date.now(), deck: repairDeck(save.deck, save.unlocked, CARDS).deck });
@@ -124,7 +141,7 @@ export function App() {
           saveOk={saveOk}
           isAdmin={admin}
           onPlay={startRun}
-          onNavigate={(name) => setScreen({ name })}
+          onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           onToggleReducedMotion={() =>
             setSave((s) => ({ ...s, settings: { ...s.settings, reducedMotion: !s.settings.reducedMotion } }))
           }
@@ -146,7 +163,29 @@ export function App() {
         />
       )}
       {screen.name === 'admin' && (
-        <Admin onCatalogChange={applyRecords} onSettingsChange={(s: GameSettings) => setGameSettings(s)} onDesignsChange={applyDesigns} onBack={toMenu} />
+        <Admin
+          onCatalogChange={applyRecords}
+          onSettingsChange={(s: GameSettings) => setGameSettings(s)}
+          onDesignsChange={applyDesigns}
+          onCampaignChange={applyCampaign}
+          onTestCampaign={(missionId) => setScreen({ name: 'campaign', preview: true, missionId })}
+          onBack={toMenu}
+        />
+      )}
+      {screen.name === 'campaign' && (
+        <Campaign
+          key={`${screen.preview ? 'test' : 'play'}-${screen.missionId ?? ''}`}
+          content={campaign}
+          progress={campaignProgress}
+          onProgress={setCampaignProgress}
+          deck={repairDeck(save.deck, save.unlocked, CARDS).deck}
+          unlocked={save.unlocked}
+          reducedMotion={reducedMotion}
+          skin={getSkin(save.skins.runner).colors}
+          preview={screen.preview}
+          startMissionId={screen.missionId}
+          onExit={screen.preview ? () => setScreen({ name: 'admin' }) : toMenu}
+        />
       )}
       {screen.name === 'runner' && (
         <Runner

@@ -5,6 +5,10 @@
 import { CardRecord, parseCardRecord, recordToDoc } from './catalog';
 import { GameSettings, parseSettings } from './settings';
 import { ARENAS_COLLECTION, Arena, arenaToDoc, parseArena } from './arenas';
+import {
+  CampaignContent, MISSIONS_COLLECTION, Mission, OPPONENTS_COLLECTION, Opponent, WORLDS_COLLECTION, World, missionToDoc, opponentToDoc, parseMission,
+  parseOpponent, parseWorld, worldToDoc,
+} from './campaign';
 import { DESIGNS_COLLECTION, DESIGN_STATE_DOC, Design, DesignState, designToDoc, displaySize, parseDesign, parseDesignState } from './designs';
 
 export const CARDS_COLLECTION = 'cards';
@@ -185,6 +189,38 @@ export async function prepareDisplayImage(file: Blob, max: { w: number; h: numbe
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** Campaign worlds, missions and opponents saved by the admin. null = no database (built-in content applies). */
+export async function loadCampaign(db: Db | null): Promise<Partial<CampaignContent> | null> {
+  if (!db) return null;
+  try {
+    const read = async <T>(name: string, parse: (id: string, raw: unknown) => T | null): Promise<T[]> => {
+      const snap = await db.collection(name).get();
+      return snap.docs.flatMap((d) => {
+        const x = d.exists ? parse(d.id, d.data()) : null;
+        return x ? [x] : [];
+      });
+    };
+    const [worlds, missions, opponents] = await Promise.all([
+      read(WORLDS_COLLECTION, parseWorld), read(MISSIONS_COLLECTION, parseMission), read(OPPONENTS_COLLECTION, parseOpponent),
+    ]);
+    return { worlds, missions, opponents };
+  } catch {
+    return null;
+  }
+}
+
+export async function saveWorld(db: Db, w: World): Promise<void> {
+  await db.collection(WORLDS_COLLECTION).doc(w.id).set(worldToDoc(w));
+}
+
+export async function saveMission(db: Db, m: Mission): Promise<void> {
+  await db.collection(MISSIONS_COLLECTION).doc(m.id).set(missionToDoc(m));
+}
+
+export async function saveOpponent(db: Db, o: Opponent): Promise<void> {
+  await db.collection(OPPONENTS_COLLECTION).doc(o.id).set(opponentToDoc(o));
 }
 
 export async function deleteCardRecord(db: Db, id: string): Promise<void> {
