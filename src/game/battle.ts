@@ -210,7 +210,10 @@ function auraParts(board: readonly (BoardCell | null)[], terrain: readonly Terra
   const element: Part[] = def.cls && here !== 'normal' && CLASS_TERRAIN[def.cls] === here
     ? [{ source: `Element ${TERRAIN_INFO[here].icon} ${TERRAIN_INFO[here].label}`, d: [ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS], kind: 'element' }]
     : [];
-  return [...element, ...effectAura(board, terrain, cell)];
+  // Terrain gives at most +1: a terrain effect (Wurzelkraft, …) never adds to the element bonus.
+  const effect = def.effect ? EFFECTS[def.effect] : null;
+  const effectParts = element.length > 0 && effect?.terrain ? [] : effectAura(board, terrain, cell);
+  return [...element, ...effectParts];
 }
 
 /** Conditional bonus from the card's own effect. */

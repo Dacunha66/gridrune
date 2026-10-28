@@ -140,14 +140,15 @@ describe('Kampagne: Sterne-Ziele', () => {
     expect(duelStats(start, [{ handIndex: 1, cell: 0 }]).terrainBonus).toBe(0);
   });
 
-  it('Geländebonus: Sumpfechse (Wurzelkraft) auf einem Waldfeld zählt, auf normalem Feld nicht', () => {
+  it('Geländebonus: Sumpfechse auf einem Waldfeld zählt einmal, auf normalem Feld nicht', () => {
     const forest = ARENAS.find((a) => a.id === 'a07')!.cells;
     const hand = ['c06', 'c01', 'c02', 'c03', 'c05', 'c07', 'c08', 'c09'];
     const start = createBattle(toHand(hand), toHand(BUILTIN_OPPONENTS[0].deck), 'player', [], forest);
     expect(forest[0]).toBe('wald');
     const onForest = duelStats(start, [{ handIndex: 0, cell: 0 }]);
     expect(onForest.terrainBonus).toBe(1);
-    expect(onForest.effects.wurzelkraft).toBe(1);
+    // Terrain gives at most +1: Wurzelkraft does not work on top of the element bonus.
+    expect(onForest.effects.wurzelkraft ?? 0).toBe(0);
     const onNormal = duelStats(start, [{ handIndex: 0, cell: 1 }]);
     expect(onNormal.terrainBonus).toBe(0);
   });

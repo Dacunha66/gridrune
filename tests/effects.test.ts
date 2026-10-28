@@ -129,25 +129,25 @@ describe('Magische Barriere', () => {
 });
 
 describe('Gelände-Effekte', () => {
-  // Every terrain effect belongs to the class whose element is that terrain, so the element +1 comes on top.
-  it('Wurzelkraft: auf Wald +1 auf alle Werte (plus Element +1), sonst nichts', () => {
-    expect(values(applyMove(setup({}, ['t05'], { 5: 'wald' }), { handIndex: 0, cell: 5 }), 5)).toEqual([6, 6, 6, 6]);
+  // Every terrain effect belongs to the class whose element is that terrain: there only the element +1 counts (never more).
+  it('Wurzelkraft: auf Wald insgesamt nur +1 (Element), sonst nichts', () => {
+    expect(values(applyMove(setup({}, ['t05'], { 5: 'wald' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
     expect(values(applyMove(setup({}, ['t05'], { 5: 'lava' }), { handIndex: 0, cell: 5 }), 5)).toEqual([4, 4, 4, 4]);
   });
-  it('Flammenherz: auf Lava oben +2', () => {
-    expect(values(applyMove(setup({}, ['t07'], { 5: 'lava' }), { handIndex: 0, cell: 5 }), 5)).toEqual([7, 5, 5, 5]);
+  it('Flammenherz: auf Lava insgesamt nur +1 (Element)', () => {
+    expect(values(applyMove(setup({}, ['t07'], { 5: 'lava' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
   });
-  it('Frostpanzer: auf Eis links und rechts +1', () => {
-    expect(values(applyMove(setup({}, ['t08'], { 5: 'eis' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 6, 5, 6]);
+  it('Frostpanzer: auf Eis insgesamt nur +1 (Element)', () => {
+    expect(values(applyMove(setup({}, ['t08'], { 5: 'eis' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
   });
-  it('Schattenmantel: auf Schatten niedrigster Wert +2 (Gleichstand: rechts vor links)', () => {
-    expect(values(applyMove(setup({}, ['t09'], { 5: 'schatten' }), { handIndex: 0, cell: 5 }), 5)).toEqual([7, 6, 6, 4]);
+  it('Schattenmantel: auf Schatten insgesamt nur +1 (Element)', () => {
+    expect(values(applyMove(setup({}, ['t09'], { 5: 'schatten' }), { handIndex: 0, cell: 5 }), 5)).toEqual([7, 4, 6, 4]);
   });
   it('Gelände ohne passenden Effekt ändert nichts', () => {
     expect(values(applyMove(setup({}, ['p05'], { 5: 'wald' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
   });
   it('Gelände-Bonus zählt bei der Verteidigung', () => {
-    // Enemy Flammenherz on lava defends with 4+2+1=7 at the top: our 5 from below does not capture.
+    // Enemy Flammenherz on lava defends with 4+1=5 at the top (element only): our 5 from below does not capture (tie).
     const s = applyMove(setup({ 5: at('t07', 'cpu') }, ['p05'], { 5: 'lava' }), { handIndex: 0, cell: 1 });
     expect(s.board[5]!.owner).toBe('cpu');
   });

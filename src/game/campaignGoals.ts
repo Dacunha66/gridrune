@@ -4,7 +4,7 @@
 // duel lasts exactly 15 or 16 moves, so "win within N moves" cannot be measured meaningfully.
 import { BattleState, CELL_COUNT, HAND_SIZE, Move, Outcome, applyMove, cellBreakdown, outcome, score } from './battle';
 import { getCard } from './cards';
-import { CLASS_INFO, CLASS_TERRAIN, CardClass, EFFECTS, EffectId, TERRAIN_INFO, Terrain, isCardClass, isEffectId } from './effects';
+import { CLASS_INFO, CLASS_TERRAIN, CardClass, EFFECTS, EffectId, Terrain, isCardClass, isEffectId } from './effects';
 
 export type GoalType =
   | 'win' | 'min_fields' | 'min_margin' | 'min_captures' | 'play_class' | 'without_class' | 'terrain_bonus' | 'effect_active' | 'runner_clean';
@@ -197,7 +197,7 @@ export function goalProblems(goal: Goal, ctx: GoalContext): { errors: string[]; 
     }
     case 'effect_active': {
       const t = goal.effect ? EFFECTS[goal.effect].terrain : undefined;
-      if (t && !ctx.terrain.includes(t)) errors.push(`${EFFECTS[goal.effect!].name} wirkt nur auf ${TERRAIN_INFO[t].label} – die Arena hat kein solches Feld.`);
+      if (t) errors.push(`${EFFECTS[goal.effect!].name} wirkt nie zusätzlich zum Element-Bonus – nimm stattdessen „Geländeboni auslösen“.`);
       if (goal.effect && ctx.onlyClass && EFFECTS[goal.effect].cls !== ctx.onlyClass) errors.push(`Nur ${CLASS_INFO[ctx.onlyClass].label}-Karten erlaubt – dieser Effekt gehört zu einer anderen Klasse.`);
       break;
     }

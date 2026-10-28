@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Version 1.14 – Gelände gibt höchstens +1
+
+Auf deinen Wunsch: Gelände gibt nie mehr als +1. Liegt eine Karte auf dem Gelände ihres Elements, zählt nur der Element-Bonus (+1 auf alle Werte); Geländeeffekte (Wurzelkraft, Flammenherz, Frostpanzer, Schattenmantel) wirken dort nicht zusätzlich. Effekttexte, Effekt-Vorschau im Admin, Regeln und Kampagnen-Prüfung („Effekt auslösen“ mit Geländeeffekt wird als nicht erreichbar gemeldet) angepasst.
+
+**Automatische Tests:** 182, alle bestanden (Geländeeffekte jetzt „insgesamt nur +1“).
+
 ## Version 1.13 – Element-Bonus auf Gelände
 
 Neue Regel (von dir freigegeben): Jede Karte bekommt auf dem Gelände ihres Elements +1 auf alle Werte – 🌿 Natur auf 🌲 Wald, 🔥 Feuer auf 🌋 Lava, ❄️ Frost auf ❄️ Eis, 🌑 Schatten auf 🌑 Schatten. Krieger und Magier haben kein Element. Geländeeffekte (Wurzelkraft, Flammenherz, Frostpanzer, Schattenmantel) bleiben unverändert und wirken zusätzlich. Beim Auswählen einer Karte leuchten die Felder, auf denen sie ihren Bonus bekommt; der Hinweis unter dem Spielfeld nennt den Bonus, die Kartendetails zeigen „Element … (auf diesem Feld)“. Regeln-Seite, Effekt-Vorschau im Admin und Kampagnen-Ziele „Geländeboni“ angepasst (Mooslichtung jetzt 2, Herz des Waldes 3 Geländeboni).

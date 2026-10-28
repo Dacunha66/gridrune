@@ -344,7 +344,7 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
     'Ein Streuner versperrt den Pfad tiefer in den Wald.', { x: 0.28, y: 0.84 }),
   mission('m003', 3, 'Mooslichtung', 'normal', 'a07', 'o003', goals('m003', { type: 'terrain_bonus', n: 2 }, { type: 'play_class', n: 3, cls: 'natur' }),
     'Hier gibt es Waldfelder 🌲: Naturkarten werden dort stärker.', { x: 0.62, y: 0.75 }, {
-      tips: ['Naturkarten 🌿 bekommen auf Waldfeldern 🌲 +1 auf alle Werte.', 'Wählst du eine Karte aus, leuchten die Felder, auf denen sie ihren Bonus bekommt.', 'Karten mit Wurzelkraft bekommen auf Wald zusätzlich ihren Effekt.'],
+      tips: ['Naturkarten 🌿 bekommen auf Waldfeldern 🌲 +1 auf alle Werte.', 'Wählst du eine Karte aus, leuchten die Felder, auf denen sie ihren Bonus bekommt.'],
     }),
   mission('m004', 4, 'Waldhüter', 'normal', 'a02', 'o004', goals('m004', { type: 'min_fields', n: 10 }, { type: 'effect_active', n: 1, effect: 'naturbund' }),
     'Waldhüter Bram prüft, ob du deine Karten klug nebeneinander legst.', { x: 0.8, y: 0.65 }),
