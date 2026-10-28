@@ -52,7 +52,7 @@ export function CardInspect({ board, terrain, cell, onClose }: Props) {
             <tr><td>Grundwerte</td>{info.base.map((v, i) => <td key={i}>{v}</td>)}</tr>
             {info.parts.map((p, k) => (
               <tr key={k} className={p.d.some((x) => x < 0) ? 'minus' : 'plus'}>
-                <td>{p.source}{p.kind === 'aura' ? ' (solange aktiv)' : ''}</td>
+                <td>{p.source}{p.kind === 'aura' ? ' (solange aktiv)' : p.kind === 'element' ? ' (auf diesem Feld)' : ''}</td>
                 {p.d.map((v, i) => <td key={i}>{v === 0 ? '' : `${v > 0 ? '+' : ''}${v}`}</td>)}
               </tr>
             ))}

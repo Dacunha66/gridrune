@@ -129,24 +129,25 @@ describe('Magische Barriere', () => {
 });
 
 describe('Gelände-Effekte', () => {
-  it('Wurzelkraft: auf Wald +1 auf alle Werte, sonst nichts', () => {
-    expect(values(applyMove(setup({}, ['t05'], { 5: 'wald' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
+  // Every terrain effect belongs to the class whose element is that terrain, so the element +1 comes on top.
+  it('Wurzelkraft: auf Wald +1 auf alle Werte (plus Element +1), sonst nichts', () => {
+    expect(values(applyMove(setup({}, ['t05'], { 5: 'wald' }), { handIndex: 0, cell: 5 }), 5)).toEqual([6, 6, 6, 6]);
     expect(values(applyMove(setup({}, ['t05'], { 5: 'lava' }), { handIndex: 0, cell: 5 }), 5)).toEqual([4, 4, 4, 4]);
   });
   it('Flammenherz: auf Lava oben +2', () => {
-    expect(values(applyMove(setup({}, ['t07'], { 5: 'lava' }), { handIndex: 0, cell: 5 }), 5)).toEqual([6, 4, 4, 4]);
+    expect(values(applyMove(setup({}, ['t07'], { 5: 'lava' }), { handIndex: 0, cell: 5 }), 5)).toEqual([7, 5, 5, 5]);
   });
   it('Frostpanzer: auf Eis links und rechts +1', () => {
-    expect(values(applyMove(setup({}, ['t08'], { 5: 'eis' }), { handIndex: 0, cell: 5 }), 5)).toEqual([4, 5, 4, 5]);
+    expect(values(applyMove(setup({}, ['t08'], { 5: 'eis' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 6, 5, 6]);
   });
   it('Schattenmantel: auf Schatten niedrigster Wert +2 (Gleichstand: rechts vor links)', () => {
-    expect(values(applyMove(setup({}, ['t09'], { 5: 'schatten' }), { handIndex: 0, cell: 5 }), 5)).toEqual([6, 5, 5, 3]);
+    expect(values(applyMove(setup({}, ['t09'], { 5: 'schatten' }), { handIndex: 0, cell: 5 }), 5)).toEqual([7, 6, 6, 4]);
   });
   it('Gelände ohne passenden Effekt ändert nichts', () => {
     expect(values(applyMove(setup({}, ['p05'], { 5: 'wald' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
   });
   it('Gelände-Bonus zählt bei der Verteidigung', () => {
-    // Enemy Flammenherz on lava defends with 4+2=6 at the top: our 5 from below does not capture.
+    // Enemy Flammenherz on lava defends with 4+2+1=7 at the top: our 5 from below does not capture.
     const s = applyMove(setup({ 5: at('t07', 'cpu') }, ['p05'], { 5: 'lava' }), { handIndex: 0, cell: 1 });
     expect(s.board[5]!.owner).toBe('cpu');
   });
@@ -249,5 +250,39 @@ describe('Vorschau im Admin-Editor', () => {
       const s = applyMove(setup(friend, [c.id], terrainFor[e] ? { 5: terrainFor[e] } : {}), { handIndex: 0, cell: 5 });
       expect(effectPreview([c.top, c.right, c.bottom, c.left], e).values, e).toEqual(values(s, 5));
     }
+  });
+});
+
+describe('Element: Klasse auf ihrem Gelände', () => {
+  const cls = (id: string) => getCard(id).cls;
+  it('Natur auf Wald, Feuer auf Lava, Frost auf Eis, Schatten auf Schatten: +1 auf alle Werte', () => {
+    const pairs: [CardClass, Terrain][] = [['natur', 'wald'], ['feuer', 'lava'], ['frost', 'eis'], ['schatten', 'schatten']];
+    for (const [c, t] of pairs) {
+      const card = BUILTIN_CARDS.find((x) => x.cls === c && !x.effect)!;
+      const base = [card.top, card.right, card.bottom, card.left].map((v) => Math.min(10, v + 1));
+      expect(values(applyMove(setup({}, [card.id], { 5: t }), { handIndex: 0, cell: 5 }), 5), `${c} auf ${t}`).toEqual(base);
+      // Not on another terrain.
+      const other: Terrain = t === 'wald' ? 'lava' : 'wald';
+      expect(values(applyMove(setup({}, [card.id], { 5: other }), { handIndex: 0, cell: 5 }), 5)).toEqual([card.top, card.right, card.bottom, card.left]);
+    }
+  });
+  it('Krieger und Magier haben kein Element', () => {
+    for (const c of ['krieger', 'magier'] as CardClass[]) {
+      const card = BUILTIN_CARDS.find((x) => x.cls === c && !x.effect)!;
+      for (const t of ['wald', 'lava', 'eis', 'schatten'] as Terrain[]) {
+        expect(values(applyMove(setup({}, [card.id], { 5: t }), { handIndex: 0, cell: 5 }), 5)).toEqual([card.top, card.right, card.bottom, card.left]);
+      }
+    }
+    expect(cls('c03')).toBe('krieger');
+  });
+  it('wirkt auch bei der Verteidigung und erscheint in der Aufschlüsselung', () => {
+    // Enemy Moosling (Natur, links 6) on Wald defends with 7: a 7 does not capture it, on a normal field it would.
+    const att = 'p07';
+    const s = applyMove(setup({ 5: at('c01', 'cpu') }, [att], { 5: 'wald' }), { handIndex: 0, cell: 4 });
+    expect(s.board[5]!.owner).toBe('cpu');
+    const n = applyMove(setup({ 5: at('c01', 'cpu') }, [att]), { handIndex: 0, cell: 4 });
+    expect(n.board[5]!.owner).toBe('player');
+    const s2 = applyMove(setup({}, ['c01'], { 5: 'wald' }), { handIndex: 0, cell: 5 });
+    expect(cellBreakdown(s2.board, s2.terrain, 5).parts.map((p) => p.kind)).toContain('element');
   });
 });

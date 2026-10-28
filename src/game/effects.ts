@@ -18,6 +18,11 @@ export type Terrain = 'normal' | 'wald' | 'lava' | 'eis' | 'schatten';
 
 export const TERRAINS: Terrain[] = ['normal', 'wald', 'lava', 'eis', 'schatten'];
 
+/** Element of a class: on its own terrain a card gets +1 on all values (Krieger and Magier have none). */
+export const CLASS_TERRAIN: Partial<Record<CardClass, Exclude<Terrain, 'normal'>>> = { natur: 'wald', feuer: 'lava', frost: 'eis', schatten: 'schatten' };
+/** Bonus on all four values for a card on the terrain of its class. */
+export const ELEMENT_BONUS = 1;
+
 export const TERRAIN_INFO: Record<Terrain, { label: string; icon: string }> = {
   normal: { label: 'Normal', icon: '' },
   wald: { label: 'Wald', icon: '🌲' },
@@ -141,19 +146,23 @@ export function effectPreview(base: Four, effect: EffectId): { situation: string
     case 'naturbund':
       [0, 1, 2].forEach((i) => add(i, 1));
       return { situation: effect === 'schildwall' ? 'Eigene Karte links daneben' : 'Eigene Naturkarte links daneben', values: v };
+    // Terrain effects: the card also gets its element bonus there (+1 on all values).
     case 'wurzelkraft':
-      [0, 1, 2, 3].forEach((i) => add(i, 1));
-      return { situation: 'Auf Wald 🌲', values: v };
+      [0, 1, 2, 3].forEach((i) => add(i, 1 + ELEMENT_BONUS));
+      return { situation: 'Auf Wald 🌲 (mit Element +1)', values: v };
     case 'flammenherz':
       add(0, 2);
-      return { situation: 'Auf Lava 🌋', values: v };
+      [0, 1, 2, 3].forEach((i) => add(i, ELEMENT_BONUS));
+      return { situation: 'Auf Lava 🌋 (mit Element +1)', values: v };
     case 'frostpanzer':
       add(1, 1);
       add(3, 1);
-      return { situation: 'Auf Eis ❄️', values: v };
+      [0, 1, 2, 3].forEach((i) => add(i, ELEMENT_BONUS));
+      return { situation: 'Auf Eis ❄️ (mit Element +1)', values: v };
     case 'schattenmantel':
       add(pickIndex(base, 'min'), 2);
-      return { situation: 'Auf Schatten 🌑', values: v };
+      [0, 1, 2, 3].forEach((i) => add(i, ELEMENT_BONUS));
+      return { situation: 'Auf Schatten 🌑 (mit Element +1)', values: v };
     case 'schwaechender_blick':
       return { situation: 'Beim Ausspielen', values: v, note: 'Die eigenen Werte bleiben gleich – eine Gegnerkarte daneben bekommt −1 auf alle Werte.' };
   }

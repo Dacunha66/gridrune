@@ -79,9 +79,12 @@ describe('Kampagne: Flüsterwald', () => {
     const errs = missionProblems(BUILTIN_MISSIONS[0], c2).filter((p) => p.level === 'error').map((p) => p.text);
     expect(errs.some((t) => /2 statt 8/.test(t))).toBe(true);
     expect(errs.some((t) => /zz99/.test(t))).toBe(true);
-    // Only one card has Wurzelkraft – asking for two terrain bonuses is impossible.
-    const two: Mission = { ...BUILTIN_MISSIONS[2], goals: [BUILTIN_MISSIONS[2].goals[0], { id: 'y', type: 'terrain_bonus', n: 2 }] };
-    expect(missionProblems(two, c).some((p) => p.level === 'error' && /Nur 1 Karte/.test(p.text))).toBe(true);
+    // Mooslichtung has 6 forest fields – 7 terrain bonuses are impossible.
+    const seven: Mission = { ...BUILTIN_MISSIONS[2], goals: [BUILTIN_MISSIONS[2].goals[0], { id: 'y', type: 'terrain_bonus', n: 7 }] };
+    expect(missionProblems(seven, c).some((p) => p.level === 'error' && /nur 6 Geländefelder/.test(p.text))).toBe(true);
+    // Only Krieger allowed in a forest arena: no card gets a terrain bonus there.
+    const krieger: Mission = { ...BUILTIN_MISSIONS[2], onlyClass: 'krieger', goals: [BUILTIN_MISSIONS[2].goals[0], { id: 'z', type: 'terrain_bonus', n: 1 }] };
+    expect(missionProblems(krieger, c).some((p) => p.level === 'error' && /Keine aktive Karte bekommt|keinen Bonus/.test(p.text))).toBe(true);
   });
 
   it('unerreichbare Freischalt-Bedingungen und Kreise werden erkannt', () => {
@@ -128,6 +131,13 @@ describe('Kampagne: Sterne-Ziele', () => {
       if (side === 'player') caps += s.lastFlips.length;
     }
     expect(st.captures).toBe(caps);
+  });
+
+  it('Geländebonus: Naturkarte auf Wald zählt (Element), Krieger auf Wald nicht', () => {
+    const forest = ARENAS.find((a) => a.id === 'a07')!.cells;
+    const start = createBattle(toHand(['c09', 'c03', 'c02', 'c05', 'c07', 'c08', 'c10', 'c11']), toHand(BUILTIN_OPPONENTS[0].deck), 'player', [], forest);
+    expect(duelStats(start, [{ handIndex: 0, cell: 0 }]).terrainBonus).toBe(1);
+    expect(duelStats(start, [{ handIndex: 1, cell: 0 }]).terrainBonus).toBe(0);
   });
 
   it('Geländebonus: Sumpfechse (Wurzelkraft) auf einem Waldfeld zählt, auf normalem Feld nicht', () => {

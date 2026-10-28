@@ -6,7 +6,7 @@ import { AI_LEVELS, AiLevel } from './ai';
 import { ARENAS, Arena } from './arenas';
 import { HAND_SIZE } from './battle';
 import { CARDS, CardDef, RARITY_ORDER, cardPower, getCard, isCardId } from './cards';
-import { CLASS_INFO, CardClass, EFFECTS, isCardClass } from './effects';
+import { CLASS_INFO, CLASS_TERRAIN, CardClass, EFFECTS, isCardClass } from './effects';
 import { Goal, goalProblems, parseGoal } from './campaignGoals';
 import { ImageFit, clampFit } from './designs';
 
@@ -342,9 +342,9 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
     }),
   mission('m002', 2, 'Waldpfad', 'normal', 'a01', 'o002', goals('m002', { type: 'min_captures', n: 5 }, { type: 'min_fields', n: 10 }),
     'Ein Streuner versperrt den Pfad tiefer in den Wald.', { x: 0.28, y: 0.84 }),
-  mission('m003', 3, 'Mooslichtung', 'normal', 'a07', 'o003', goals('m003', { type: 'terrain_bonus', n: 1 }, { type: 'play_class', n: 3, cls: 'natur' }),
-    'Hier gibt es Waldfelder 🌲: Karten mit Wurzelkraft werden dort stärker.', { x: 0.62, y: 0.75 }, {
-      tips: ['Waldfelder 🌲 geben Karten mit dem Effekt Wurzelkraft +1 auf alle Werte.', 'Lege die Sumpfechse auf ein Waldfeld, um den Geländebonus auszulösen.'],
+  mission('m003', 3, 'Mooslichtung', 'normal', 'a07', 'o003', goals('m003', { type: 'terrain_bonus', n: 2 }, { type: 'play_class', n: 3, cls: 'natur' }),
+    'Hier gibt es Waldfelder 🌲: Naturkarten werden dort stärker.', { x: 0.62, y: 0.75 }, {
+      tips: ['Naturkarten 🌿 bekommen auf Waldfeldern 🌲 +1 auf alle Werte.', 'Wählst du eine Karte aus, leuchten die Felder, auf denen sie ihren Bonus bekommt.', 'Karten mit Wurzelkraft bekommen auf Wald zusätzlich ihren Effekt.'],
     }),
   mission('m004', 4, 'Waldhüter', 'normal', 'a02', 'o004', goals('m004', { type: 'min_fields', n: 10 }, { type: 'effect_active', n: 1, effect: 'naturbund' }),
     'Waldhüter Bram prüft, ob du deine Karten klug nebeneinander legst.', { x: 0.8, y: 0.65 }),
@@ -358,7 +358,7 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
     'Elite: Der Ruinenwächter denkt deine Antworten voraus.', { x: 0.75, y: 0.29 }),
   mission('m009', 9, 'Wächtertor', 'elite', 'a02', 'o009', goals('m009', { type: 'without_class', n: 0, cls: 'magier' }, { type: 'min_margin', n: 4 }),
     'Elite: Torwächterin Lyra lässt nur Würdige passieren.', { x: 0.42, y: 0.18 }),
-  mission('m010', 10, 'Herz des Waldes', 'boss', 'a08', 'o010', goals('m010', { type: 'min_fields', n: 10 }, { type: 'terrain_bonus', n: 1 }),
+  mission('m010', 10, 'Herz des Waldes', 'boss', 'a08', 'o010', goals('m010', { type: 'min_fields', n: 10 }, { type: 'terrain_bonus', n: 3 }),
     'Endboss: Der Waldwächter erwartet dich im Herzen des Waldes.', { x: 0.5, y: 0.06 }),
 ];
 
@@ -495,9 +495,10 @@ export function missionProblems(m: Mission, content: CampaignContent, arenas: re
     warnings.forEach((t) => warn(`Stern ${i + 1}: ${t}`));
     // Cards that can do it must exist in the game right now.
     if (g.type === 'terrain_bonus' && arena) {
-      const able = cards.filter((c) => c.effect && EFFECTS[c.effect].terrain && arena.cells.includes(EFFECTS[c.effect].terrain!) && (!m.onlyClass || c.cls === m.onlyClass));
-      if (able.length === 0) err(`Stern ${i + 1}: Keine aktive Karte hat einen Geländeeffekt für diese Arena.`);
-      else if (able.length < g.n) err(`Stern ${i + 1}: Nur ${able.length} Karte(n) mit passendem Geländeeffekt – jede zählt einmal.`);
+      const able = cards.filter((c) => (!m.onlyClass || c.cls === m.onlyClass) && (
+        (c.cls && CLASS_TERRAIN[c.cls] && arena.cells.includes(CLASS_TERRAIN[c.cls]!)) || (c.effect && EFFECTS[c.effect].terrain && arena.cells.includes(EFFECTS[c.effect].terrain!))));
+      if (able.length === 0) err(`Stern ${i + 1}: Keine aktive Karte bekommt in dieser Arena einen Geländebonus.`);
+      else if (able.length < g.n) err(`Stern ${i + 1}: Nur ${able.length} Karte(n) bekommen hier einen Geländebonus – jede zählt einmal.`);
     }
     if (g.type === 'effect_active' && g.effect) {
       const able = cards.filter((c) => c.effect === g.effect);

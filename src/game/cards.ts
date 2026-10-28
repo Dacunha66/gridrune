@@ -32,7 +32,7 @@ export interface CardDef {
   inRunner?: boolean;
   /** true: only obtainable as a duel reward – never in booster packs (default false). */
   rewardOnly?: boolean;
-  /** Class (Krieger, Magier, …). Alone it gives no bonus. */
+  /** Class (Krieger, Magier, …). On the terrain of its element the card gets +1 (see CLASS_TERRAIN). */
   cls?: CardClass;
   /** At most one special effect from the central list (effects.ts). */
   effect?: EffectId;

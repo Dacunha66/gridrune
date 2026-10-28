@@ -1,7 +1,7 @@
 // Pure duel rules: 4×4 board, 8 cards per side, orthogonal captures, no chains.
 // Special effects (effects.ts) only change values for the current duel; printed values never change.
 import { getCard } from './cards';
-import { EFFECTS, Terrain } from './effects';
+import { CLASS_TERRAIN, EFFECTS, ELEMENT_BONUS, TERRAIN_INFO, Terrain } from './effects';
 
 export type Side = 'player' | 'cpu';
 
@@ -163,8 +163,8 @@ function sum(a: Values, b: Values): Values {
 export interface Part {
   source: string;
   d: Values;
-  /** stone = Stolperstein, play = on-play effect (lasting), aura = while a condition holds. */
-  kind: 'stone' | 'play' | 'aura';
+  /** stone = Stolperstein, play = on-play effect (lasting), aura = while a condition holds, element = class on its terrain. */
+  kind: 'stone' | 'play' | 'aura' | 'element';
 }
 
 export interface Breakdown {
@@ -202,6 +202,19 @@ function onlyAt(indexes: number[], amount: number): Values {
 
 /** Conditional bonuses of the card on `cell` – recomputed live, so ownership changes count immediately. */
 function auraParts(board: readonly (BoardCell | null)[], terrain: readonly Terrain[], cell: number): Part[] {
+  const card = board[cell];
+  if (!card) return [];
+  const def = getCard(card.cardId);
+  const here = terrain[cell] ?? 'normal';
+  // Element: a card on the terrain of its class gets +1 on all values (Natur → Wald, Feuer → Lava, Frost → Eis, Schatten → Schatten).
+  const element: Part[] = def.cls && here !== 'normal' && CLASS_TERRAIN[def.cls] === here
+    ? [{ source: `Element ${TERRAIN_INFO[here].icon} ${TERRAIN_INFO[here].label}`, d: [ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS], kind: 'element' }]
+    : [];
+  return [...element, ...effectAura(board, terrain, cell)];
+}
+
+/** Conditional bonus from the card's own effect. */
+function effectAura(board: readonly (BoardCell | null)[], terrain: readonly Terrain[], cell: number): Part[] {
   const card = board[cell];
   if (!card) return [];
   const effect = getCard(card.cardId).effect;

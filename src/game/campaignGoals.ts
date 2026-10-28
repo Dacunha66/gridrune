@@ -4,7 +4,7 @@
 // duel lasts exactly 15 or 16 moves, so "win within N moves" cannot be measured meaningfully.
 import { BattleState, CELL_COUNT, HAND_SIZE, Move, Outcome, applyMove, cellBreakdown, outcome, score } from './battle';
 import { getCard } from './cards';
-import { CLASS_INFO, CardClass, EFFECTS, EffectId, TERRAIN_INFO, Terrain, isCardClass, isEffectId } from './effects';
+import { CLASS_INFO, CLASS_TERRAIN, CardClass, EFFECTS, EffectId, TERRAIN_INFO, Terrain, isCardClass, isEffectId } from './effects';
 
 export type GoalType =
   | 'win' | 'min_fields' | 'min_margin' | 'min_captures' | 'play_class' | 'without_class' | 'terrain_bonus' | 'effect_active' | 'runner_clean';
@@ -57,7 +57,7 @@ export interface DuelStats {
   captures: number;
   /** Cards played per class. */
   played: Partial<Record<CardClass, number>>;
-  /** Own cards that got their terrain bonus right when they were placed. */
+  /** Own cards that got a terrain bonus (element or terrain effect) right when they were placed. */
   terrainBonus: number;
   /** How often each effect of an own card worked when it was placed. */
   effects: Partial<Record<EffectId, number>>;
@@ -85,10 +85,10 @@ export function duelStats(start: BattleState, moves: readonly Move[], stumbles: 
       const def = getCard(card.cardId);
       stats.captures += next.lastFlips.length;
       if (def.cls) stats.played[def.cls] = (stats.played[def.cls] ?? 0) + 1;
-      if (def.effect && effectWorked(next, move.cell, def.effect)) {
-        stats.effects[def.effect] = (stats.effects[def.effect] ?? 0) + 1;
-        if (EFFECTS[def.effect].terrain) stats.terrainBonus++;
-      }
+      const worked = !!def.effect && effectWorked(next, move.cell, def.effect);
+      if (def.effect && worked) stats.effects[def.effect] = (stats.effects[def.effect] ?? 0) + 1;
+      const element = cellBreakdown(next.board, next.terrain, move.cell).parts.some((p) => p.kind === 'element');
+      if (element || (worked && def.effect && EFFECTS[def.effect].terrain)) stats.terrainBonus++;
     }
     state = next;
   }
@@ -188,7 +188,10 @@ export function goalProblems(goal: Goal, ctx: GoalContext): { errors: string[]; 
       break;
     case 'terrain_bonus': {
       const fields = ctx.terrain.filter((t) => t !== 'normal').length;
-      if (terrainEffects.length === 0) errors.push('Die Arena hat kein Gelände, auf dem ein Geländeeffekt wirkt.');
+      if (fields === 0) errors.push('Die Arena hat kein Gelände.');
+      else if (ctx.onlyClass && !terrainEffects.length && !ctx.terrain.includes(CLASS_TERRAIN[ctx.onlyClass] ?? 'normal')) {
+        errors.push(`${CLASS_INFO[ctx.onlyClass].label}-Karten bekommen auf diesem Gelände keinen Bonus.`);
+      }
       else if (goal.n > fields) errors.push(`Die Arena hat nur ${fields} Geländefelder.`);
       break;
     }

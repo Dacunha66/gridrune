@@ -1,5 +1,15 @@
 # Testprotokoll
 
+## Version 1.13 – Element-Bonus auf Gelände
+
+Neue Regel (von dir freigegeben): Jede Karte bekommt auf dem Gelände ihres Elements +1 auf alle Werte – 🌿 Natur auf 🌲 Wald, 🔥 Feuer auf 🌋 Lava, ❄️ Frost auf ❄️ Eis, 🌑 Schatten auf 🌑 Schatten. Krieger und Magier haben kein Element. Geländeeffekte (Wurzelkraft, Flammenherz, Frostpanzer, Schattenmantel) bleiben unverändert und wirken zusätzlich. Beim Auswählen einer Karte leuchten die Felder, auf denen sie ihren Bonus bekommt; der Hinweis unter dem Spielfeld nennt den Bonus, die Kartendetails zeigen „Element … (auf diesem Feld)“. Regeln-Seite, Effekt-Vorschau im Admin und Kampagnen-Ziele „Geländeboni“ angepasst (Mooslichtung jetzt 2, Herz des Waldes 3 Geländeboni).
+
+**Automatische Tests (182, alle bestanden), neu:** Element-Bonus für alle vier Elemente nur auf dem passenden Gelände, kein Bonus für Krieger/Magier, Bonus auch bei der Verteidigung, Element + Geländeeffekt addieren sich, Geländeziel zählt Naturkarten auf Wald; Fairness-Test der Arenen (Startspieler 38–62 %) besteht weiterhin.
+
+**Simulation (je 120 Duelle, mittlere KI, gewöhnliche/ungewöhnliche Naturkarten gegen Krieger):** Klassische Arena 24 % (unverändert), Waldlichtung 24 % → 47 %, Grenzland 24 % → 40 %. Das Gelände zählt also spürbar.
+
+**Browser:** Mooslichtung auf dem iPhone: Schwanenmaid (5/3/7/4) liegt auf Wald mit 6/4/8/5 und leuchtet; Sumpfechse (4/4/3/4) mit Element und Wurzelkraft 6/6/5/6; 6 Waldfelder leuchten beim Auswählen.
+
 ## Version 1.12 – Kampagne (Vorschau ohne Belohnungen)
 
 Neu: Hauptmenü „Kampagne“ mit Weltauswahl und Weltkarte (Stationen: erledigt ✓, verfügbar leuchtend, gesperrt 🔒, Boss groß, 3 Sterne je Station, Fortschritt in %, Sternbalken mit Meilensteinen). Missions-Briefing (Gegner, KI-Stufe, Arena, Sterne-Ziele, geplante Belohnungen als Vorschau, Tipps, Kartenwahl mit 8 Karten aus dem Deck, Leihkarten nur gewöhnlich), Boss-Intro, Ergebnis mit animierten neuen Sternen. KI-Stufen leicht/mittel/schwer (mittel = bisherige KI). Testwelt „Flüsterwald“ mit 10 Missionen und 10 Gegnern aus bestehenden Karten, neue Arenen „Mooslichtung“ und „Herz des Waldes“ (Status „Nur Kampagne“, nie zufällig im Abenteuer oder in der Liga). Admin-Reiter „Kampagnen-Editor“ (Welten, Missionen, Gegner, Prüfen, Test-Start, Bild-Upload mit Größenangaben und Finger-Ausschnitt). Fortschritt vorerst nur auf dem Gerät (eigener Speicherschlüssel `gridrune/campaign-v1`, normaler Spielstand unverändert). Spielregeln, Kartenwerte und Effekte unverändert.

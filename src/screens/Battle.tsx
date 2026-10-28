@@ -7,7 +7,7 @@ import {
   other, outcome, score, totalMoves,
 } from '../game/battle';
 import { Arena, pickArena } from '../game/arenas';
-import { CLASS_INFO, EFFECTS, TERRAIN_INFO, Terrain } from '../game/effects';
+import { CLASS_INFO, CLASS_TERRAIN, EFFECTS, TERRAIN_INFO, Terrain } from '../game/effects';
 import { getCard } from '../game/cards';
 import { CardInspect } from '../components/CardInspect';
 import { BoardArt } from '../components/DesignArt';
@@ -50,12 +50,11 @@ export interface DuelRecord {
   moves: Move[];
 }
 
-const TERRAIN_EFFECTS = new Set(['wurzelkraft', 'flammenherz', 'frostpanzer', 'schattenmantel']);
-
-/** True while a terrain effect of this card is giving a bonus (soft green glow on the card). */
+/** True while the card gets a terrain bonus – its element or a terrain effect (soft green glow on the card). */
 function terrainBonus(cardId: string, info: Breakdown): boolean {
   const effect = getCard(cardId).effect;
-  return !!effect && TERRAIN_EFFECTS.has(effect) && info.parts.some((p) => p.kind === 'aura' && p.source === EFFECTS[effect].name);
+  const terrainEffect = effect && EFFECTS[effect].terrain ? EFFECTS[effect].name : null;
+  return info.parts.some((p) => p.kind === 'element' || (p.kind === 'aura' && p.source === terrainEffect));
 }
 
 /** Full effect text under the large preview (the card itself shows at most three lines). */
@@ -204,6 +203,8 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
   const winner: Side | null = result === 'win' ? 'player' : result === 'loss' ? 'cpu' : null;
   const selectedDef = selected !== null && state.hands.player[selected] ? getCard(state.hands.player[selected].cardId) : null;
   const selectedEffect = selectedDef?.effect ? EFFECTS[selectedDef.effect] : null;
+  /** Terrain of the selected card's element, if this arena has it. */
+  const selectedElement = selectedDef?.cls && CLASS_TERRAIN[selectedDef.cls] && state.terrain.includes(CLASS_TERRAIN[selectedDef.cls]!) ? CLASS_TERRAIN[selectedDef.cls]! : null;
   const hint = phase === 'toss'
     ? 'Ein Münzwurf entscheidet, wer wählen darf.'
     : over
@@ -216,7 +217,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
             ? 'Karte wählen · Feldkarte antippen = Details'
             : selectedEffect
               ? `${CLASS_INFO[selectedEffect.cls].icon} ${selectedEffect.name}: ${selectedEffect.short}`
-              : 'Tippe auf ein freies Feld.';
+              : selectedElement
+                ? `${CLASS_INFO[selectedDef!.cls!].icon} ${CLASS_INFO[selectedDef!.cls!].label}: auf ${TERRAIN_INFO[selectedElement].icon} ${TERRAIN_INFO[selectedElement].label} +1 auf alle Werte`
+                : 'Tippe auf ein freies Feld.';
   const placedAt = state.lastPlaced !== null ? cellCenter(state.lastPlaced) : null;
 
   return (
@@ -262,12 +265,14 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
             const terrain = state.terrain[i];
             const info = cell ? cellBreakdown(state.board, state.terrain, i) : null;
             const isTarget = targeting?.targets.includes(i);
+            // The selected card would get its element bonus here.
+            const elementHere = canDrop && selectedDef?.cls && CLASS_TERRAIN[selectedDef.cls] === terrain;
             return (
               <button
                 key={i}
                 type="button"
                 role="gridcell"
-                className={`cell terrain-${terrain} ${canDrop ? 'droppable' : ''} ${isTarget ? 'targetable' : ''} ${targeting?.cell === i ? 'pending' : ''}`}
+                className={`cell terrain-${terrain} ${canDrop ? 'droppable' : ''} ${elementHere ? 'element-here' : ''} ${isTarget ? 'targetable' : ''} ${targeting?.cell === i ? 'pending' : ''}`}
                 onClick={() => tapCell(i)}
                 disabled={!cell && (over || phase !== 'play')}
                 aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei${terrain !== 'normal' ? `, ${TERRAIN_INFO[terrain].label}` : ''}`}

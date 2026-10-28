@@ -51,3 +51,5 @@ Arenen: Startspieler-Siegquote mit Fels, alle Karten mit Effekt, je 3000 Duelle:
 45,9 % · Vulkankrater 46,6 % · Frostsee 46,5 % · Schattenhain 46,4 % · Grenzland 46,0 % (kein Unentschieden).
 Ranglisten-Arenen müssen spiegelgleich sein (Feld i = Feld 15 − i), jedes Gelände 0× oder ≥2×, höchstens 8
 Geländefelder; der Fels liegt nur auf normalen Feldern.
+
+**Element-Bonus (v1.13):** Karten auf dem Gelände ihres Elements (Natur→Wald, Feuer→Lava, Frost→Eis, Schatten→Schatten) bekommen +1 auf alle Werte; Krieger und Magier haben kein Element. Simulation Naturkarten gegen Krieger: Waldlichtung 24 % → 47 %, Grenzland 24 % → 40 %, Klassische Arena unverändert 24 %. Beobachten: Krieger/Magier sind auf Gelände-Arenen dadurch relativ schwächer.
