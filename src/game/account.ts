@@ -20,6 +20,8 @@ export const NAME_MIN = 2;
 export const NAME_MAX = 20;
 export const PASSWORD_MIN = 8;
 const GUEST_KEY = 'gridrune/guest-v1';
+/** Accounts are switched on once the database and the e-mail links are set up (until then: no sign-in screen). */
+export const ACCOUNTS_LIVE = false;
 /** Where the confirmation and new-password e-mails lead back to. */
 const SITE_URL = 'https://gridrune.netlify.app/';
 
@@ -74,7 +76,7 @@ export function watchAccount(next: (s: AccountState) => void): () => void {
   let stop = () => {};
   let alive = true;
   (async () => {
-    const sb = await client();
+    const sb = ACCOUNTS_LIVE ? await client() : null;
     if (!alive) return;
     if (!sb) return next({ kind: 'unavailable' });
     const { data } = sb.auth.onAuthStateChange((event, session) => {
