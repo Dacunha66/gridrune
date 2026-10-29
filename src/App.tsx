@@ -23,6 +23,7 @@ import { Admin } from './screens/Admin';
 import { League } from './screens/League';
 import { Campaign } from './screens/Campaign';
 import { setDevTools } from './game/cardStyle';
+import { SymbolTips } from './components/SymbolTips';
 import { CampaignContent, mergeContent, setCampaign } from './game/campaign';
 import { CampaignProgress, loadProgress, writeProgress } from './game/campaignProgress';
 
@@ -138,6 +139,7 @@ export function App() {
   return (
     <>
     <PageArt design={pageDesign} />
+    <SymbolTips />
     <div className={`app ${screen.name === 'admin' ? 'app-wide' : ''} ${pageDesign ? 'has-page-art' : ''}`} style={skinStyle(getSkin(save.skins.card).colors)}>
       {screen.name === 'menu' && (
         <Menu

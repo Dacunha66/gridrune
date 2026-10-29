@@ -35,7 +35,7 @@ interface Props {
 }
 
 type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'cardstyle';
-const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', cardstyle: 'Kartendesign (Test)' };
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', cardstyle: 'Kartendesign' };
 /** Tab to come back to (e.g. after testing a mission). */
 let lastTab: Tab = 'cards';
 

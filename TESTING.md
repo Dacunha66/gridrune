@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Version 1.19 – Hybrid Premium für alle, Symbol-Erklärungen
+
+Neu: „Hybrid Premium“ ist jetzt das Kartendesign für alle Spieler. Im Admin-Reiter „Kartendesign“ bleiben nur „Hybrid Premium“ und „Standard (Steampunk)“ (nur auf dem eigenen Gerät, zum Vergleich) sowie „Beide im Vergleich“; die übrigen Testvarianten sind entfernt. Symbol-Erklärungen: Finger auf das Klassen-Wappen oder das Fähigkeits-Medaillon halten (oder antippen, wo die Karte selbst nichts tut, z. B. große Ansicht) → Erklärung mit Klasse, Element und Bonus bzw. Fähigkeitstext; Antippen woanders schließt sie. In der Hand wird beim Halten eines Symbols weder die Karte gewählt noch die große Vorschau geöffnet. Regeln-Seite mit Symbol-Legende (6 Klassen mit Element, 10 Fähigkeiten); Kartendetails zeigen das Element. Spielregeln, Werte und Daten unverändert.
+
+**Automatische Tests:** 186, alle bestanden.
+
+**Browser (iPhone):** Spieler ohne Admin-Rechte sieht Hybrid Premium, kein 🎨-Knopf. Halten des Klassen-Wappens → „Magier · Klasse / Element Runenfeld …“, Karte nicht gewählt, keine große Vorschau; Halten des Medaillons → Naturbund-Text; Tippen woanders schließt; normales Tippen wählt die Karte weiterhin, Halten auf dem Bild öffnet weiterhin die große Vorschau. Legende mit 16 Einträgen. Abenteuer und Kampagne (Tutorial, Boss, Lauf-Mission) ohne Fehler.
+
 ## Version 1.18 – Hybrid Premium Fantasy (Test, nur Admin-Gerät)
 
 Neu im Admin-Reiter „Kartendesign (Test)“: zwei weitere Varianten auf Basis des Hybrid-Designs – „Hybrid Premium Fantasy“ (Werte als plastische Metall-Medaillons) und „Hybrid Premium (dezente Werte)“ (flache, halbtransparente Plaketten). Äußerer Rahmen = Spielerfarbe Rot/Blau (oberste Ebene, wechselt bei Übernahme mit kurzer Animation), innerer Rahmen = Material der Klasse (Holz, glühendes Eisen, Silber, Obsidian, Stahl, arkane Runen), Klasse oben links (Wappenschild), Fähigkeit oben rechts (Medaillon), Namensleiste bis zwei Zeilen mit Silbentrennung, Seltenheit als farbige Linie unter dem Namen. Auf sehr kleinen Karten (iPhone SE) ohne Namensleiste. Ansichten: „Bisheriger Hybrid“, „Hybrid Premium Fantasy“, „Beide im Vergleich“; Beispielfeld mit 8 roten und 8 blauen Karten, Antippen wechselt die Besitzerfarbe (nur in der Vorschau). Bisherige Designs, Spielregeln, Werte und Datenbank unverändert.

@@ -1,7 +1,7 @@
 // Details of a card on the board: class, effect, terrain and every active value change.
 import { BoardCell, cellBreakdown } from '../game/battle';
 import { RARITY_LABEL, getCard } from '../game/cards';
-import { CLASS_INFO, EFFECTS, TERRAIN_INFO, Terrain } from '../game/effects';
+import { CLASS_INFO, CLASS_TERRAIN, EFFECTS, TERRAIN_INFO, Terrain } from '../game/effects';
 import { Card } from './Card';
 import { CLASS_ICON, Icon } from './cardIcons';
 
@@ -31,6 +31,7 @@ export function CardInspect({ board, terrain, cell, onClose }: Props) {
             <p className={`rarity-text rarity-${def.rarity}`}>{RARITY_LABEL[def.rarity]}</p>
             <p>{card.owner === 'player' ? '🔵 Deine Karte' : '🔴 Gegnerkarte'}</p>
             {cls && def.cls && <p className="inspect-cls"><Icon path={CLASS_ICON[def.cls].path} color={CLASS_ICON[def.cls].color} /> {cls.label}</p>}
+            {def.cls && <p className="muted small">Element: {TERRAIN_INFO[CLASS_TERRAIN[def.cls]].icon} {TERRAIN_INFO[CLASS_TERRAIN[def.cls]].label} (+1 auf diesem Gelände)</p>}
             {here !== 'normal' && <p>Feld: {TERRAIN_INFO[here].icon} {TERRAIN_INFO[here].label}</p>}
           </div>
         </div>

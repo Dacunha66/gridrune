@@ -1,5 +1,6 @@
+import { AbilityMedallion, ClassShield } from '../components/cardIcons';
 import { Header } from './Header';
-import { CLASSES, CLASS_INFO, EFFECT_IDS, EFFECTS, TERRAINS, TERRAIN_INFO } from '../game/effects';
+import { CLASSES, CLASS_INFO, CLASS_TERRAIN, EFFECT_IDS, EFFECTS, TERRAINS, TERRAIN_INFO } from '../game/effects';
 
 export function Rules({ onBack }: { onBack: () => void }) {
   return (
@@ -31,6 +32,23 @@ export function Rules({ onBack }: { onBack: () => void }) {
         <p>„Beim Ausspielen“-Effekte wirken <b>vor</b> dem Vergleich und nur einmal. Bedingungen (z. B. „solange eine eigene Karte angrenzt“) werden laufend neu geprüft: Wird eine Nachbarkarte erobert, ändert sich der Bonus sofort – aber es wird dadurch nie nachträglich etwas erobert.</p>
         <p><b>Gelände</b> (farbiger Rand): {TERRAINS.filter((t) => t !== 'normal').map((t) => `${TERRAIN_INFO[t].icon} ${TERRAIN_INFO[t].label}`).join(' · ')}. Liegt eine Karte auf dem Gelände ihres Elements, bekommt sie <b>+1 auf alle Werte</b> (das Feld leuchtet beim Auswählen). Mehr als +1 gibt Gelände nie: Geländeeffekte wie Wurzelkraft wirken nicht zusätzlich zum Element. Der Fels liegt immer auf einem normalen Feld.</p>
         <p>Die Werte stehen in Tintenklecksen. Auf dem Spielfeld zeigt ein dünner Ring, wem die Karte gehört: <b style={{ color: 'var(--player)' }}>blau</b> (deine Karte) oder <b style={{ color: '#ff6b6b' }}>rot</b> (Gegner). <b style={{ color: '#4ade80' }}>Grüner Klecks</b> = gerade verstärkt, <b style={{ color: '#ffb15c' }}>orange Zahl</b> = geschwächt, 🛡 unten links = Schild. Werte bleiben immer zwischen 1 und 10. <b>Tippe eine Karte auf dem Feld an</b>, um Klasse, Effekt und alle Änderungen zu sehen. <b>Halte eine Handkarte gedrückt</b> für eine große Vorschau.</p>
+
+        <h2>Symbole auf den Karten</h2>
+        <p>Halte den Finger auf ein Symbol einer Karte, um die Erklärung zu sehen. <b>Wappenschild oben links</b> = Klasse mit ihrem Element, <b>goldenes Medaillon oben rechts</b> = Fähigkeit.</p>
+        <ul className="symbol-legend">
+          {CLASSES.map((c) => (
+            <li key={c}>
+              <span className="legend-icon"><ClassShield cls={c} /></span>
+              <span><b>{CLASS_INFO[c].label}</b> · Element {TERRAIN_INFO[CLASS_TERRAIN[c]].icon} {TERRAIN_INFO[CLASS_TERRAIN[c]].label}: dort +1 auf alle Werte</span>
+            </li>
+          ))}
+          {EFFECT_IDS.map((id) => (
+            <li key={id}>
+              <span className="legend-icon"><AbilityMedallion effect={id} /></span>
+              <span><b>{EFFECTS[id].name}</b> · {EFFECTS[id].short}</span>
+            </li>
+          ))}
+        </ul>
 
         <h2>3 · Belohnung</h2>
         <p>Sieg: 🪙 100 und die seltenste neue <b>Entdeckung</b> aus deinem Lauf wird dauerhaft freigeschaltet. Hattest du sie schon, gibt es 🪙 50 extra.</p>

@@ -1,27 +1,19 @@
-// Card design test (Kartendesign 2.0): which card layout this device shows. Only the admin can switch it
-// (admin area or the 🎨 button in the duel); it is stored on this device only – never in the save, never
-// for other players. Only the look changes: values, rules and collections stay exactly the same.
+// Card design: everyone sees "Hybrid Premium". The admin can switch this device back to the former
+// steampunk design to compare (admin area or the 🎨 button in the duel); stored on this device only –
+// never in the save, never for other players. Only the look changes: values, rules and collections stay the same.
 import { useSyncExternalStore } from 'react';
 
-export type CardStyle = 'current' | 'classic' | 'compact' | 'split' | 'hybrid' | 'premium' | 'premiumLite';
-export const CARD_STYLES: CardStyle[] = ['current', 'classic', 'compact', 'split', 'hybrid', 'premium', 'premiumLite'];
+export type CardStyle = 'premium' | 'current';
+export const CARD_STYLES: CardStyle[] = ['premium', 'current'];
+/** Design every player sees. */
+export const DEFAULT_CARD_STYLE: CardStyle = 'premium';
 export const CARD_STYLE_LABEL: Record<CardStyle, string> = {
-  current: 'Aktuell (Steampunk)',
-  classic: 'Design 2 klassisch',
-  compact: 'Design 2 kompakt',
-  split: 'Design 3 geteilt',
-  hybrid: 'Design 4 hybrid',
-  premium: 'Hybrid Premium Fantasy',
-  premiumLite: 'Hybrid Premium (dezente Werte)',
+  premium: 'Hybrid Premium',
+  current: 'Standard (Steampunk)',
 };
 export const CARD_STYLE_HINT: Record<CardStyle, string> = {
-  current: 'Das Design, das alle Spieler gerade sehen.',
-  classic: 'Werte an den Rändern, Name unten, Klasse oben links, Fähigkeit oben rechts.',
-  compact: 'Wie klassisch, größere Werte für kleine Bildschirme; auf dem Spielfeld ohne Namen.',
-  split: 'Große Illustration oben, eigener Wertebereich darunter (Werte als Kreuz).',
-  hybrid: 'Illustration über die ganze Karte, kompakte Infoleiste unten.',
   premium: 'Außen der Spielerrahmen (rot/blau), innen ein Klassenrahmen aus passendem Material, Werte als Metall-Medaillons, Klasse oben links, Fähigkeit oben rechts, Namensleiste mit bis zu zwei Zeilen.',
-  premiumLite: 'Wie Premium, aber mit flacheren, halbtransparenten Wertplaketten – mehr Bild sichtbar.',
+  current: 'Das bisherige Steampunk-Design (zum Vergleich).',
 };
 
 export const CARD_STYLE_KEY = 'gridrune/dev-card-style';
@@ -37,9 +29,9 @@ function storage(): Storage | null {
 function read(): CardStyle {
   try {
     const v = storage()?.getItem(CARD_STYLE_KEY);
-    return CARD_STYLES.includes(v as CardStyle) ? (v as CardStyle) : 'current';
+    return CARD_STYLES.includes(v as CardStyle) ? (v as CardStyle) : DEFAULT_CARD_STYLE;
   } catch {
-    return 'current';
+    return DEFAULT_CARD_STYLE;
   }
 }
 

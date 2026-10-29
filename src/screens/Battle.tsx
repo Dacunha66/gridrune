@@ -11,6 +11,7 @@ import { CLASS_INFO, CLASS_TERRAIN, EFFECTS, TERRAIN_INFO, Terrain } from '../ga
 import { getCard } from '../game/cards';
 import { CardInspect } from '../components/CardInspect';
 import { BoardArt } from '../components/DesignArt';
+import { isSymbolTipOpen } from '../components/SymbolTips';
 import { ACTIVE, layoutVars } from '../game/designs';
 import { AiOptions, chooseCpuMove, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
@@ -99,7 +100,8 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
         if (pressTimer.current) clearTimeout(pressTimer.current);
         pressTimer.current = setTimeout(() => {
           pressedLong.current = true;
-          show();
+          // Holding a symbol shows its explanation instead of the large card.
+          if (!isSymbolTipOpen()) show();
         }, 420);
       },
       onPointerUp: end,

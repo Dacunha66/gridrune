@@ -1,6 +1,5 @@
-// Admin: card design test (Kartendesign 2.0). Switches the card layout on this device only and shows
-// a fully occupied 4×4 board in phone sizes. Other players keep the current design. Tapping a board card
-// switches its owner colour in this preview only (nothing in any game or save changes).
+// Admin: card design. Everyone sees "Hybrid Premium"; this device can switch to the former steampunk design
+// to compare. Tapping a board card switches its owner colour in this preview only (nothing in any game changes).
 import { useMemo, useState } from 'react';
 import { Card } from '../components/Card';
 import { CARDS, CardDef } from '../game/cards';
@@ -55,7 +54,6 @@ export function CardStyleView() {
   const [board, setBoard] = useState<Sample[]>(initial);
   const hand = board.slice(0, 5);
   const flip = (i: number) => setBoard((b) => b.map((x, k) => (k === i ? { ...x, owner: x.owner === 'player' ? 'cpu' : 'player' } : x)));
-  const reds = board.filter((b) => b.owner === 'cpu').length;
 
   const boardOf = (st: CardStyle | undefined, w: number) => (
     <>
@@ -78,28 +76,21 @@ export function CardStyleView() {
   return (
     <div className="scroll card-style-admin">
       <p className="muted small">
-        Nur auf diesem Gerät: Andere Spieler sehen weiter das aktuelle Design. Im Duell wechselst du mit dem 🎨-Knopf oben rechts.
-        Spielregeln, Werte und Sammlungen bleiben unverändert. <b>Karte im Beispielfeld antippen = Besitzer Rot/Blau wechseln</b> (nur hier).
+        Alle Spieler sehen <b>Hybrid Premium</b>. Hier kannst du nur auf diesem Gerät zum Vergleich auf das Standard-Design umschalten
+        (im Duell mit dem 🎨-Knopf). <b>Karte im Beispielfeld antippen = Besitzer Rot/Blau wechseln</b> (nur hier).
+        Symbol gedrückt halten = Erklärung.
       </p>
       <div className="segmented style-view-seg" role="radiogroup" aria-label="Ansicht">
-        <button type="button" role="radio" aria-checked={view === 'device' && style === 'hybrid'} className={`seg ${view === 'device' && style === 'hybrid' ? 'active' : ''}`} onClick={() => { setView('device'); setCardStyle('hybrid'); }}>Bisheriger Hybrid</button>
-        <button type="button" role="radio" aria-checked={view === 'device' && style === 'premium'} className={`seg ${view === 'device' && style === 'premium' ? 'active' : ''}`} onClick={() => { setView('device'); setCardStyle('premium'); }}>Hybrid Premium Fantasy</button>
+        {CARD_STYLES.map((s) => (
+          <button key={s} type="button" role="radio" aria-checked={view === 'device' && style === s} className={`seg ${view === 'device' && style === s ? 'active' : ''}`} onClick={() => { setView('device'); setCardStyle(s); }}>
+            {CARD_STYLE_LABEL[s]}
+          </button>
+        ))}
         <button type="button" role="radio" aria-checked={view === 'compare'} className={`seg ${view === 'compare' ? 'active' : ''}`} onClick={() => setView('compare')}>Beide im Vergleich</button>
       </div>
-      {view === 'device' && (
+      {view === 'device' ? (
         <>
-          <details className="upload-info">
-            <summary>Alle Designs ({CARD_STYLE_LABEL[style]})</summary>
-            <div className="segmented style-seg" role="radiogroup" aria-label="Kartendesign">
-              {CARD_STYLES.map((s) => (
-                <button key={s} type="button" role="radio" aria-checked={style === s} className={`seg ${style === s ? 'active' : ''}`} onClick={() => setCardStyle(s)}>
-                  {CARD_STYLE_LABEL[s]}
-                </button>
-              ))}
-            </div>
-          </details>
           <p className="small">{CARD_STYLE_HINT[style]}</p>
-          <p className="muted small">Im Feld: {16 - reds} blau, {reds} rot.</p>
           {([['iPhone', 310], ['iPhone SE', 230]] as const).map(([label, w]) => (
             <section key={label} className="style-preview">
               <h3>{label} – volles Spielfeld</h3>
@@ -107,25 +98,15 @@ export function CardStyleView() {
             </section>
           ))}
         </>
-      )}
-      {view === 'compare' && (
-        <>
-          <div className="segmented style-seg" role="radiogroup" aria-label="Premium-Variante">
-            {(['premium', 'premiumLite'] as CardStyle[]).map((s) => (
-              <button key={s} type="button" role="radio" aria-checked={style === s} className={`seg ${style === s ? 'active' : ''}`} onClick={() => setCardStyle(s)}>{CARD_STYLE_LABEL[s]}</button>
-            ))}
-          </div>
-          <div className="compare-wrap">
-            <section className="style-preview">
-              <h3>Bisheriger Hybrid</h3>
-              {boardOf('hybrid', 310)}
+      ) : (
+        <div className="compare-wrap">
+          {CARD_STYLES.map((s) => (
+            <section key={s} className="style-preview">
+              <h3>{CARD_STYLE_LABEL[s]}</h3>
+              {boardOf(s, 310)}
             </section>
-            <section className="style-preview">
-              <h3>{CARD_STYLE_LABEL[style === 'premiumLite' ? 'premiumLite' : 'premium']}</h3>
-              {boardOf(style === 'premiumLite' ? 'premiumLite' : 'premium', 310)}
-            </section>
-          </div>
-        </>
+          ))}
+        </div>
       )}
     </div>
   );
