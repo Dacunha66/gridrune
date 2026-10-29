@@ -126,4 +126,4 @@ Was getestet ist und was noch offen ist, steht in [TESTING.md](TESTING.md).
 
 ## Veröffentlichung im Web (Netlify)
 
-Das Spiel läuft unter **https://gridrune.netlify.app**. Netlify baut es bei jedem Hochladen in den Zweig `claude/project-card-rush-dev-84c1jl` automatisch neu (`npm run build`, Ordner `dist`, siehe `netlify.toml`). Ohne Supabase-Verbindung nutzt diese Version die eingebauten Karten und speichert den Fortschritt nur im Browser.
+Das Spiel läuft unter **https://gridrune.netlify.app**. Netlify baut es bei jedem Hochladen in den Zweig `claude/project-card-rush-dev-84c1jl` automatisch neu (`npm run build`, Ordner `dist`, siehe `netlify.toml`). Diese Version liest Karten, Designs, Runen und Kampagnen-Inhalte aus Supabase (Tabelle `content_docs`, Bilder im Speicher `game-images`); ohne Verbindung spielt sie mit den eingebauten Karten. Der Fortschritt liegt vorerst nur im Browser (Spielerkonten folgen).

@@ -1,5 +1,18 @@
 # Testprotokoll
 
+## Web-Version Phase 1 – gridrune.netlify.app mit Supabase
+
+Neu:
+- Die Web-Version (Netlify) liest Karten, Designs, Runen, Arenen, Kampagnen-Inhalte und Einstellungen aus Supabase (Tabelle `content_docs`, gleiche Daten-Form wie im claude.ai-Spiel). Bilder kommen aus dem Supabase-Bildspeicher `game-images`. Die claude.ai-Version ist unverändert (enthält keinen Supabase-Code).
+- Datenbank-Regeln: Alle lesen veröffentlichte Inhalte, Entwürfe nur Admins; schreiben, Bilder hochladen/löschen nur Admins (Tabelle `admins`, geprüft in der Datenbank).
+- Übernahme aus dem claude.ai-Spiel: 101 Karten, 3 Designs, Design-Einstellung, 2 bearbeitete Runen; 39 Bilder (36 MB) über eine einmalige, per Geheimschlüssel geschützte Import-Funktion hochgeladen und danach abgeschaltet. Stichprobe: Bild identisch (SHA-256).
+- Fehlt ein Kartenbild, zeigt die Karte ihr Emoji; fehlende Designbilder werden ausgeblendet.
+- Migrationen 004–007 eingespielt (Admin-Prüfung intern, Runenfeld/Schlachtfeld, Runen-Tabellen, Inhalte/Bildspeicher). Supabase-Sicherheitsprüfung: keine Warnungen.
+
+**Automatische Tests:** 221, alle bestanden.
+
+**Browser (iPhone-Größe, live auf gridrune.netlify.app gegen die echte Datenbank):** Sammlung zeigt 101 Karten (24 freigeschaltet) mit den echten Namen; alle 16 sichtbaren Kartenbilder geladen; Seitenhintergrund (Design „Hintergrund Sterne“) geladen; keine Fehler, keine fehlgeschlagenen Anfragen. Ohne Datenbank-Verbindung spielt die Seite mit den eingebauten Karten weiter (Menü, Kampagne, Duell getestet).
+
 ## Version 1.24 – Runen werden in der Kampagne freigespielt
 
 Neu (nach deiner Entscheidung):
