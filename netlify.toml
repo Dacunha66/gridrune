@@ -1,0 +1,7 @@
+# Netlify: builds the game from this repository (npm run build) and serves the dist folder.
+[build]
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
