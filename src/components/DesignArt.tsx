@@ -7,7 +7,8 @@ import { Design, ImageFit, fitStyle } from '../game/designs';
 export function DesignImage({ src, fit, className = '' }: { src: string; fit: ImageFit; className?: string }) {
   const f = fitStyle(fit);
   const style: CSSProperties = { objectPosition: f.objectPosition, transform: f.transform, transformOrigin: f.transformOrigin };
-  return <img className={`design-img ${className}`} src={src} alt="" draggable={false} style={style} />;
+  // A picture that cannot be loaded is simply left out (the normal background shows).
+  return <img className={`design-img ${className}`} src={src} alt="" draggable={false} style={style} onError={(e) => { e.currentTarget.style.display = 'none'; }} />;
 }
 
 /** Picture under the 4×4 grid (first child of .board). */

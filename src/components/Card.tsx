@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, useState } from 'react';
 import { CardDef, RARITY_LABEL, getCard } from '../game/cards';
 import type { Side } from '../game/battle';
 import { CLASS_INFO, CardClass, EFFECTS } from '../game/effects';
@@ -125,7 +125,7 @@ export function Card({
       <span className="cs-frame" aria-hidden="true" />
       {premium && <ClassFrame cls={c.cls} />}
       <span className="art" aria-hidden="true">
-        {locked ? <span className="art-emoji">🔒</span> : c.image ? <img src={c.image} alt="" draggable={false} /> : <span className="art-emoji">{c.art}</span>}
+        {locked ? <span className="art-emoji">🔒</span> : <CardArt image={c.image} art={c.art} />}
       </span>
       {DIRS.map((d, i) => {
         const delta = values ? effective(i) - (base ? base[i] : c[d]) : mod;
@@ -156,7 +156,7 @@ export function Card({
         <i className="rivet r1" /><i className="rivet r2" /><i className="rivet r3" /><i className="rivet r4" />
       </span>
       <span className="art" aria-hidden="true">
-        {locked ? <span className="art-emoji">🔒</span> : c.image ? <img src={c.image} alt="" draggable={false} /> : <span className="art-emoji">{c.art}</span>}
+        {locked ? <span className="art-emoji">🔒</span> : <CardArt image={c.image} art={c.art} />}
       </span>
       {detail && !locked && (
         <span className="parchment">
@@ -226,3 +226,10 @@ const ORNAMENT: Record<CardClass, string> = {
   krieger: 'M3 17h14M3 17V7M3 7l4 4M8 15a1.4 1.4 0 1 0 0.01 0M14 15a1.4 1.4 0 1 0 0.01 0', // riveted bracket
   magier: 'M3 17l4-12 4 12M5 12h4M13 5v12l4-4', // runes
 };
+
+/** Card picture; if it cannot be loaded (missing or offline), the card shows its emoji instead. */
+function CardArt({ image, art }: { image?: string; art: string }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!image || failed === image) return <span className="art-emoji">{art}</span>;
+  return <img src={image} alt="" draggable={false} onError={() => setFailed(image)} />;
+}
