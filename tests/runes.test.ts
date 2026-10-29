@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { BUILTIN_CARDS, CardDef, setCardCatalog } from '../src/game/cards';
 import { BattleState, BoardCell, CELL_COUNT, applyMove, cellBreakdown, createBattle, isGameOver, toHand } from '../src/game/battle';
-import { BUILTIN_RUNES, RUNES, applyAction, applyRune, availableRunes, parseRune, runeChoices, runeProblem, runeRules, setRunes } from '../src/game/runes';
+import { BUILTIN_RUNES, RUNES, applyAction, applyRune, availableRunes, echoCapturable, parseRune, runeChoices, runeProblem, runeRules, setRunes } from '../src/game/runes';
+import { runeOptions } from '../src/game/ai';
 import { CardClass, EffectId, Terrain } from '../src/game/effects';
 import { duelStats } from '../src/game/campaignGoals';
 
@@ -12,6 +13,8 @@ const TEST: CardDef[] = [
   card('f5', [5, 5, 5, 5], 'feuer'), card('f9', [9, 9, 9, 10], 'feuer'), card('n5', [5, 5, 5, 5], 'natur'), card('n1', [1, 1, 1, 1], 'natur'),
   card('k5', [5, 5, 5, 5], 'krieger'), card('t9', [9, 1, 2, 3], 'frost'), card('mb', [3, 5, 3, 6], 'magier', 'magische_barriere'),
   card('kw', [6, 6, 6, 6], 'feuer', 'kampfgeist'),
+  card('k9', [9, 9, 9, 9], 'krieger', 'kettenuebernahme'),
+  card('l66', [1, 6, 6, 1], 'krieger'),
 ];
 setCardCatalog([...BUILTIN_CARDS, ...TEST]);
 afterEach(() => {
@@ -95,6 +98,59 @@ describe('Rune des Nachhalls', () => {
     const s = setup({ 5: at('n5', 'player'), 15: at('k5', 'cpu') }, 'rn02');
     expect(runeChoices(s, 'player', RUNES.find((r) => r.id === 'rn02')!).cells).toEqual([]);
     expect(runeProblem(s, { rune: true, cell: 5 })).not.toBeNull();
+  });
+});
+
+describe('Rune des Nachhalls: höchstens eine Übernahme, nie eine Kette', () => {
+  // Own k9 (9 on every side) in the middle at 5, weak enemies on 1, 4, 6 (all capturable), l66 chain bait on 7.
+  const crowd = () => setup({ 5: at('k9', 'player'), 1: at('n1', 'cpu'), 4: at('n1', 'cpu'), 6: at('l66', 'cpu'), 7: at('l66', 'cpu') }, 'rn02');
+  it('bei mehreren möglichen Übernahmen muss der Spieler genau eine wählen', () => {
+    const s = crowd();
+    expect(echoCapturable(s, 5).sort()).toEqual([1, 4, 6]);
+    expect(runeProblem(s, { rune: true, cell: 5 })).toMatch(/Welche|Wähle, welche/);
+    expect(runeProblem(s, { rune: true, cell: 5, capture: [1, 4] })).not.toBeNull();
+    expect(runeProblem(s, { rune: true, cell: 5, capture: [7] })).not.toBeNull();
+    const a = applyRune(s, { rune: true, cell: 5, capture: [4] });
+    expect([1, 4, 6].map((c) => a.board[c]!.owner)).toEqual(['cpu', 'player', 'cpu']);
+    expect(a.lastFlips).toEqual([4]);
+    expect(a.lastChain).toEqual([]);
+  });
+  it('die Kettenübernahme der angreifenden Karte löst durch Nachhall keine Kette aus', () => {
+    const s = crowd();
+    // Capturing l66 on 6 would let it attack l66 on 7 in a chain – Nachhall must not do that.
+    const a = applyRune(s, { rune: true, cell: 5, capture: [6] });
+    expect(a.board[6]!.owner).toBe('player');
+    expect(a.board[7]!.owner).toBe('cpu');
+    expect(a.lastChain).toEqual([]);
+    expect(a.log[a.log.length - 1].text).toMatch(/Nachhall.*erobert 1/);
+  });
+  it('nur eine mögliche Übernahme: keine Auswahl nötig (und keine erlaubt)', () => {
+    const s = setup({ 5: at('k9', 'player'), 6: at('n1', 'cpu') }, 'rn02');
+    expect(runeProblem(s, { rune: true, cell: 5 })).toBeNull();
+    expect(runeProblem(s, { rune: true, cell: 5, capture: [6] })).toMatch(/nichts zu wählen/);
+    expect(applyRune(s, { rune: true, cell: 5 }).board[6]!.owner).toBe('player');
+  });
+  it('Höchstzahl im Admin einstellbar (z. B. 2)', () => {
+    setRunes([{ ...BUILTIN_RUNES[1], maxTargets: 2 }]);
+    const s = crowd();
+    expect(runeProblem(s, { rune: true, cell: 5, capture: [1] })).toBeNull();
+    const a = applyRune(s, { rune: true, cell: 5, capture: [1, 6] });
+    expect([1, 4, 6].map((c) => a.board[c]!.owner)).toEqual(['player', 'cpu', 'player']);
+    expect(a.board[7]!.owner).toBe('cpu');
+  });
+  it('die KI wählt nur gültige Nachhall-Einsätze', () => {
+    const s = crowd();
+    const opts = runeOptions(s);
+    expect(opts.length).toBe(3);
+    for (const o of opts) expect(runeProblem(s, o)).toBeNull();
+  });
+  it('Kettenübernahme beim Legen bleibt unabhängig davon (eigene Regel, eigene Grenze)', () => {
+    let s = setup({ 1: at('l66', 'cpu'), 2: at('l66', 'cpu'), 3: at('l66', 'cpu') }, 'rn02');
+    s = { ...s, hands: { ...s.hands, player: toHand(['k9']) } };
+    const placed = applyMove(s, { handIndex: 0, cell: 0 });
+    expect(placed.lastChain.map((c) => c.cell)).toEqual([2, 3]);
+    // Every card is captured once: no double captures.
+    expect(new Set(placed.lastFlips).size).toBe(placed.lastFlips.length);
   });
 });
 

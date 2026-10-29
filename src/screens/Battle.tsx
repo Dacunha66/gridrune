@@ -16,7 +16,7 @@ import { ACTIVE, layoutVars } from '../game/designs';
 import { AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
-import { Action, BUILTIN_RUNES, RuneDef, RuneUse, applyRune, findRune, runeChoices, runeProblem, runeRules } from '../game/runes';
+import { Action, BUILTIN_RUNES, RuneDef, RuneUse, applyRune, echoCapturable, findRune, runeChoices, runeProblem, runeRules } from '../game/runes';
 import { RuneBadge } from '../components/RuneBadge';
 import { CardClass } from '../game/effects';
 import { CARD_STYLE_LABEL, cycleCardStyle, useCardStyle, useDevTools } from '../game/cardStyle';
@@ -130,7 +130,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   /** Wirbelwind: card shown on the field, waiting for the orientation and the confirmation. */
   const [placing, setPlacing] = useState<{ hand: number; cell: number; rot: number; target?: number } | null>(null);
   /** Rune activation in progress: chosen cards, class (Fluch) and direction (Verdrehung). */
-  const [runeMode, setRuneMode] = useState<{ cells: number[]; cls?: CardClass; dir?: 1 | -1 } | null>(null);
+  const [runeMode, setRuneMode] = useState<{ cells: number[]; cls?: CardClass; dir?: 1 | -1; capture?: number[] } | null>(null);
   /** Rune details sheet (own or the opponent's). */
   const [runeSheet, setRuneSheet] = useState<Side | null>(null);
   const [showLog, setShowLog] = useState(false);
@@ -232,12 +232,16 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   /** The rune use as chosen so far (complete or not). */
   const runeUse: RuneUse | null = runeMode && myRuneRules
     ? myRuneRules.effect === 'twist' || myRuneRules.effect === 'echo'
-      ? { rune: true, cell: runeMode.cells[0], ...(runeMode.dir ? { dir: runeMode.dir } : {}) }
+      ? { rune: true, cell: runeMode.cells[0], ...(runeMode.dir ? { dir: runeMode.dir } : {}), ...(runeMode.capture?.length ? { capture: runeMode.capture } : {}) }
       : { rune: true, cells: runeMode.cells, ...(runeMode.cls ? { cls: runeMode.cls } : {}) }
     : null;
   const runeReady = !!runeUse && runeProblem(state, runeUse) === null;
+  /** Nachhall: enemy cards that could be taken – the player picks when there are more than allowed. */
+  const echoChoice = runeMode && myRuneRules?.effect === 'echo' && runeMode.cells.length === 1 ? echoCapturable(state, runeMode.cells[0], 'player') : [];
+  const echoMustPick = !!myRuneRules && echoChoice.length > myRuneRules.maxTargets;
   /** Cards that can be chosen right now during a rune activation. */
   const runeSelectable = (i: number): boolean => {
+    if (echoMustPick && echoChoice.includes(i)) return true;
     if (!runeMode || !myRuneRules || !runeChoice || !runeChoice.cells.includes(i)) return false;
     if (myRuneRules.effect === 'curse') return !!runeMode.cls && getCard(state.board[i]!.cardId).cls === runeMode.cls;
     return true;
@@ -246,8 +250,15 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   function tapRuneCell(cell: number) {
     if (!runeMode || !myRuneRules) return;
     if (!runeSelectable(cell)) return;
+    // Nachhall: after the own card, choose which enemy card is taken (only when more than allowed are possible).
+    if (echoMustPick && echoChoice.includes(cell)) {
+      const cur = runeMode.capture ?? [];
+      const next = cur.includes(cell) ? cur.filter((c) => c !== cell) : myRuneRules.maxTargets === 1 ? [cell] : [...cur, cell].slice(0, myRuneRules.maxTargets);
+      setRuneMode({ ...runeMode, capture: next });
+      return;
+    }
     const single = myRuneRules.effect === 'twist' || myRuneRules.effect === 'echo';
-    if (single) setRuneMode({ ...runeMode, cells: runeMode.cells[0] === cell ? [] : [cell] });
+    if (single) setRuneMode({ ...runeMode, cells: runeMode.cells[0] === cell ? [] : [cell], capture: [] });
     else if (runeMode.cells.includes(cell)) setRuneMode({ ...runeMode, cells: runeMode.cells.filter((c) => c !== cell) });
     else if (runeMode.cells.length < myRuneRules.maxTargets) setRuneMode({ ...runeMode, cells: [...runeMode.cells, cell] });
   }
@@ -304,7 +315,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   const hint = phase === 'toss'
     ? 'Ein Münzwurf entscheidet, wer wählen darf.'
     : runeMode && myRuneRules
-      ? runeHint(myRuneRules, runeMode)
+      ? runeHint(myRuneRules, runeMode, echoMustPick)
       : placing
         ? '↻ Wirbelwind: Ausrichtung wählen, dann „Legen“'
         : over
@@ -388,7 +399,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
             const terrain = state.terrain[i];
             const info = cell ? cellBreakdown(state.board, state.terrain, i) : null;
             const isTarget = targeting?.targets.includes(i) || (runeMode && runeSelectable(i));
-            const runePicked = runeMode?.cells.includes(i);
+            const runePicked = runeMode?.cells.includes(i) || runeMode?.capture?.includes(i);
             const ghost = placing && placing.cell === i && placingCard;
             // The selected card would get its element bonus here.
             const elementHere = canDrop && selectedDef?.cls && CLASS_TERRAIN[selectedDef.cls] === terrain;
@@ -610,12 +621,14 @@ function CoinToss({ reducedMotion, rng, onDecide }: { reducedMotion: boolean; rn
   );
 }
 
-function runeHint(r: RuneDef, mode: { cells: number[]; cls?: CardClass; dir?: 1 | -1 }): string {
+function runeHint(r: RuneDef, mode: { cells: number[]; cls?: CardClass; dir?: 1 | -1; capture?: number[] }, mustPick = false): string {
   switch (r.effect) {
     case 'twist':
       return mode.cells.length === 0 ? 'ᚱ Eigene Karte zum Drehen antippen' : mode.dir ? 'ᚱ ✓ bestätigt die Drehung' : 'ᚱ Richtung: ↺ links oder ↻ rechts';
     case 'echo':
-      return mode.cells.length === 0 ? 'ᚱ Eigene Karte antippen, die erneut angreift' : 'ᚱ ✓ – greift die Nachbarn erneut an';
+      if (mode.cells.length === 0) return 'ᚱ Eigene Karte antippen, die erneut angreift';
+      if (mustPick && !(mode.capture?.length)) return r.maxTargets === 1 ? 'ᚱ Welche Gegnerkarte übernehmen? Antippen' : `ᚱ Bis zu ${r.maxTargets} Gegnerkarten zum Übernehmen antippen`;
+      return `ᚱ ✓ greift erneut an · max. ${r.maxTargets} Übernahme${r.maxTargets > 1 ? 'n' : ''}, keine Kette`;
     case 'empower':
       return `ᚱ Eigene Karten antippen (${mode.cells.length}/${r.maxTargets}), dann ✓`;
     case 'curse':

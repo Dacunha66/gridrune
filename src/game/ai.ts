@@ -10,7 +10,7 @@ import {
 import { CARDS, Rarity, getCard, pickByRarity, virtualCard } from './cards';
 import { CardClass } from './effects';
 import { Rng } from './rng';
-import { RuneUse, applyRune, findRune, runeChoices, runeProblem, runeRules } from './runes';
+import { RuneUse, applyRune, echoCapturable, findRune, runeChoices, runeProblem, runeRules } from './runes';
 
 /**
  * Strength of the computer opponent (campaign). Every level plays by the same rules and values –
@@ -182,7 +182,13 @@ export function runeOptions(state: BattleState): RuneUse[] {
   };
   const uses: RuneUse[] = [];
   if (r.effect === 'twist') for (const c of cells) for (const dir of [1, -1] as const) uses.push({ rune: true, cell: c, dir });
-  if (r.effect === 'echo') for (const c of cells) uses.push({ rune: true, cell: c });
+  if (r.effect === 'echo') {
+    for (const c of cells) {
+      const can = echoCapturable(state, c);
+      if (can.length > r.maxTargets) for (const sub of subsets(can).filter((x) => x.length === r.maxTargets)) uses.push({ rune: true, cell: c, capture: sub });
+      else uses.push({ rune: true, cell: c });
+    }
+  }
   if (r.effect === 'empower') for (const sub of subsets(cells)) uses.push({ rune: true, cells: sub });
   if (r.effect === 'curse') {
     for (const cls of classes) for (const sub of subsets(cells.filter((c) => getCard(state.board[c]!.cardId).cls === cls))) uses.push({ rune: true, cls, cells: sub });

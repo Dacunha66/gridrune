@@ -72,4 +72,6 @@ Je 400 Duelle, mittlere KI auf beiden Seiten, zufällige Hände aus gewöhnliche
 | Rune des Fluchs | 51 % | 26 % | mittel |
 | Nachhall gegen Fluch | 48 % | 31 % | |
 
-Folgerungen: Stärke-Werte für die Balancing-Hinweise im Karteneditor: Wirbelwind Σ 2, Kettenübernahme Σ 7 (eine Karte mit Kettenübernahme braucht etwa 2 Punkte weniger pro Seite als eine Karte gleicher Seltenheit ohne Fähigkeit). Offene Entscheidung: Nachhall eventuell auf „höchstens 1 Übernahme“ begrenzen; Glut ist nur in Feuer-Decks stark.
+Folgerungen: Stärke-Werte für die Balancing-Hinweise im Karteneditor: Wirbelwind Σ 2, Kettenübernahme Σ 7 (eine Karte mit Kettenübernahme braucht etwa 2 Punkte weniger pro Seite als eine Karte gleicher Seltenheit ohne Fähigkeit). Glut ist nur in Feuer-Decks stark.
+
+**v1.21:** Nachhall auf höchstens 1 Übernahme begrenzt (Spieler wählt, keine Kette, im Admin 1–3). Neue Simulation (400 Duelle, Karten des Spiels): ohne Rune 41 % / 35 %, Nachhall 63 % / 20 % – gleich mit Höchstzahl 3, da Mehrfach-Übernahmen selten sind (6 von 400 Duellen); Fluch 55 % / 25 %. Der Vorteil von Nachhall kommt vom zusätzlichen Angriff selbst.

@@ -52,7 +52,7 @@ Empfohlene Bildgrößen: Weltkarte und Boss-Hintergrund 1290 × 2796 px, Welt-Ka
 ### Runen und neue Fähigkeiten (Test)
 
 Freigabe im Admin-Reiter **Runen**: „Aus“, „Nur Admin (Test)“ oder „Alle Spieler“ – getrennt für Runen und für die Fähigkeiten Wirbelwind/Kettenübernahme. Bis zur Freigabe spielen Spieler unverändert.
-- **Runen:** Im Hauptmenü unter „Runen“ ausrüsten. Im Duell einmal im eigenen Zug vor dem Legen einsetzen (Runenleiste oben, antippen → Aktivieren → Ziel wählen → ✓). Die Rune bleibt in der Sammlung. Grundrunen: Verdrehung, Nachhall, Glut, Fluch – für alle von Anfang an; weitere Runen über die Kampagne.
+- **Runen:** Im Hauptmenü unter „Runen“ ausrüsten. Im Duell einmal im eigenen Zug vor dem Legen einsetzen (Runenleiste oben, antippen → Aktivieren → Ziel wählen → ✓). Die Rune bleibt in der Sammlung. Grundrunen: Verdrehung, Nachhall, Glut, Fluch – für alle von Anfang an; weitere Runen über die Kampagne. Nachhall: die gewählte Karte greift erneut an, höchstens 1 Übernahme (bei mehreren wählst du), nie eine Kettenreaktion.
 - **Wirbelwind:** Karte wählen, Feld antippen, mit ↺ ↻ drehen, „Legen“.
 - **Kettenübernahme:** eroberte Karten greifen weiter an (Stufen im Admin einstellbar).
 - **Spielprotokoll:** 📜 in der Runenleiste.

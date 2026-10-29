@@ -33,7 +33,7 @@ export interface RuneDef {
   effect: RuneEffect;
   /** Value change for empower/curse (1–2). */
   amount: number;
-  /** How many cards may be chosen (empower/curse, 1–3). */
+  /** empower/curse: how many cards may be chosen; echo: how many cards may be captured at most (1–3). */
   maxTargets: number;
   /** empower: only own cards of this class. */
   cls?: CardClass;
@@ -63,7 +63,7 @@ function rune(id: string, name: string, effect: RuneEffect, glyph: string, descr
 /** The four basic runes – every player has them from the start (fair in ranked play). */
 export const BUILTIN_RUNES: readonly RuneDef[] = [
   rune('rn01', 'Rune der Verdrehung', 'twist', 'ᛃ', 'Drehe die Werte einer eigenen gelegten Karte einmal um 90° nach links oder rechts. Es wird dabei nicht neu gekämpft.'),
-  rune('rn02', 'Rune des Nachhalls', 'echo', 'ᛇ', 'Eine eigene gelegte Karte greift ihre angrenzenden Gegnerkarten erneut an – normale Regeln, keine Kettenreaktion.'),
+  rune('rn02', 'Rune des Nachhalls', 'echo', 'ᛇ', 'Eine eigene gelegte Karte greift ihre angrenzenden Gegnerkarten erneut an – normale Regeln, höchstens eine Übernahme (bei mehreren wählst du), keine Kettenreaktion.'),
   rune('rn03', 'Rune der Glut', 'empower', 'ᚲ', 'Bis zu zwei eigene Feuerkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'feuer', maxTargets: 2 }),
   rune('rn04', 'Rune des Fluchs', 'curse', 'ᚦ', 'Wähle eine gegnerische Klasse: Bis zu zwei Gegnerkarten dieser Klasse auf dem Spielfeld erhalten −1 auf alle vier Werte bis Duellende.', { maxTargets: 2 }),
 ];
@@ -101,6 +101,8 @@ export interface RuneUse {
   cell?: number;
   /** twist: −1 = left, 1 = right. */
   dir?: -1 | 1;
+  /** echo: the enemy cards to take when more could be captured than allowed. */
+  capture?: number[];
   /** empower/curse: the chosen cards. */
   cells?: number[];
   /** curse: the chosen enemy class. */
@@ -134,6 +136,17 @@ export function runeChoices(state: BattleState, side: Side, def: RuneDef): { cel
   }
 }
 
+/**
+ * Rune des Nachhalls: the enemy neighbours the card on `cell` would capture with a new attack (normal comparison,
+ * current values). Never a chain – the Kettenübernahme ability of the attacking card plays no part here.
+ */
+export function echoCapturable(state: BattleState, cell: number, side: Side = state.turn): number[] {
+  return neighbours(cell).filter((n) => {
+    const o = state.board[n.cell];
+    return !!o && o.owner !== side && boardValue(state.board, state.terrain, cell, n.mine) > boardValue(state.board, state.terrain, n.cell, n.theirs);
+  }).map((n) => n.cell);
+}
+
 /** Why the rune cannot be used like this (German), or null if it can. Prevents double use and invalid targets. */
 export function runeProblem(state: BattleState, use: RuneUse): string | null {
   const side = state.turn;
@@ -151,8 +164,20 @@ export function runeProblem(state: BattleState, use: RuneUse): string | null {
       if (!okCell(use.cell)) return 'Wähle eine eigene Karte auf dem Spielfeld.';
       if (use.dir !== 1 && use.dir !== -1) return 'Wähle links oder rechts.';
       return null;
-    case 'echo':
-      return okCell(use.cell) ? null : 'Wähle eine eigene Karte mit einer Gegnerkarte daneben.';
+    case 'echo': {
+      if (!okCell(use.cell)) return 'Wähle eine eigene Karte mit einer Gegnerkarte daneben.';
+      const can = echoCapturable(state, use.cell);
+      // More possible captures than allowed: the player picks which one(s).
+      if (can.length > r.maxTargets) {
+        const pick = use.capture ?? [];
+        if (pick.length < 1 || pick.length > r.maxTargets || new Set(pick).size !== pick.length || !pick.every((c) => can.includes(c))) {
+          return r.maxTargets === 1 ? 'Wähle, welche Gegnerkarte übernommen wird.' : `Wähle bis zu ${r.maxTargets} Gegnerkarten, die übernommen werden.`;
+        }
+      } else if (use.capture && use.capture.length > 0) {
+        return 'Hier gibt es nichts zu wählen.';
+      }
+      return null;
+    }
     case 'empower':
     case 'curse': {
       const cells = use.cells ?? [];
@@ -195,9 +220,13 @@ export function applyRune(state: BattleState, use: RuneUse): BattleState {
         const defense = boardValue(board, state.terrain, n.cell, n.theirs);
         clashes.push({ cell: n.cell, dir: n.mine, attack, defense, captured: attack > defense });
       }
+      // At most `maxTargets` captures (chosen by the player if more were possible); nothing else happens – no chain.
+      const can = clashes.filter((c) => c.captured).map((c) => c.cell);
+      const take = new Set(can.length > r.maxTargets ? use.capture! : can);
+      clashes = clashes.map((c) => ({ ...c, captured: take.has(c.cell) }));
       for (const c of clashes) if (c.captured) board[c.cell] = { ...board[c.cell]!, owner: side };
-      const n = clashes.filter((c) => c.captured).length;
-      text = `${getCard(board[use.cell!]!.cardId).name} auf ${cellName(use.cell!)} greift erneut an – erobert ${n}`;
+      const n = take.size;
+      text = `${getCard(board[use.cell!]!.cardId).name} auf ${cellName(use.cell!)} greift erneut an – erobert ${n}${n ? ` (${[...take].map(cellName).join(', ')})` : ''}`;
       break;
     }
     case 'empower':

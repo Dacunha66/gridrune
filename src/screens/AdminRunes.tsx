@@ -202,6 +202,14 @@ function RuneEditor({ db, assets, initial, all, campaign, onToast, onClose }: {
               {RUNE_EFFECTS.map((x) => <option key={x} value={x}>{RUNE_EFFECT_LABEL[x]}</option>)}
             </select>
           </label>
+          {draft.effect === 'echo' && (
+            <label className="field"><span>Höchstens Übernahmen pro Einsatz</span>
+              <select className="admin-input" value={draft.maxTargets} onChange={(e) => set({ maxTargets: Number(e.target.value) })}>
+                {[1, 2, 3].map((n) => <option key={n} value={n}>{n} Karte{n > 1 ? 'n' : ''}{n === 1 ? ' (Test-Standard)' : ''}</option>)}
+              </select>
+              <small className="muted">Könnte die Karte mehr Gegner übernehmen, wählt der Spieler aus. Nie eine Kettenreaktion – auch nicht bei Karten mit Kettenübernahme.</small>
+            </label>
+          )}
           {(draft.effect === 'empower' || draft.effect === 'curse') && (
             <div className="field-row wrap">
               <label className="field grow"><span>Stärke (±)</span>
