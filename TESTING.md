@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Version 1.16 – Jede Deckkarte nur einmal pro Lauf
+
+Neu: Im Lauf (Abenteuer und Kampagnen-Lauf) kann jede Karte aus dem 20er-Deck nur einmal genommen werden. Die Tore 1–7 verteilen zuerst alle 20 Deckkarten, bevor sich eine wiederholt; wird eine Karte genommen, wird sie in den späteren Toren durch eine noch nicht genommene Deckkarte ersetzt. Die Liga bleibt unverändert (dort sind 2 Kopien einer Karte erlaubt, die Bahn ist fest).
+
+**Automatische Tests:** 186, alle bestanden (neu: 50 Bahnen – 21 Plätze, 20 verschiedene Karten; 300 Läufe mit zufälligen Spuren – nie eine Karte doppelt; Liga-Bahnen bleiben unverändert).
+
+**Browser:** 12 Läufe mit zufälligen Spurwechseln: jedes Mal 8 verschiedene Karten auf der Hand, 0 Fehler.
+
 ## Version 1.15 – Runenfeld und Schlachtfeld
 
 Neu: Zwei Geländearten, damit jede Klasse ein Element hat – ᚱ Runenfeld (Magier, blau) und ⚔️ Schlachtfeld (Krieger, rot). Gleiche Regel wie bei allen Elementen: +1 auf alle Werte, nie mehr. Im Arena-Editor als Pinsel wählbar; Ranglisten-Regeln unverändert (spiegelgleich, höchstens 8 Geländefelder, jedes Gelände 0× oder ≥ 2×). Bestehende Arenen unverändert. Supabase-Änderung (neue Geländearten und Arena-Status „Nur Kampagne“) als Migration 005 vorbereitet, noch nicht ausgeführt.

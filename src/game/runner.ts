@@ -68,12 +68,14 @@ function pickDiscoveries(deck: string[], owned: ReadonlySet<string>, rng: Rng): 
 }
 
 /**
- * Gates 1–7: three different cards from the deck. Gate 8 (final): three new cards –
- * the one you take is yours if you win the duel.
+ * Gates 1–7: three different cards from the deck, dealt from the shuffled deck so every deck card
+ * comes up once before any card repeats. Gate 8 (final): three new cards – the one you take is
+ * yours if you win the duel.
  */
 export function generateGates(deck: string[], rng: Rng, owned: ReadonlySet<string> = new Set()): Gate[] {
   if (deck.length < LANES) throw new Error(`Deck needs at least ${LANES} cards`);
   const gates: Gate[] = [];
+  let queue = shuffle(rng, deck);
   for (let i = 0; i < GATE_COUNT; i++) {
     let offers: Offer[];
     if (i === FINAL_GATE) {
@@ -85,7 +87,13 @@ export function generateGates(deck: string[], rng: Rng, owned: ReadonlySet<strin
         offers.push({ cardId: id, kind: 'deck' });
       }
     } else {
-      offers = shuffle(rng, deck).slice(0, LANES).map((cardId) => ({ cardId, kind: 'deck' as const }));
+      const ids: string[] = [];
+      while (ids.length < LANES) {
+        if (queue.length === 0) queue = shuffle(rng, deck);
+        const id = queue.shift()!;
+        if (!ids.includes(id)) ids.push(id);
+      }
+      offers = ids.map((cardId) => ({ cardId, kind: 'deck' as const }));
     }
     gates.push({ index: i, distance: FIRST_GATE + i * GATE_SPACING, offers: shuffle(rng, offers) });
   }
@@ -135,12 +143,21 @@ export class RunnerSim {
   stumbled = false;
   private nextGate = 0;
   private nextObstacle = 0;
+  /** Adventure runs: every card can be taken only once (league tracks may hold two copies on purpose). */
+  private readonly unique: boolean;
+  /** Deck cards in the order they may replace an already taken card. */
+  private readonly reserve: string[] = [];
 
   constructor(deckOrLayout: string[] | RunnerLayout, rng?: Rng, owned: ReadonlySet<string> = new Set()) {
+    this.unique = Array.isArray(deckOrLayout);
     if (Array.isArray(deckOrLayout)) {
       if (!rng) throw new Error('rng required');
       this.gates = generateGates(deckOrLayout, rng, owned);
       this.obstacles = generateObstacles(rng);
+      // Replacement order: as the cards come up on the track, then the rest of the deck.
+      for (const id of [...this.gates.flatMap((g) => g.offers.map((o) => o.cardId)), ...deckOrLayout]) {
+        if (deckOrLayout.includes(id) && !this.reserve.includes(id)) this.reserve.push(id);
+      }
     } else {
       this.gates = deckOrLayout.gates;
       this.obstacles = [...deckOrLayout.obstacles].sort((a, b) => a.distance - b.distance);
@@ -220,7 +237,27 @@ export class RunnerSim {
     const mod = this.stumbled ? STUMBLE_PENALTY : 0;
     this.stumbled = false;
     this.picks.push({ ...offer, gate: gate.index, mod });
+    if (this.unique) this.replaceTaken(offer.cardId);
     return { type: 'pick', gate: gate.index, lane: this.lane, offer, mod };
+  }
+
+  /** A taken card is not offered again: later gates get an untaken deck card instead (if there is one left). */
+  private replaceTaken(cardId: string): void {
+    const taken = new Set(this.picks.map((p) => p.cardId));
+    for (const gate of this.gates.slice(this.nextGate)) {
+      gate.offers = gate.offers.map((o) => {
+        if (o.cardId !== cardId) return o;
+        const inGate = new Set(gate.offers.map((x) => x.cardId));
+        const other = this.reserve.find((id) => !taken.has(id) && !inGate.has(id) && !this.upcoming(id));
+        const fallback = other ?? this.reserve.find((id) => !taken.has(id) && !inGate.has(id));
+        return fallback ? { cardId: fallback, kind: 'deck' } : o;
+      });
+    }
+  }
+
+  /** True if the card is already offered in a gate that is still ahead. */
+  private upcoming(cardId: string): boolean {
+    return this.gates.slice(this.nextGate).some((g) => g.offers.some((o) => o.cardId === cardId));
   }
 }
 

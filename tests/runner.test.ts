@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CARDS, RARITIES, RARITY_POWER, STARTER_DECK, STARTING_UNLOCKED, cardPower, getCard } from '../src/game/cards';
 import { createRng } from '../src/game/rng';
-import { BASE_SPEED, FINAL_GATE, FINISH_DISTANCE, GATE_COUNT, RunnerSim, STUMBLE_PENALTY, generateGates, generateObstacles } from '../src/game/runner';
+import { BASE_SPEED, FINAL_GATE, FINISH_DISTANCE, GATE_COUNT, LANES, RunnerSim, STUMBLE_PENALTY, generateGates, generateObstacles } from '../src/game/runner';
 
 /** Lane that avoids every stone in the next row ahead (rows can block two lanes). */
 function freeLane(sim: RunnerSim): number {
@@ -52,10 +52,12 @@ describe('Runner', () => {
 
   it('nimmt die Karte der aktuellen Spur', () => {
     const sim = new RunnerSim(STARTER_DECK, createRng(5));
-    sim.setLane(2);
+    // A lane next to the middle that avoids the first stone.
+    const lane = sim.obstacles[0].lane === 2 ? 0 : 2;
+    sim.setLane(lane);
     const events = sim.update(sim.gates[0].distance / BASE_SPEED + 0.01);
     const pick = events.find((e) => e.type === 'pick');
-    expect(pick).toEqual({ type: 'pick', gate: 0, lane: 2, offer: sim.gates[0].offers[2], mod: 0 });
+    expect(pick).toEqual({ type: 'pick', gate: 0, lane, offer: sim.gates[0].offers[lane], mod: 0 });
   });
 
   it('Stolperstein schwächt genau die nächste Karte um 1', () => {
@@ -173,5 +175,40 @@ describe('Runner', () => {
     }
     expect(mythic / total).toBeGreaterThan(0.004);
     expect(mythic / total).toBeLessThan(0.025);
+  });
+});
+
+describe('Jede Karte nur einmal pro Lauf', () => {
+  const deck20 = STARTER_DECK;
+  it('die Tore 1–7 zeigen erst alle 20 Deckkarten, bevor sich eine wiederholt', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const gates = generateGates(deck20, createRng(seed));
+      const ids = gates.slice(0, FINAL_GATE).flatMap((g) => g.offers.map((o) => o.cardId));
+      // 21 places, 20 different cards: only one card comes up twice.
+      expect(ids).toHaveLength(21);
+      expect(new Set(ids).size).toBe(20);
+      for (const g of gates) expect(new Set(g.offers.map((o) => o.cardId)).size).toBe(g.offers.length);
+    }
+  });
+  it('egal welche Spur man nimmt: keine Karte wird zweimal genommen', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const rng = createRng(seed * 7);
+      const sim = new RunnerSim(deck20, createRng(seed));
+      while (sim.gatesTaken < GATE_COUNT) {
+        sim.lane = Math.floor(rng() * LANES);
+        sim.advanceTo(sim.gates[sim.gatesTaken].distance);
+      }
+      const ids = sim.picks.map((p) => p.cardId);
+      expect(new Set(ids).size, `Seed ${seed}: ${ids.join(',')}`).toBe(ids.length);
+      // Offers still never repeat inside one gate.
+      for (const g of sim.gates) expect(new Set(g.offers.map((o) => o.cardId)).size).toBe(g.offers.length);
+    }
+  });
+  it('Liga-Strecken (feste Bahn) bleiben unverändert', () => {
+    const layout = { gates: generateGates(deck20, createRng(9)), obstacles: [] };
+    const before = JSON.stringify(layout.gates);
+    const sim = new RunnerSim(layout);
+    sim.skipToEnd();
+    expect(JSON.stringify(sim.gates)).toBe(before);
   });
 });
