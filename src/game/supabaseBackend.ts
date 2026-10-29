@@ -14,7 +14,10 @@ const PAGE = 1000;
 
 let client: SupabaseClient | null = null;
 export function supabase(): SupabaseClient {
-  client ??= createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+  // Implicit flow: the links in confirmation and password e-mails also work when opened on another device.
+  client ??= createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' },
+  });
   return client;
 }
 

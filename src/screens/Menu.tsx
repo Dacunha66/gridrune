@@ -17,9 +17,12 @@ interface Props {
   /** The equipped rune (shown on the Runen button). */
   equippedRune?: string | null;
   onToggleReducedMotion: () => void;
+  /** Web version: the signed-in player's name, 'guest', or null (no accounts, e.g. claude.ai). */
+  account?: string | 'guest' | null;
+  onAccount?: () => void;
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount }: Props) {
   const equipped = findRune(equippedRune);
   const { wins, draws, losses } = save.stats;
   return (
@@ -31,6 +34,12 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         </h1>
         <p className="tagline">Renne. Sammle. Erobere das Raster.</p>
       </div>
+
+      {account && (
+        <button type="button" className={`account-chip ${account === 'guest' ? 'guest' : ''}`} onClick={onAccount}>
+          {account === 'guest' ? <>👤 Gast · <b>Anmelden / Konto erstellen</b></> : <>👤 <b>{account}</b></>}
+        </button>
+      )}
 
       <div className="wallet" aria-label="Spielstand">
         <span>🪙 {save.coins}</span>
@@ -58,7 +67,9 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
       </label>
 
       <p className="fineprint">
-        {saveOk
+        {account && account !== 'guest'
+          ? 'Du bist angemeldet. Das Speichern des Spielstands im Konto folgt im nächsten Schritt – bis dahin bleibt er in diesem Browser.'
+          : saveOk
           ? 'Dein Fortschritt wird nur in diesem Browser auf diesem Gerät gespeichert. Ohne Konto gibt es keine Sicherung auf anderen Geräten.'
           : '⚠️ Speichern ist in diesem Browser gerade nicht möglich (z. B. im privaten Modus). Fortschritt geht beim Schließen verloren.'}
       </p>

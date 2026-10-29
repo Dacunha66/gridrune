@@ -28,9 +28,11 @@ import { setDevTools } from './game/cardStyle';
 import { SymbolTips } from './components/SymbolTips';
 import { CampaignContent, mergeContent, setCampaign } from './game/campaign';
 import { CampaignProgress, loadProgress, writeProgress } from './game/campaignProgress';
+import { AccountState, isGuest, watchAccount } from './game/account';
+import { AccountPage, NewPassword, Welcome } from './screens/Account';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
   | { name: 'runner'; runId: number; deck: string[] }
@@ -58,6 +60,22 @@ export function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
   }, [reducedMotion]);
+
+  // Accounts (web version only). Signing in or out reloads the page, so admin rights and content start fresh.
+  const [account, setAccount] = useState<AccountState | null>(null);
+  const [guest, setGuestState] = useState(isGuest);
+  useEffect(() => {
+    let firstUser: string | null | undefined;
+    return watchAccount((s) => {
+      const user = s.kind === 'signedIn' || s.kind === 'recovery' ? s.account.id : null;
+      if (firstUser === undefined) firstUser = user;
+      else if (user !== firstUser && s.kind !== 'recovery') {
+        window.location.reload();
+        return;
+      }
+      setAccount(s);
+    });
+  }, []);
 
   // Card database: load the managed cards once, apply them outside of runs and duels.
   const [admin, setAdmin] = useState(false);
@@ -175,8 +193,18 @@ export function App() {
     <PageArt design={pageDesign} />
     <SymbolTips />
     <div className={`app ${screen.name === 'admin' ? 'app-wide' : ''} ${pageDesign ? 'has-page-art' : ''}`} style={skinStyle(getSkin(save.skins.card).colors)}>
-      {screen.name === 'menu' && (
+      {account?.kind === 'recovery' && <NewPassword onDone={() => setAccount({ kind: 'signedIn', account: account.account })} />}
+      {account?.kind === 'signedOut' && !guest && screen.name === 'menu' && <Welcome onGuest={() => setGuestState(true)} />}
+      {screen.name === 'account' && account?.kind === 'signedIn' && (
+        <AccountPage account={account.account} onBack={toMenu} onRenamed={(name) => setAccount({ kind: 'signedIn', account: { ...account.account, name } })} />
+      )}
+      {screen.name === 'menu' && account?.kind !== 'recovery' && !(account?.kind === 'signedOut' && !guest) && (
         <Menu
+          account={account?.kind === 'signedIn' ? account.account.name : account?.kind === 'signedOut' ? 'guest' : null}
+          onAccount={() => {
+            if (account?.kind === 'signedIn') setScreen({ name: 'account' });
+            else setGuestState(false);
+          }}
           save={save}
           saveOk={saveOk}
           isAdmin={admin}
