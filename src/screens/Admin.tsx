@@ -16,6 +16,7 @@ import { BalanceView, RunnerSettingsView } from './AdminBalance';
 import { ArenaView } from './AdminArenas';
 import { DesignerView } from './AdminDesigns';
 import { CampaignView } from './AdminCampaign';
+import { CardStyleView } from './AdminCardStyle';
 import { Design, DesignState } from '../game/designs';
 import { CLASSES, CLASS_INFO, CardClass, EFFECTS, EffectId, effectPreview, effectsForClass } from '../game/effects';
 
@@ -33,8 +34,8 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign';
-const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor' };
+type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'cardstyle';
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', cardstyle: 'Kartendesign (Test)' };
 /** Tab to come back to (e.g. after testing a mission). */
 let lastTab: Tab = 'cards';
 
@@ -183,6 +184,7 @@ export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCa
       )}
       {tab === 'arenas' && records && records.length > 0 && <ArenaView db={db!} onToast={setToast} />}
       {tab === 'designs' && records && records.length > 0 && <DesignerView db={db!} assets={assets} onToast={setToast} onDesignsChange={onDesignsChange} />}
+      {tab === 'cardstyle' && <CardStyleView />}
       {tab === 'campaign' && records && records.length > 0 && <CampaignView db={db!} assets={assets} onToast={setToast} onCampaignChange={onCampaignChange} onTest={onTestCampaign} />}
       {toast && <div className="admin-toast" role="status">{toast}</div>}
     </main>

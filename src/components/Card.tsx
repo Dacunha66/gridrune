@@ -2,7 +2,8 @@ import { CSSProperties } from 'react';
 import { CardDef, RARITY_LABEL, getCard } from '../game/cards';
 import type { Side } from '../game/battle';
 import { CLASS_INFO, EFFECTS } from '../game/effects';
-import { CLASS_ICON, EFFECT_ICON, Icon, SHIELD_PATH } from './cardIcons';
+import { AbilityMedallion, CLASS_ICON, ClassShield, EFFECT_ICON, Icon, SHIELD_PATH } from './cardIcons';
+import { useCardStyle } from '../game/cardStyle';
 
 export type CardBadge = 'deck' | 'discovery' | null;
 
@@ -96,20 +97,51 @@ export function Card({
   id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0, def, values, shield,
   terrainGlow, detail,
 }: Props) {
+  const cardStyle = useCardStyle();
   const c = def ?? getCard(id);
   const effective = (i: number) => (values ? values[i] : Math.min(10, Math.max(1, c[DIRS[i]] + mod)));
   const cls = c.cls ? CLASS_ICON[c.cls] : null;
   const effect = c.effect ? EFFECTS[c.effect] : null;
   const style = { '--hue': c.hue, '--cls': cls?.color ?? '#f3c77a' } as CSSProperties;
   const classes = [
-    'card', `card-${size}`, `rarity-${c.rarity}`,
+    'card', `card-${size}`, `rarity-${c.rarity}`, `cs-${cardStyle}`,
     owner ? `owner-${owner}` : '', locked ? 'locked' : '', selected ? 'selected' : '',
     badge === 'discovery' ? 'discovery' : '', detail ? 'card-detail' : '', terrainGlow ? 'terrain-glow' : '', className,
   ].join(' ');
   const label = ariaLabel ?? (locked
     ? `Gesperrte Karte, ${RARITY_LABEL[c.rarity]}`
     : `${c.name}${mod < 0 ? ` (geschwächt ${mod})` : ''}, ${RARITY_LABEL[c.rarity]}${c.cls ? `, ${CLASS_INFO[c.cls].label}` : ''}${effect ? `, Effekt ${effect.name}` : ''}, oben ${effective(0)}, rechts ${effective(1)}, unten ${effective(2)}, links ${effective(3)}${shield ? ', Schild aktiv' : ''}`);
-  const content = (
+  const v2 = cardStyle !== 'current';
+  const content = v2 ? (
+    <>
+      <span className="cs-frame" aria-hidden="true" />
+      <span className="art" aria-hidden="true">
+        {locked ? <span className="art-emoji">🔒</span> : c.image ? <img src={c.image} alt="" draggable={false} /> : <span className="art-emoji">{c.art}</span>}
+      </span>
+      <span className="cs-panel" aria-hidden="true" />
+      {DIRS.map((d, i) => {
+        const delta = values ? effective(i) - c[d] : mod;
+        return (
+          <span key={d} className={`pv pv-${d} ${delta > 0 ? 'up' : delta < 0 ? 'down' : ''}`} aria-hidden="true">
+            <span className="v">{locked ? '?' : effective(i)}</span>
+          </span>
+        );
+      })}
+      {!locked && c.cls && <ClassShield cls={c.cls} className="cs-cls" />}
+      {!locked && c.effect && <AbilityMedallion effect={c.effect} className="cs-fx" />}
+      {!locked && <span className="cs-name" style={{ '--nl': Math.max(8, c.name.length) } as CSSProperties}>{c.name}</span>}
+      {shield && !locked && (
+        <span className="cs-shield" aria-hidden="true"><Icon path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" /></span>
+      )}
+      {owner && <span className="owner-ring" aria-hidden="true" />}
+      {badge === 'discovery' && (
+        <span className={`badge ${badgeText === 'Neutral' ? 'badge-neutral' : badgeText === 'NEU' ? 'badge-new' : ''}`} title={badgeText} aria-label={badgeText === 'Neutral' ? 'neutrale Entdeckung' : badgeText === 'NEU' ? 'neue Karte' : 'Entdeckung'}>
+          {badgeText === 'Neutral' ? '◆' : '★'}
+        </span>
+      )}
+      {showName && <span className="name">{locked ? '???' : c.name}</span>}
+    </>
+  ) : (
     <>
       <span className="card-frame" aria-hidden="true">
         <i className="rivet r1" /><i className="rivet r2" /><i className="rivet r3" /><i className="rivet r4" />

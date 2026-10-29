@@ -15,6 +15,7 @@ import { ACTIVE, layoutVars } from '../game/designs';
 import { AiOptions, chooseCpuMove, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
+import { CARD_STYLE_LABEL, cycleCardStyle, useCardStyle, useDevTools } from '../game/cardStyle';
 
 interface Props {
   picks: Pick[];
@@ -127,6 +128,15 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
   const [handOrigin, setHandOrigin] = useState<number[]>(() => picks.map((_, i) => i));
   const animating = pendingFlips.length > 0;
   const fxTime = reducedMotion ? 0 : 1;
+  // Admin test of the card designs: switch the look mid-duel (nothing in the game changes).
+  const devTools = useDevTools();
+  const cardStyle = useCardStyle();
+  const [styleToast, setStyleToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!styleToast) return;
+    const t = setTimeout(() => setStyleToast(null), 1400);
+    return () => clearTimeout(t);
+  }, [styleToast]);
 
   useEffect(() => {
     if (!banner) return;
@@ -234,6 +244,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
           </span>
           <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner</span>
         </div>
+        {devTools && (
+          <button type="button" className="btn btn-small style-btn" aria-label={`Kartendesign wechseln, jetzt ${CARD_STYLE_LABEL[cardStyle]}`} onClick={() => setStyleToast(CARD_STYLE_LABEL[cycleCardStyle()])}>🎨</button>
+        )}
         <div className={`turn-pill ${phase === 'play' ? state.turn : ''}`}>
           {phase === 'toss' ? 'Münzwurf' : over ? 'Ende' : state.turn === 'player' ? 'Dein Zug' : 'Gegner'}
         </div>
@@ -362,6 +375,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
           <p className="preview-text">{previewText(preview.id)}</p>
         </div>
       )}
+      {styleToast && <div className="style-toast" role="status">🎨 {styleToast}</div>}
       {inspect !== null && state.board[inspect] && (
         <CardInspect board={state.board} terrain={state.terrain} cell={inspect} onClose={() => setInspect(null)} />
       )}

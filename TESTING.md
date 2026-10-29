@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Version 1.17 – Kartendesign 2.0 (Test, nur Admin-Gerät)
+
+Neu: Vier umschaltbare Kartendesigns als Vorschau – Design 2 klassisch, Design 2 kompakt (auf dem Spielfeld ohne Namen), Design 3 geteilt, Design 4 hybrid – plus das aktuelle Design zum Vergleich. Umschalten im Admin-Reiter „Kartendesign (Test)“ (mit vollem Beispielfeld in iPhone- und SE-Größe) und im Duell mit dem 🎨-Knopf (nur für Admins). Die Wahl gilt nur für dieses Gerät; alle Spieler sehen weiter das aktuelle Design. Neue Symbolsprache: Klasse = Wappenschild in Klassenfarbe, Fähigkeit = goldenes Medaillon mit eigenem Symbol; Bonus/Malus zusätzlich mit ▲/▼; Seltenheit als Rahmenfarbe (eisengrau, bronze, silberblau, violett, gold, regenbogen). Spielregeln, Werte, Sammlungen und Spielstände unverändert.
+
+**Automatische Tests:** 186, alle bestanden.
+
+**Browser (je Design ein voll gespieltes Duell mit 16 Karten, iPhone 390 × 664, iPhone SE 375 × 548, iPad 820 × 1050 – 15 Durchläufe):** 0 Werte oder Symbole verdeckt oder außerhalb der Karte, 0 Fehler. Gemessen (iPhone / SE / iPad, Pixel): Werte aktuell 12 / 12 / 18,2 · klassisch 12,7 / 11,5 / 21,4 · kompakt 14,1 / 11,5 / 25,3 · geteilt 11,5 / 11,5 / 19,5 · hybrid 12 / 11,5 / 21,4. Namen klassisch 8–8,9 / 6,2 / 14,3–14,9 · geteilt und hybrid 7,5–7,6 / 5,6 / 13,6 · kompakt im Spielfeld ohne Namen. Symbole 12–16 px (iPhone).
+
 ## Version 1.16 – Jede Deckkarte nur einmal pro Lauf
 
 Neu: Im Lauf (Abenteuer und Kampagnen-Lauf) kann jede Karte aus dem 20er-Deck nur einmal genommen werden. Die Tore 1–7 verteilen zuerst alle 20 Deckkarten, bevor sich eine wiederholt; wird eine Karte genommen, wird sie in den späteren Toren durch eine noch nicht genommene Deckkarte ersetzt. Die Liga bleibt unverändert (dort sind 2 Kopien einer Karte erlaubt, die Bahn ist fest).

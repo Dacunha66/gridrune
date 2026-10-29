@@ -1137,3 +1137,129 @@ label.btn.disabled { opacity: .45; }
 .terrain-mini .tm-runen { background: #0c4a6e; }
 .terrain-mini .tm-schlacht { background: #881337; }
 .cell.terrain-runen .terrain-icon { font-family: 'Cinzel', serif; font-weight: 700; color: #7dd3fc; }
+
+/* ---------- Kartendesign 2.0 (Test, nur Admin-Gerät) ----------
+   Four layouts sharing one structure: rarity frame → picture → (panel) → value plaques → class shield,
+   ability medallion, name → state icons → owner ring. All sizes in cqw (card width = 100cqw, height ≈ 133cqw). */
+.card:is(.cs-classic, .cs-compact, .cs-split, .cs-hybrid) {
+  --fr1: #9aa0aa; --fr2: #4a4f58;
+  --pw: 23cqw; --ph: 20cqw; --pn: 16.5cqw; --ic: 21cqw;
+}
+.card.rarity-uncommon:is(.cs-classic, .cs-compact, .cs-split, .cs-hybrid) { --fr1: #c99a55; --fr2: #5a3f1c; }
+.card.rarity-rare:is(.cs-classic, .cs-compact, .cs-split, .cs-hybrid) { --fr1: #b9d6ee; --fr2: #3f5f80; }
+.card.rarity-epic:is(.cs-classic, .cs-compact, .cs-split, .cs-hybrid) { --fr1: #d3a8ff; --fr2: #5b2b8c; }
+.card.rarity-legendary:is(.cs-classic, .cs-compact, .cs-split, .cs-hybrid) { --fr1: #ffe08a; --fr2: #a86e10; }
+.card .cs-frame {
+  position: absolute; inset: 0; border-radius: inherit;
+  background: radial-gradient(circle at 25% 12%, rgba(255, 255, 255, 0.35), transparent 45%), linear-gradient(150deg, var(--fr1), var(--fr2));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), inset 0 0 0 2.2cqw rgba(0, 0, 0, 0.18);
+}
+.card.rarity-mythic .cs-frame { background: radial-gradient(circle at 25% 12%, rgba(255, 255, 255, 0.4), transparent 45%), var(--rainbow); }
+.card.rarity-epic .cs-frame, .card.rarity-legendary .cs-frame, .card.rarity-mythic .cs-frame { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), 0 0 6px var(--rc); }
+.card:is(.cs-classic, .cs-compact, .cs-split, .cs-hybrid) .art { top: 3cqw; left: 3cqw; right: 3cqw; bottom: 3cqw; border-radius: 2cqw; box-shadow: none; }
+.card:is(.cs-classic, .cs-compact, .cs-split, .cs-hybrid) .art::after { box-shadow: inset 0 0 5cqw rgba(0, 0, 0, 0.4); }
+.card .cs-panel { display: none; }
+
+/* Value plaques: dark, high contrast; bonus green with ▲, malus orange with ▼ (not only colour). */
+.card .pv {
+  position: absolute; z-index: 4; min-width: max(15px, var(--pw)); height: max(14px, var(--ph)); box-sizing: border-box; padding: 0 1.5cqw;
+  display: grid; place-items: center; border-radius: 4cqw; background: rgba(12, 9, 18, 0.86);
+  box-shadow: 0 0 0 max(1px, 0.9cqw) rgba(255, 240, 210, 0.6), 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.card .pv .v { font-family: 'Grenze Gotisch', Georgia, serif; font-weight: 800; font-size: max(11.5px, var(--pn)); line-height: 1; color: #fffaf0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.card .pv.up { background: rgba(20, 83, 45, 0.96); box-shadow: 0 0 0 max(1px, 0.9cqw) #4ade80, 0 1px 3px rgba(0, 0, 0, 0.7); }
+.card .pv.down { background: rgba(84, 24, 8, 0.94); box-shadow: 0 0 0 max(1px, 0.9cqw) #fb923c, 0 1px 3px rgba(0, 0, 0, 0.7); }
+.card .pv.down .v { color: #ffc27a; }
+.card .pv.up .v::after, .card .pv.down .v::after { font-family: Inter, system-ui, sans-serif; font-size: 0.48em; vertical-align: 0.7em; margin-left: 0.08em; }
+.card .pv.up .v::after { content: '▲'; color: #86efac; }
+.card .pv.down .v::after { content: '▼'; color: #fdba74; }
+.card .pv-top, .card .pv-bottom { left: 50%; transform: translateX(-50%); }
+
+.card .cs-cls, .card .cs-fx { position: absolute; z-index: 5; width: max(12px, var(--ic)); height: max(12px, var(--ic)); filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85)); }
+.card .cs-name {
+  position: absolute; z-index: 4; box-sizing: border-box; padding: 0 3cqw; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: Inter, system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; color: #fff7e6; text-shadow: 0 1px 2px #000, 0 0 3px #000;
+  font-size: min(11.5cqw, calc(165cqw / var(--nl)));
+}
+.card .cs-shield {
+  position: absolute; z-index: 5; width: max(12px, 14cqw); height: max(12px, 14cqw); border-radius: 50%; display: grid; place-items: center;
+  background: #0c2233; box-shadow: 0 0 0 1.5px #7dd3fc, 0 0 6px rgba(125, 211, 252, 0.9);
+}
+.card .cs-shield svg { width: 70%; height: 70%; }
+
+/* Design 2 klassisch: values on the edges, name at the bottom, class top left, ability top right. */
+.card.cs-classic .pv-top { top: 1.5cqw; }
+.card.cs-classic .pv-bottom { bottom: 17.5cqw; }
+.card.cs-classic .pv-left, .card.cs-classic .pv-right { top: 52cqw; }
+.card.cs-classic .pv-left { left: 1.2cqw; }
+.card.cs-classic .pv-right { right: 1.2cqw; }
+.card.cs-classic .cs-cls { top: 2.5cqw; left: 2.5cqw; }
+.card.cs-classic .cs-fx { top: 2.5cqw; right: 2.5cqw; }
+.card:is(.cs-classic, .cs-compact) .cs-name {
+  left: 3cqw; right: 3cqw; bottom: 3cqw; height: 15cqw; line-height: 15.5cqw; border-radius: 0 0 2cqw 2cqw;
+  background: linear-gradient(rgba(8, 6, 12, 0), rgba(8, 6, 12, 0.9) 35%);
+}
+.card:is(.cs-classic, .cs-compact) .cs-shield { left: 3cqw; bottom: 18cqw; }
+
+/* Design 2 kompakt: bigger values, smaller symbols; on the board without the name. */
+.card.cs-compact { --pw: 26cqw; --ph: 23cqw; --pn: 19.5cqw; --ic: 18cqw; }
+.card.cs-compact .pv-top { top: 1cqw; }
+.card.cs-compact .pv-bottom { bottom: 17cqw; }
+.card.cs-compact .pv-left, .card.cs-compact .pv-right { top: 50cqw; }
+.card.cs-compact .pv-left { left: 0.8cqw; }
+.card.cs-compact .pv-right { right: 0.8cqw; }
+.card.cs-compact .cs-cls { top: 2cqw; left: 2cqw; }
+.card.cs-compact .cs-fx { top: 2cqw; right: 2cqw; }
+.card.cs-compact:is(.owner-player, .owner-cpu) .cs-name { display: none; }
+.card.cs-compact:is(.owner-player, .owner-cpu) .pv-bottom { bottom: 1cqw; }
+.card.cs-compact:is(.owner-player, .owner-cpu) .cs-shield { bottom: 4cqw; }
+
+/* Design 3 geteilt: big picture on top, own value area below (values as a cross: top / left · right / bottom). */
+.card.cs-split { --pw: 22cqw; --ph: 16.5cqw; --pn: 15cqw; --ic: 16cqw; }
+.card.cs-split .art { bottom: 56cqw; border-radius: 2cqw 2cqw 0 0; }
+.card.cs-split .cs-panel {
+  display: block; position: absolute; z-index: 2; left: 3cqw; right: 3cqw; bottom: 3cqw; height: 53cqw; border-radius: 0 0 2cqw 2cqw;
+  background: linear-gradient(#211b2e, #100c18); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.card.cs-split .pv-top { bottom: 38cqw; }
+.card.cs-split .pv-bottom { bottom: 4cqw; }
+.card.cs-split .pv-left, .card.cs-split .pv-right { bottom: 21cqw; }
+.card.cs-split .pv-left { left: 4cqw; }
+.card.cs-split .pv-right { right: 4cqw; }
+.card.cs-split .cs-cls { bottom: 21.2cqw; left: 30cqw; }
+.card.cs-split .cs-fx { bottom: 21.2cqw; right: 30cqw; }
+.card.cs-split .cs-name {
+  left: 3cqw; right: 3cqw; bottom: 56cqw; height: 13cqw; line-height: 13.5cqw; font-size: min(10.5cqw, calc(165cqw / var(--nl)));
+  background: linear-gradient(rgba(8, 6, 12, 0), rgba(8, 6, 12, 0.88) 40%);
+}
+.card.cs-split .cs-shield { left: 4cqw; bottom: 40cqw; }
+
+/* Design 4 hybrid: picture over the whole card, compact info bar (name, class, bottom value, ability). */
+.card.cs-hybrid .cs-panel {
+  display: block; position: absolute; z-index: 2; left: 3cqw; right: 3cqw; bottom: 3cqw; height: 37cqw; border-radius: 0 0 2cqw 2cqw;
+  background: linear-gradient(rgba(8, 6, 12, 0), rgba(8, 6, 12, 0.9) 28%);
+}
+.card.cs-hybrid .pv-top { top: 1.5cqw; }
+.card.cs-hybrid .pv-left, .card.cs-hybrid .pv-right { top: 40cqw; }
+.card.cs-hybrid .pv-left { left: 1.2cqw; }
+.card.cs-hybrid .pv-right { right: 1.2cqw; }
+.card.cs-hybrid .pv-bottom { bottom: 4cqw; }
+.card.cs-hybrid .cs-name { left: 3cqw; right: 3cqw; bottom: 24.5cqw; height: 12cqw; line-height: 12cqw; font-size: min(10.5cqw, calc(165cqw / var(--nl))); }
+.card.cs-hybrid .cs-cls { left: 5cqw; bottom: 4cqw; --ic: 18cqw; }
+.card.cs-hybrid .cs-fx { right: 5cqw; bottom: 4cqw; --ic: 18cqw; }
+.card.cs-hybrid .cs-shield { left: 3cqw; top: 22cqw; }
+
+/* Tiny thumbnails: picture and values only. */
+.card-xs:is(.cs-classic, .cs-compact, .cs-split, .cs-hybrid) { --pn: 20cqw; --pw: 26cqw; --ph: 22cqw; }
+.card-xs .cs-cls, .card-xs .cs-fx, .card-xs .cs-name, .card-xs .cs-shield { display: none; }
+
+/* Design switch in the duel (admin only). */
+.battle-top .style-btn { min-width: 40px; min-height: 40px; padding: 0; flex: 0 0 auto; }
+.style-toast { position: fixed; z-index: 61; left: 50%; top: 64px; transform: translateX(-50%); padding: 6px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.85); font-size: 13px; font-weight: 700; pointer-events: none; }
+.card-style-admin { display: flex; flex-direction: column; gap: 10px; }
+.style-seg .seg { font-size: 13px; padding: 6px 10px; }
+.style-preview h3 { margin: 6px 0; font-size: 15px; }
+.cs-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; padding: 3px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); margin: 0 auto; }
+.cs-cell { position: relative; }
+.cs-hand { display: flex; gap: 6px; margin: 10px auto 0; max-width: 100%; }
+.cs-hand-slot { flex: 1 1 0; min-width: 0; }

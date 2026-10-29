@@ -22,6 +22,7 @@ import { GameSettings, setGameSettings } from './game/settings';
 import { Admin } from './screens/Admin';
 import { League } from './screens/League';
 import { Campaign } from './screens/Campaign';
+import { setDevTools } from './game/cardStyle';
 import { CampaignContent, mergeContent, setCampaign } from './game/campaign';
 import { CampaignProgress, loadProgress, writeProgress } from './game/campaignProgress';
 
@@ -110,7 +111,10 @@ export function App() {
       if (alive && arenas) setArenas(arenas);
       if (alive && records && records.length > 0) applyRecords(records);
       const ok = await isAdmin();
-      if (alive) setAdmin(ok);
+      if (alive) {
+        setAdmin(ok);
+        setDevTools(ok);
+      }
     })();
     return () => {
       alive = false;

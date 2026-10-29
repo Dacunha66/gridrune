@@ -32,3 +32,46 @@ export function Icon({ path, className, color, fill = 'none' }: { path: string; 
     </svg>
   );
 }
+
+/**
+ * Kartendesign 2.0: ability symbols for the round medallion. Solid shapes where possible – they stay readable
+ * at 12–16 px, where thin line icons blur. Each one has a clearly different outline.
+ */
+export const ABILITY_GLYPH: Record<EffectId, { d: string; fill: boolean }> = {
+  kampfgeist: { d: EFFECT_ICON.kampfgeist, fill: false }, // crossed swords
+  schildwall: { d: 'M12 2.2l8.3 3.1v6.1c0 5.3-3.5 9.2-8.3 11-4.8-1.8-8.3-5.7-8.3-11V5.3z', fill: true }, // shield
+  arkane_kraft: { d: 'M12 1.5l2.6 7.9L22.5 12l-7.9 2.6L12 22.5l-2.6-7.9L1.5 12l7.9-2.6z', fill: true }, // star
+  magische_barriere: { d: 'M2.5 19.5h19M5 19.5a7 7 0 0 1 14 0M12 4v2.5M5.6 6.6l1.7 1.7M18.4 6.6l-1.7 1.7', fill: false }, // dome
+  wurzelkraft: { d: 'M12 2.5v10.5M12 13c-3.5.3-6 3.2-7 8M12 13c3.5.3 6 3.2 7 8M12 13v8.5M8.5 16.5l-3.5-.5M15.5 16.5l3.5-.5', fill: false }, // roots
+  naturbund: { d: EFFECT_ICON.naturbund, fill: true }, // two leaves
+  flammenherz: { d: CLASS_ICON.feuer.path, fill: true }, // flame
+  frostpanzer: { d: 'M12 1.8l3.4 6.6-3.4 13.8-3.4-13.8zM4.5 8.5l3.8 2.2-1.6 8.3M19.5 8.5l-3.8 2.2 1.6 8.3', fill: false }, // ice crystal
+  schattenmantel: { d: EFFECT_ICON.schattenmantel, fill: false }, // hood
+  schwaechender_blick: { d: EFFECT_ICON.schwaechender_blick, fill: false }, // eye
+};
+
+/** Heraldic shield in the class colour with the class symbol – the shape alone says "class". */
+export function ClassShield({ cls, className = '' }: { cls: CardClass; className?: string }) {
+  const c = CLASS_ICON[cls];
+  return (
+    <svg className={className} viewBox="0 0 24 26" aria-hidden="true">
+      <path d="M12 1l10 3.2v7.2c0 6.6-4.3 11.3-10 13.6C6.3 22.7 2 18 2 11.4V4.2z" fill="#14101c" stroke={c.color} strokeWidth="1.8" />
+      <g transform="translate(5.2 5.2) scale(0.57)">
+        <path d={c.path} fill="none" stroke={c.color} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
+/** Round gold medallion with the ability symbol – the shape alone says "ability". */
+export function AbilityMedallion({ effect, className = '' }: { effect: EffectId; className?: string }) {
+  const g = ABILITY_GLYPH[effect];
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="11" fill="#2a1d05" stroke="#ffd34d" strokeWidth="1.8" />
+      <g transform="translate(5 5) scale(0.583)">
+        <path d={g.d} fill={g.fill ? '#ffd34d' : 'none'} stroke="#ffd34d" strokeWidth={g.fill ? 0.8 : 2.6} strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
