@@ -64,12 +64,12 @@ function rune(id: string, name: string, effect: RuneEffect, glyph: string, descr
   };
 }
 
-/** The four basic runes – every player has them from the start (fair in ranked play). */
+/** The four basic runes – unlocked in the first campaign world (the strongest, Nachhall, by the boss). */
 export const BUILTIN_RUNES: readonly RuneDef[] = [
-  rune('rn01', 'Rune der Verdrehung', 'twist', 'ᛃ', 'Drehe die Werte einer eigenen gelegten Karte einmal um 90° nach links oder rechts. Es wird dabei nicht neu gekämpft.'),
-  rune('rn02', 'Rune des Nachhalls', 'echo', 'ᛇ', 'Eine eigene gelegte Karte greift ihre angrenzenden Gegnerkarten erneut an – normale Regeln, höchstens eine Übernahme (bei mehreren wählst du), keine Kettenreaktion. Einsetzbar ab der Spielmitte (8 Karten auf dem Feld).', { minPlaced: 8 }),
-  rune('rn03', 'Rune der Glut', 'empower', 'ᚲ', 'Bis zu zwei eigene Feuerkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'feuer', maxTargets: 2 }),
-  rune('rn04', 'Rune des Fluchs', 'curse', 'ᚦ', 'Wähle eine gegnerische Klasse: Bis zu zwei Gegnerkarten dieser Klasse auf dem Spielfeld erhalten −1 auf alle vier Werte bis Duellende.', { maxTargets: 2 }),
+  rune('rn01', 'Rune der Verdrehung', 'twist', 'ᛃ', 'Drehe die Werte einer eigenen gelegten Karte einmal um 90° nach links oder rechts. Es wird dabei nicht neu gekämpft.', { unlock: { kind: 'mission', missionId: 'm002' } }),
+  rune('rn02', 'Rune des Nachhalls', 'echo', 'ᛇ', 'Eine eigene gelegte Karte greift ihre angrenzenden Gegnerkarten erneut an – normale Regeln, höchstens eine Übernahme (bei mehreren wählst du), keine Kettenreaktion. Einsetzbar ab der Spielmitte (8 Karten auf dem Feld).', { minPlaced: 8, unlock: { kind: 'mission', missionId: 'm010' } }),
+  rune('rn03', 'Rune der Glut', 'empower', 'ᚲ', 'Bis zu zwei eigene Feuerkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'feuer', maxTargets: 2, unlock: { kind: 'mission', missionId: 'm004' } }),
+  rune('rn04', 'Rune des Fluchs', 'curse', 'ᚦ', 'Wähle eine gegnerische Klasse: Bis zu zwei Gegnerkarten dieser Klasse auf dem Spielfeld erhalten −1 auf alle vier Werte bis Duellende.', { maxTargets: 2, unlock: { kind: 'mission', missionId: 'm008' } }),
 ];
 
 export const RUNES: RuneDef[] = [...BUILTIN_RUNES];
@@ -91,9 +91,20 @@ export function runeRules(def: RuneDef): RuneDef {
   return base && !base.variantOf ? { ...def, effect: base.effect, amount: base.amount, maxTargets: base.maxTargets, minPlaced: base.minPlaced, cls: base.cls } : def;
 }
 
-/** Runes this player may choose in a mode (published, allowed in the mode, owned – ranked: all basic runes). */
+/** One of the four basic runes (not a variant). */
+export function isBasicRune(r: RuneDef): boolean {
+  return BUILTIN_RUNES.some((b) => b.id === r.id) && !r.variantOf;
+}
+
+/** Runes the computer may get as a random rune: the active basic runes. */
+export function basicRunes(): RuneDef[] {
+  return RUNES.filter((r) => r.status === 'active' && isBasicRune(r));
+}
+
+/** Runes this player may choose in a mode (published, allowed in the mode, owned – the league: only owned basic runes). */
 export function availableRunes(mode: GameMode, owned: readonly string[]): RuneDef[] {
-  return RUNES.filter((r) => r.status === 'active' && r.modes[mode] && (mode === 'league' ? r.unlock.kind === 'start' && !r.variantOf : r.unlock.kind === 'start' || owned.includes(r.id)));
+  const have = (r: RuneDef) => r.unlock.kind === 'start' || owned.includes(r.id);
+  return RUNES.filter((r) => r.status === 'active' && r.modes[mode] && have(r) && (mode !== 'league' || isBasicRune(r)));
 }
 
 // ---------- Using a rune ----------

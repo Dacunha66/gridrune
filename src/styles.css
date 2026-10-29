@@ -1365,3 +1365,6 @@ label.btn.disabled { opacity: .45; }
 .deck-tabs .seg { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .rune-list { padding: 0 12px 12px; }
 .btn-deck { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.rune-reward { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; text-align: left; }
+.rune-reward.done { opacity: 0.7; }
+.rune-unlocked { border-color: #d8b86c; }

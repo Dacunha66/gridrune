@@ -1,5 +1,18 @@
 # Testprotokoll
 
+## Version 1.24 – Runen werden in der Kampagne freigespielt
+
+Neu (nach deiner Entscheidung):
+- **Grundrunen nicht mehr von Anfang an:** Der erste Sieg schaltet frei – Mission 2 „Waldpfad“ → Verdrehung, Mission 4 „Waldhüter“ → Glut, Mission 8 „Alte Ruinen“ (Elite) → Fluch, Mission 10 „Herz des Waldes“ (Boss) → Nachhall. Im Admin (Reiter „Runen“ → Freischaltung) jederzeit änderbar.
+- Ohne freigespielte Rune spielt man ohne Rune: Deck-Reiter „Rune“ zeigt alle Runen gesperrt mit „🔒 Kampagne: Mission … gewinnen“, Menü „Deck bearbeiten – ohne Rune“. Im Abenteuer bekommt der Computer nur dann eine Zufallsrune, wenn du selbst eine hast.
+- **Kampagne:** Das Briefing zeigt „Erster Sieg schaltet frei: [Rune]“ (bzw. „Freigespielt“), das Ergebnis „Neue Rune freigespielt!“ mit Runen-Button und Beschreibung (auch bei Freischaltung über Sterne). Gegner der Kampagne (Elite/Boss) bringen ihre Rune auch gegen Spieler ohne Rune mit.
+- **Liga:** nur Grundrunen, die du freigespielt hast; ohne Rune spielst du ohne. Der Gegner bekommt weiter eine Grundrune pro Match.
+- Regeln und Hinweistexte angepasst.
+
+**Automatische Tests (221, alle bestanden), neu:** Freischalt-Missionen der Grundrunen; ohne Freischaltung keine Rune in Abenteuer/Kampagne/Liga; Liga nur freigespielte Grundrunen (keine Kampagnen-Runen); Computer bekommt weiter alle Grundrunen; Rune nach erstem Sieg der Mission freigeschaltet, andere nicht.
+
+**Browser (iPhone, neuer Spieler):** Menü „ohne Rune“, Rune-Reiter mit 4 gesperrten Runen und Hinweis, Abenteuer ohne Runenleiste; Briefing „Waldpfad“ zeigt „Erster Sieg schaltet frei: Rune der Verdrehung“; Mission gewonnen (9:7) → „Neue Rune freigespielt! Rune der Verdrehung“; danach Menü mit Runen-Button, Verdrehung automatisch gewählt, 3 Runen noch gesperrt. Keine Fehler.
+
 ## Version 1.23 – Runen ab „selten“, Rune im Deck-Editor
 
 Neu (nach deinem Wunsch):

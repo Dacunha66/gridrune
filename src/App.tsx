@@ -137,7 +137,7 @@ export function App() {
   }, [applyRecords, applyDesigns, applyCampaign]);
 
   // Only cards that are in play right now (the database may have changed since the deck was built).
-  // Runes: everyone has the basic runes; campaign runes are unlocked by missions or stars.
+  // Runes are unlocked in the campaign (missions or stars); admins can also set a rune to "für alle".
   const runesOn = released(features.runes, admin);
   const ownedRunes = [...new Set([...save.runes.owned, ...RUNES.filter((r) => runeUnlocked(r, campaignProgress, campaign)).map((r) => r.id)])];
   /** Rune the player takes into a duel of this mode (null = none or not allowed there). */
@@ -237,6 +237,7 @@ export function App() {
           preview={screen.preview}
           startMissionId={screen.missionId}
           playerRune={duelRune('campaign')}
+          runesOn={runesOn}
           onExit={screen.preview ? () => setScreen({ name: 'admin' }) : toMenu}
         />
       )}
@@ -258,7 +259,7 @@ export function App() {
           reducedMotion={reducedMotion}
           onEnd={(outcome, score) => finishBattle(screen.picks, outcome, score)}
           onQuit={toMenu}
-          runes={{ player: duelRune('adventure'), cpu: runesOn ? 'random' : null }}
+          runes={{ player: duelRune('adventure'), cpu: duelRune('adventure') ? 'random' : null }}
         />
       )}
       {screen.name === 'result' && (

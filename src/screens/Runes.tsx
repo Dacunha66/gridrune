@@ -1,5 +1,5 @@
-// Rune choice (tab "Rune" in the deck editor): one rune for the next duels. The basic runes are owned by
-// everyone; further runes are unlocked in the campaign. Using a rune in a duel never removes it from the collection.
+// Rune choice (tab "Rune" in the deck editor): one rune for the next duels. Runes are unlocked in the
+// campaign; without any rune the player plays without. Using a rune in a duel never removes it from the collection.
 import { RuneBadge } from '../components/RuneBadge';
 import { RARITY_LABEL } from '../game/cards';
 import { CLASS_INFO } from '../game/effects';
@@ -22,8 +22,8 @@ export function RunePicker({ owned, equipped, onEquip, lockText }: RuneChoicePro
     <div className="rune-list">
       <p className="muted small">
         {anyOwned
-          ? 'Wähle die Rune für deine Duelle. Im Duell setzt du sie einmal in deinem Zug ein – vor dem Legen einer Karte, ohne den Zug zu verbrauchen. Die Rune bleibt in deiner Sammlung. In der Liga sind nur die Grundrunen erlaubt.'
-          : 'Du besitzt noch keine Rune – du spielst ohne Rune.'}
+          ? 'Wähle die Rune für deine Duelle. Im Duell setzt du sie einmal in deinem Zug ein – vor dem Legen einer Karte, ohne den Zug zu verbrauchen. Die Rune bleibt in deiner Sammlung. In der Liga sind nur freigespielte Grundrunen erlaubt.'
+          : 'Du besitzt noch keine Rune – du spielst ohne Rune. Runen spielst du in der Kampagne frei.'}
       </p>
       {visible.map((r) => {
         const own = have(r);

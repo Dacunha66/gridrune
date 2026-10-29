@@ -65,7 +65,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
                 </li>
               ))}
             </ul>
-            <p>Diese vier Grundrunen hat jeder von Anfang an (in der Liga sind nur sie erlaubt). Weitere Runen gibt es in der Kampagne – nie stärker, nie für Echtgeld.</p>
+            <p>Die vier Grundrunen spielst du in der <b>Kampagne</b> frei: Waldpfad → Verdrehung, Waldhüter → Glut, Alte Ruinen → Fluch, Herz des Waldes (Boss) → Nachhall. Ohne Rune spielst du ohne. In der Liga sind nur Grundrunen erlaubt, die du freigespielt hast. Runen gibt es nie für Echtgeld, Varianten sind nie stärker.</p>
           </>
         )}
 

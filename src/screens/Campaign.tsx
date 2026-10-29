@@ -13,8 +13,8 @@ import { getCard } from '../game/cards';
 import { imageUrl } from '../game/catalog';
 import { CLASS_INFO, TERRAIN_INFO, Terrain } from '../game/effects';
 import { createRng } from '../game/rng';
-import { findRune } from '../game/runes';
-import { RuneMatchup } from '../components/RuneBadge';
+import { RUNES, RuneDef, findRune } from '../game/runes';
+import { RuneBadge, RuneMatchup } from '../components/RuneBadge';
 import { Pick } from '../game/runner';
 import {
   CampaignContent, ImageRef, KIND_LABEL, LEVEL_LABEL, Mission, MissionCard, Opponent, REWARD_ICON, RANK_LABEL, Reward, World, findArena,
@@ -22,9 +22,14 @@ import {
 } from '../game/campaign';
 import { DuelStats, duelStats, goalProgress, goalText } from '../game/campaignGoals';
 import {
-  CampaignProgress, MissionResult, missionDone, missionUnlocked, nextMilestone, recordResult, starSlots, worldLockText, worldPercent, worldStars,
+  CampaignProgress, MissionResult, missionDone, missionUnlocked, nextMilestone, recordResult, starSlots, totalStars, worldLockText, worldPercent, worldStars,
   worldUnlocked,
 } from '../game/campaignProgress';
+
+/** Runes a mission unlocks with its first win. */
+function missionRunes(missionId: string): RuneDef[] {
+  return RUNES.filter((r) => r.status === 'active' && r.unlock.kind === 'mission' && r.unlock.missionId === missionId);
+}
 
 interface Props {
   content: CampaignContent;
@@ -41,6 +46,8 @@ interface Props {
   startMissionId?: string;
   /** Rune the player takes into missions (null = none / runes not released). */
   playerRune?: string | null;
+  /** Runes are released for this player (opponents bring theirs, rune rewards are shown). */
+  runesOn?: boolean;
   onExit: () => void;
 }
 
@@ -55,7 +62,7 @@ type View =
 
 const KIND_ICON: Record<Mission['kind'], string> = { tutorial: '📖', normal: '⚔️', special: '✴️', elite: '💀', boss: '👑' };
 
-export function Campaign({ content, progress: saved, onProgress, deck, unlocked, reducedMotion, skin, preview, startMissionId, playerRune = null, onExit }: Props) {
+export function Campaign({ content, progress: saved, onProgress, deck, unlocked, reducedMotion, skin, preview, startMissionId, playerRune = null, runesOn = false, onExit }: Props) {
   // In the admin test, progress lives only in memory.
   const [testProgress, setTestProgress] = useState<CampaignProgress>(saved);
   const progress = preview ? testProgress : saved;
@@ -100,7 +107,7 @@ export function Campaign({ content, progress: saved, onProgress, deck, unlocked,
   if (view.k === 'brief') {
     return (
       <Briefing
-        mission={mission} opponent={opponent} content={content} progress={progress} deck={deck} preview={!!preview} playerRune={playerRune}
+        mission={mission} opponent={opponent} content={content} progress={progress} deck={deck} preview={!!preview} playerRune={playerRune} runesOn={runesOn}
         onBack={back}
         onStart={(hand) => (opponent.intro ? setView({ k: 'intro', missionId: mission.id, hand }) : begin(hand))}
       />
@@ -127,7 +134,7 @@ export function Campaign({ content, progress: saved, onProgress, deck, unlocked,
       setView({ k: 'result', missionId: mission.id, outcome, score, stats, result, starsBefore });
     };
     return (
-      <MissionBattle key={view.runId} mission={mission} opponent={opponent} picks={view.picks} unlocked={unlocked} reducedMotion={reducedMotion} playerRune={playerRune}
+      <MissionBattle key={view.runId} mission={mission} opponent={opponent} picks={view.picks} unlocked={unlocked} reducedMotion={reducedMotion} playerRune={playerRune} runesOn={runesOn}
         onEnd={finish} onQuit={() => setView({ k: 'brief', missionId: mission.id })} />
     );
   }
@@ -136,7 +143,7 @@ export function Campaign({ content, progress: saved, onProgress, deck, unlocked,
   return (
     <MissionResultView
       mission={mission} opponent={opponent} world={content.worlds.find((w) => w.id === mission.worldId) ?? null} content={content}
-      progress={progress} preview={!!preview} view={view} reducedMotion={reducedMotion}
+      progress={progress} preview={!!preview} runesOn={runesOn} view={view} reducedMotion={reducedMotion}
       onAgain={() => setView({ k: 'brief', missionId: mission.id })}
       onNext={next && missionUnlocked(content, progress, next, preview) && !startMission ? () => setView({ k: 'brief', missionId: next.id }) : undefined}
       onMap={back}
@@ -310,8 +317,8 @@ function WorldMap({ world, content, progress, preview, onMission, onBack }: {
 
 // ---------- Briefing ----------
 
-function Briefing({ mission, opponent, content, progress, deck, preview, playerRune, onBack, onStart }: {
-  mission: Mission; opponent: Opponent; content: CampaignContent; progress: CampaignProgress; deck: string[]; preview: boolean; playerRune: string | null;
+function Briefing({ mission, opponent, content, progress, deck, preview, playerRune, runesOn, onBack, onStart }: {
+  mission: Mission; opponent: Opponent; content: CampaignContent; progress: CampaignProgress; deck: string[]; preview: boolean; playerRune: string | null; runesOn: boolean;
   onBack: () => void; onStart: (hand: MissionCard[]) => void;
 }) {
   const arena = findArena(mission.arenaId) ?? CLASSIC_ARENA;
@@ -350,9 +357,15 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
           </div>
         </section>
 
-        {playerRune && (
+        {runesOn && (
           <section className="brief-runes">
-            <RuneMatchup player={playerRune} cpu={opponent.rune && findRune(opponent.rune) ? opponent.rune : null} note="Ändern unter „Deck bearbeiten“ → „Rune“." />
+            <RuneMatchup player={playerRune} cpu={opponent.rune && findRune(opponent.rune) ? opponent.rune : null}
+              note={playerRune ? 'Ändern unter „Deck bearbeiten“ → „Rune“.' : 'Du hast noch keine Rune – Runen spielst du in der Kampagne frei.'} />
+            {missionRunes(mission.id).map((r) => (
+              <p key={r.id} className={`rune-reward ${missionDone(progress, mission.id) ? 'done' : ''}`}>
+                <RuneBadge rune={r} className="small" /> <span>{missionDone(progress, mission.id) ? 'Freigespielt: ' : 'Erster Sieg schaltet frei: '}<b>{r.name}</b></span>
+              </p>
+            ))}
           </section>
         )}
 
@@ -443,8 +456,8 @@ function BossIntro({ opponent, mission, reducedMotion, onGo, onBack }: { opponen
   );
 }
 
-function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, playerRune, onEnd, onQuit }: {
-  mission: Mission; opponent: Opponent; picks: Pick[]; unlocked: string[]; reducedMotion: boolean; playerRune: string | null;
+function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, playerRune, runesOn, onEnd, onQuit }: {
+  mission: Mission; opponent: Opponent; picks: Pick[]; unlocked: string[]; reducedMotion: boolean; playerRune: string | null; runesOn: boolean;
   onEnd: (outcome: Outcome, score: { player: number; cpu: number }, first: unknown, record: DuelRecord) => void; onQuit: () => void;
 }) {
   const [setup] = useState<BattleSetup>(() => {
@@ -459,8 +472,8 @@ function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, play
       finishLabel: 'Weiter',
       ai: { level: opponent.level, prefer: opponent.prefer },
       badgeText: '★',
-      // The opponent brings its rune only while runes are in play for this player.
-      runes: { player: playerRune, cpu: playerRune !== null ? opponent.rune ?? null : null },
+      // The opponent brings its rune whenever runes are released – also against players who have none yet.
+      runes: { player: playerRune, cpu: runesOn ? opponent.rune ?? null : null },
     };
   });
   const boss = opponent.rank === 'boss';
@@ -474,8 +487,8 @@ function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, play
 
 // ---------- Result ----------
 
-function MissionResultView({ mission, opponent, world, content, progress, preview, view, reducedMotion, onAgain, onNext, onMap }: {
-  mission: Mission; opponent: Opponent; world: World | null; content: CampaignContent; progress: CampaignProgress; preview: boolean;
+function MissionResultView({ mission, opponent, world, content, progress, preview, runesOn, view, reducedMotion, onAgain, onNext, onMap }: {
+  mission: Mission; opponent: Opponent; world: World | null; content: CampaignContent; progress: CampaignProgress; preview: boolean; runesOn: boolean;
   view: Extract<View, { k: 'result' }>; reducedMotion: boolean; onAgain: () => void; onNext?: () => void; onMap: () => void;
 }) {
   const { outcome, score, stats, result, starsBefore } = view;
@@ -486,6 +499,12 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
   const boss = opponent.rank === 'boss';
   const title = outcome === 'win' ? (boss ? 'Boss besiegt!' : 'Mission geschafft!') : outcome === 'draw' ? 'Unentschieden' : 'Niederlage';
   const text = boss ? (outcome === 'win' ? opponent.winText : opponent.loseText) : '';
+  // Runes this result unlocked: by the first win of this mission, or by crossing a star threshold.
+  const totalNow = totalStars(content, progress);
+  const totalBefore = totalNow - result.newStars.length;
+  const newRunes = !runesOn || preview ? [] : RUNES.filter((r) => r.status === 'active' && (
+    (r.unlock.kind === 'mission' && r.unlock.missionId === mission.id && result.firstWin)
+    || (r.unlock.kind === 'stars' && r.unlock.n > totalBefore && r.unlock.n <= totalNow)));
   const newRewards = [
     ...(result.firstWin && mission.firstReward ? [mission.firstReward] : []),
     ...result.newStars.flatMap((i) => (mission.goalRewards[i] ? [mission.goalRewards[i]!] : [])),
@@ -521,6 +540,15 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
             <p><b>Freigeschaltet</b></p>
             {newRewards.map((r, i) => <p key={i}><RewardLine reward={r} /></p>)}
             <p className="muted small">🎁 {PREVIEW_NOTE}</p>
+          </div>
+        )}
+        {newRunes.length > 0 && (
+          <div className="reward-box rune-unlocked">
+            <p><b>Neue Rune freigespielt!</b></p>
+            {newRunes.map((r) => (
+              <p key={r.id} className="rune-reward"><RuneBadge rune={r} className="big" /> <span><b>{r.name}</b><br /><span className="small">{r.description}</span></span></p>
+            ))}
+            <p className="muted small">Auswählen unter „Deck bearbeiten“ → „Rune“.</p>
           </div>
         )}
         {preview && <p className="test-banner">🧪 Testmodus – nichts wurde gespeichert</p>}

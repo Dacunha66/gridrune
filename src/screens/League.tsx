@@ -15,7 +15,7 @@ import { Header } from './Header';
 import { Runner } from './Runner';
 import { Battle } from './Battle';
 import { RuneMatchup } from '../components/RuneBadge';
-import { availableRunes, findRune } from '../game/runes';
+import { basicRunes, findRune } from '../game/runes';
 
 const RULES = COLLECTION_LEAGUE_RULES;
 
@@ -52,12 +52,14 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
   // The computer's rune: one basic rune per match, fixed by the match seed (same in every round).
   const cpuRune = useMemo(() => {
     if (!seed || !runes) return null;
-    const basic = availableRunes('league', []);
+    const basic = basicRunes();
     return basic.length ? basic[Math.floor(deriveRng(seed, 'cpu-rune')() * basic.length)].id : null;
   }, [seed, runes]);
-  const runeNote = runes && runes.equipped && !runes.player
-    ? `In der Liga sind nur die Grundrunen erlaubt – „${findRune(runes.equipped)?.name ?? 'deine Rune'}“ bleibt hier draußen. Ändern unter „Deck bearbeiten“ → „Rune“.`
-    : 'Jede Rune einmal pro Duell (in jeder Runde neu). In der Liga nur Grundrunen – für alle gleich. Ändern unter „Deck bearbeiten“ → „Rune“.';
+  const runeNote = runes && !runes.equipped
+    ? 'Du hast noch keine Rune – Grundrunen spielst du in der Kampagne frei.'
+    : runes && !runes.player
+      ? `In der Liga sind nur die Grundrunen erlaubt – „${findRune(runes.equipped)?.name ?? 'deine Rune'}“ bleibt hier draußen. Ändern unter „Deck bearbeiten“ → „Rune“.`
+      : 'Jede Rune einmal pro Duell (in jeder Runde neu). In der Liga nur Grundrunen, die du in der Kampagne freigespielt hast. Ändern unter „Deck bearbeiten“ → „Rune“.';
 
   function startMatch() {
     const s = newMatchSeed();

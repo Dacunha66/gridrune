@@ -16,7 +16,7 @@ import { ACTIVE, layoutVars } from '../game/designs';
 import { AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
-import { Action, BUILTIN_RUNES, RuneDef, RuneUse, applyRune, echoCapturable, findRune, placedCount, runeChoices, runeOpen, runeProblem, runeRules } from '../game/runes';
+import { Action, RuneDef, RuneUse, applyRune, basicRunes, echoCapturable, findRune, placedCount, runeChoices, runeOpen, runeProblem, runeRules } from '../game/runes';
 import { RuneBadge } from '../components/RuneBadge';
 import { CardClass } from '../game/effects';
 import { CARD_STYLE_LABEL, cycleCardStyle, useCardStyle, useDevTools } from '../game/cardStyle';
@@ -87,7 +87,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   const [boardDesign] = useState(() => ACTIVE.board);
   const [initial] = useState<BattleState>(() => {
     const r = setup?.runes ?? runes;
-    const basic = BUILTIN_RUNES.map((x) => x.id);
+    const basic = basicRunes().map((x) => x.id);
     const cpuRune = r?.cpu === 'random' ? basic[Math.floor(rng() * basic.length)] : r?.cpu ?? null;
     return createBattle(
       picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells,
