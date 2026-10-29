@@ -46,7 +46,7 @@ describe('Häufigkeit der Seltenheiten im Lauf', () => {
   });
 
   it('nur Legendär eingestellt: im Finaltor erscheinen nur legendäre Karten', () => {
-    setGameSettings({ discoveryShares: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 1, mythic: 0 } });
+    setGameSettings({ ...defaultSettings(), discoveryShares: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 1, mythic: 0 } });
     for (let seed = 1; seed <= 100; seed++) for (const id of finalOffers(seed)) expect(getCard(id).rarity).toBe('legendary');
   });
 
@@ -57,14 +57,14 @@ describe('Häufigkeit der Seltenheiten im Lauf', () => {
       return n;
     };
     const before = count();
-    setGameSettings({ discoveryShares: { ...DEFAULT_DISCOVERY_SHARES, epic: 60 } });
+    setGameSettings({ ...defaultSettings(), discoveryShares: { ...DEFAULT_DISCOVERY_SHARES, epic: 60 } });
     expect(count()).toBeGreaterThan(before * 2);
   });
 
   it('Einstellungen werden gespeichert und geladen; Spieler können sie nicht ändern', async () => {
     const admin = fakeDb({ admin: true });
     expect(await loadGameSettings(admin.db)).toBeNull();
-    await saveGameSettings(admin.db, { discoveryShares: { ...DEFAULT_DISCOVERY_SHARES, mythic: 5 } });
+    await saveGameSettings(admin.db, { ...defaultSettings(), discoveryShares: { ...DEFAULT_DISCOVERY_SHARES, mythic: 5 } });
     expect((await loadGameSettings(admin.db))?.discoveryShares.mythic).toBe(5);
     const player = fakeDb({ admin: false });
     await expect(saveGameSettings(player.db, defaultSettings())).rejects.toMatchObject({ code: 'invalid_argument' });
@@ -98,7 +98,7 @@ describe('Karten nur durch Belohnung', () => {
     for (let seed = 1; seed <= 500; seed++) {
       for (const pack of PACKS) for (const id of rollPack(pack, createRng(seed))) expect(rewardOnly).not.toContain(id);
     }
-    setGameSettings({ discoveryShares: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 1, mythic: 1 } });
+    setGameSettings({ ...defaultSettings(), discoveryShares: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 1, mythic: 1 } });
     expect(finalOffers(1).some((id) => rewardOnly.includes(id))).toBe(true);
   });
 

@@ -16,6 +16,7 @@ import { ACTIVE, layoutVars } from '../game/designs';
 import { AiOptions, chooseCpuMove, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
+import { Action } from '../game/runes';
 import { CARD_STYLE_LABEL, cycleCardStyle, useCardStyle, useDevTools } from '../game/cardStyle';
 
 interface Props {
@@ -49,7 +50,7 @@ export interface BattleSetup {
 /** A finished duel that can be replayed exactly: start position (after the toss) and all moves. */
 export interface DuelRecord {
   start: BattleState;
-  moves: Move[];
+  moves: Action[];
 }
 
 /** True while the card gets a terrain bonus – its element or a terrain effect (soft green glow on the card). */
@@ -228,7 +229,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
           : selected === null
             ? 'Karte wählen · Feldkarte antippen = Details'
             : selectedEffect
-              ? `${CLASS_INFO[selectedEffect.cls].icon} ${selectedEffect.name}: ${selectedEffect.short}`
+              ? `${selectedEffect.cls ? CLASS_INFO[selectedEffect.cls].icon : '✦'} ${selectedEffect.name}: ${selectedEffect.short}`
               : selectedElement
                 ? `${CLASS_INFO[selectedDef!.cls!].icon} ${CLASS_INFO[selectedDef!.cls!].label}: auf ${TERRAIN_INFO[selectedElement].icon} ${TERRAIN_INFO[selectedElement].label} +1 auf alle Werte`
                 : 'Tippe auf ein freies Feld.';

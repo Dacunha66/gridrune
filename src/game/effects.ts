@@ -37,12 +37,14 @@ export const TERRAIN_INFO: Record<Terrain, { label: string; icon: string }> = {
 
 export type EffectId =
   | 'kampfgeist' | 'schildwall' | 'arkane_kraft' | 'magische_barriere' | 'wurzelkraft'
-  | 'naturbund' | 'flammenherz' | 'frostpanzer' | 'schattenmantel' | 'schwaechender_blick';
+  | 'naturbund' | 'flammenherz' | 'frostpanzer' | 'schattenmantel' | 'schwaechender_blick'
+  | 'wirbelwind' | 'kettenuebernahme';
 
 export interface EffectDef {
   id: EffectId;
   name: string;
-  cls: CardClass;
+  /** Class the effect belongs to; null = cross-class (every class may have it). */
+  cls: CardClass | null;
   /** When it works: once when played, or as long as a condition holds. */
   trigger: 'play' | 'condition';
   /** Terrain the effect needs (terrain effects only). */
@@ -96,6 +98,14 @@ export const EFFECTS: Record<EffectId, EffectDef> = {
     id: 'schwaechender_blick', short: 'Gegner daneben −1 auf alle Werte', name: 'Schwächender Blick', cls: 'schatten', trigger: 'play', value: 3.1,
     text: 'Beim Ausspielen: Eine angrenzende gegnerische Karte verliert −1 auf alle Werte (bis Duellende). Bei mehreren Gegnern wählst du das Ziel.',
   },
+  wirbelwind: {
+    id: 'wirbelwind', short: 'Beim Legen drehbar (90°-Schritte)', name: 'Wirbelwind', cls: null, trigger: 'play', value: 1.5,
+    text: 'Beim Legen wählst du die Ausrichtung: Die vier Werte drehen sich in 90°-Schritten mit (das Bild bleibt aufrecht). Die Ausrichtung bleibt bis Duellende.',
+  },
+  kettenuebernahme: {
+    id: 'kettenuebernahme', short: 'Eroberte Karten greifen weiter an', name: 'Kettenübernahme', cls: null, trigger: 'play', value: 2.5,
+    text: 'Erobert diese Karte beim Legen eine Gegnerkarte, greift die eroberte Karte ihrerseits angrenzende Gegner an – nach den normalen Regeln, höchstens zwei weitere Stufen.',
+  },
 };
 
 export const EFFECT_IDS = Object.keys(EFFECTS) as EffectId[];
@@ -112,9 +122,15 @@ export function isTerrain(v: unknown): v is Terrain {
   return typeof v === 'string' && (TERRAINS as string[]).includes(v);
 }
 
-/** Effects a card of this class may have. */
+/** May a card of this class have the effect? (Cross-class effects fit every class.) */
+export function effectFitsClass(effect: EffectId, cls: CardClass | undefined | null): boolean {
+  const own = EFFECTS[effect].cls;
+  return own === null || own === cls;
+}
+
+/** Effects a card of this class may have (its own class effects plus the cross-class ones). */
 export function effectsForClass(cls: CardClass | undefined): EffectDef[] {
-  return cls ? EFFECT_IDS.map((id) => EFFECTS[id]).filter((e) => e.cls === cls) : [];
+  return cls ? EFFECT_IDS.map((id) => EFFECTS[id]).filter((e) => effectFitsClass(e.id, cls)) : [];
 }
 
 type Four = [number, number, number, number];
@@ -161,5 +177,9 @@ export function effectPreview(base: Four, effect: EffectId): { situation: string
     }
     case 'schwaechender_blick':
       return { situation: 'Beim Ausspielen', values: v, note: 'Die eigenen Werte bleiben gleich – eine Gegnerkarte daneben bekommt −1 auf alle Werte.' };
+    case 'wirbelwind':
+      return { situation: 'Beim Legen (ungedreht)', values: v, note: `Gedreht um 90° nach rechts: ${[v[3], v[0], v[1], v[2]].join(' / ')} – die Werte werden nur neu angeordnet, nicht verändert.` };
+    case 'kettenuebernahme':
+      return { situation: 'Beim Legen', values: v, note: 'Die Werte bleiben gleich – eroberte Karten greifen weiter an.' };
   }
 }

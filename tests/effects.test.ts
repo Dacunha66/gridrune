@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  BattleState, BoardCell, CELL_COUNT, Move, applyMove, cellBreakdown, createBattle, isLegalMove, legalMoves, toHand,
+  BattleState, BoardCell, CELL_COUNT, Move, applyMove, cellBreakdown, createBattle, isLegalMove, legalMoves, rotateValues, toHand,
 } from '../src/game/battle';
 import { chooseCpuMove } from '../src/game/ai';
 import { BUILTIN_CARDS, CardDef, getCard, setCardCatalog } from '../src/game/cards';
 import { CardClass, EFFECTS, EffectId, Terrain, effectPreview, effectsForClass } from '../src/game/effects';
 import { createRng } from '../src/game/rng';
+import { SETTINGS } from '../src/game/settings';
 
 // Test cards with exactly known values. [top, right, bottom, left]
 function card(id: string, v: [number, number, number, number], cls: CardClass = 'krieger', effect?: EffectId): CardDef {
@@ -28,6 +29,10 @@ const TEST_CARDS: CardDef[] = [
   card('p08', [8, 8, 8, 8]),
   card('n05', [5, 5, 5, 5], 'natur'),
   card('x10', [10, 10, 10, 10]),
+  card('w01', [9, 1, 2, 3], 'frost', 'wirbelwind'),
+  card('k01', [6, 6, 6, 6], 'feuer', 'kettenuebernahme'),
+  card('k02', [6, 6, 6, 6], 'feuer'),
+  card('l66', [1, 6, 6, 1], 'krieger'), // weak on top/left, strong on right/bottom: chains run right and down
 ];
 
 setCardCatalog([...BUILTIN_CARDS, ...TEST_CARDS]);
@@ -51,10 +56,12 @@ const values = (s: BattleState, cell: number) => cellBreakdown(s.board, s.terrai
 // Cell 5 has neighbours: top 1, right 6, bottom 9, left 4.
 
 describe('Effekt-Vorlagen', () => {
-  it('10 Effekte, jeder gehört zu genau einer der 6 Klassen', () => {
-    expect(Object.keys(EFFECTS)).toHaveLength(10);
-    const total = (['krieger', 'magier', 'natur', 'feuer', 'frost', 'schatten'] as CardClass[]).reduce((n, c) => n + effectsForClass(c).length, 0);
+  it('12 Fähigkeiten: 10 gehören zu genau einer Klasse, Wirbelwind und Kettenübernahme zu allen', () => {
+    expect(Object.keys(EFFECTS)).toHaveLength(12);
+    const classes = ['krieger', 'magier', 'natur', 'feuer', 'frost', 'schatten'] as CardClass[];
+    const total = classes.reduce((n, c) => n + effectsForClass(c).filter((e) => e.cls !== null).length, 0);
     expect(total).toBe(10);
+    for (const c of classes) expect(effectsForClass(c).map((e) => e.id)).toEqual(expect.arrayContaining(['wirbelwind', 'kettenuebernahme']));
   });
 });
 
@@ -292,5 +299,94 @@ describe('Element: Klasse auf ihrem Gelände', () => {
     expect(n.board[5]!.owner).toBe('player');
     const s2 = applyMove(setup({}, ['c01'], { 5: 'wald' }), { handIndex: 0, cell: 5 });
     expect(cellBreakdown(s2.board, s2.terrain, 5).parts.map((p) => p.kind)).toContain('element');
+  });
+});
+
+describe('Wirbelwind (Ausrichtung beim Legen)', () => {
+  it('dreht die Werte im Uhrzeigersinn, das gedruckte Original bleibt', () => {
+    expect(rotateValues([9, 1, 2, 3], 1)).toEqual([3, 9, 1, 2]);
+    expect(rotateValues([9, 1, 2, 3], 2)).toEqual([2, 3, 9, 1]);
+    expect(rotateValues([9, 1, 2, 3], 4)).toEqual([9, 1, 2, 3]);
+    const s = applyMove(setup({}, ['w01']), { handIndex: 0, cell: 5, rot: 1 });
+    expect(values(s, 5)).toEqual([3, 9, 1, 2]);
+    expect(s.board[5]!.rot).toBe(1);
+    expect(getCard('w01').top).toBe(9);
+  });
+  it('kämpft mit der gewählten Ausrichtung: die 9 zeigt nach rechts und erobert', () => {
+    const s = applyMove(setup({ 6: at('p05', 'cpu') }, ['w01']), { handIndex: 0, cell: 5, rot: 1 });
+    expect(s.board[6]!.owner).toBe('player');
+    const n = applyMove(setup({ 6: at('p05', 'cpu') }, ['w01']), { handIndex: 0, cell: 5 });
+    expect(n.board[6]!.owner).toBe('cpu');
+  });
+  it('nur Wirbelwind-Karten dürfen gedreht werden; Ausrichtungen 0–3', () => {
+    const s = setup({}, ['p05', 'w01']);
+    expect(isLegalMove(s, { handIndex: 0, cell: 5, rot: 1 })).toBe(false);
+    expect(isLegalMove(s, { handIndex: 1, cell: 5, rot: 3 })).toBe(true);
+    expect(isLegalMove(s, { handIndex: 1, cell: 5, rot: 4 })).toBe(false);
+    expect(legalMoves(s).filter((m) => m.cell === 5)).toHaveLength(1 + 4);
+  });
+  it('Drehung verschiebt Boni mit ihrer Seite und verdoppelt nichts (Kampfgeist + Gelände)', () => {
+    // Kampfgeist +1 on the highest (local top 5 → right after a turn would need Wirbelwind; use breakdown order instead).
+    const st = applyMove(setup({}, ['w01'], { 5: 'eis' }), { handIndex: 0, cell: 5, rot: 2 });
+    const b = cellBreakdown(st.board, st.terrain, 5);
+    expect(b.base).toEqual([2, 3, 9, 1]);
+    expect(b.values).toEqual([3, 4, 10, 2]); // Frost on Eis: element +1 on every side, once
+    expect(b.rot).toBe(2);
+  });
+});
+
+describe('Kettenübernahme', () => {
+  // Row 0: [k01 placed at 0] [enemy l66 at 1] [enemy l66 at 2] [enemy l66 at 3]
+  const line = () => setup({ 1: at('l66', 'cpu'), 2: at('l66', 'cpu'), 3: at('l66', 'cpu') }, ['k01', 'k02']);
+  it('eroberte Karten greifen weiter an – Welle für Welle', () => {
+    const s = applyMove(line(), { handIndex: 0, cell: 0 });
+    expect([1, 2, 3].map((c) => s.board[c]!.owner)).toEqual(['player', 'player', 'player']);
+    expect(s.lastChain).toEqual([{ from: 1, cell: 2, level: 1 }, { from: 2, cell: 3, level: 2 }]);
+    expect(s.lastFlips).toEqual([1, 2, 3]);
+    expect(s.lastEvents.some((e) => /Kette ×2/.test(e.text))).toBe(true);
+  });
+  it('ohne die Fähigkeit keine Kette (normale Übernahme)', () => {
+    const s = applyMove(line(), { handIndex: 1, cell: 0 });
+    expect([1, 2, 3].map((c) => s.board[c]!.owner)).toEqual(['player', 'cpu', 'cpu']);
+    expect(s.lastChain).toEqual([]);
+  });
+  it('höchstens so viele Stufen wie eingestellt (Standard 2, 0 = unbegrenzt)', () => {
+    // 5 in a snake: 0 → 1 → 2 → 3 → 7 → 11
+    const snake = () => setup({ 1: at('l66', 'cpu'), 2: at('l66', 'cpu'), 3: at('l66', 'cpu'), 7: at('l66', 'cpu'), 11: at('l66', 'cpu') }, ['k01']);
+    const two = applyMove(snake(), { handIndex: 0, cell: 0 });
+    expect(two.lastChain.map((c) => c.cell)).toEqual([2, 3]);
+    expect(two.board[7]!.owner).toBe('cpu');
+    const before = SETTINGS.chainDepth;
+    try {
+      SETTINGS.chainDepth = 0;
+      const all = applyMove(snake(), { handIndex: 0, cell: 0 });
+      expect(all.lastChain.map((c) => c.cell)).toEqual([2, 3, 7, 11]);
+      SETTINGS.chainDepth = 1;
+      expect(applyMove(snake(), { handIndex: 0, cell: 0 }).lastChain.map((c) => c.cell)).toEqual([2]);
+    } finally {
+      SETTINGS.chainDepth = before;
+    }
+  });
+  it('keine Endlosschleife und jede Karte greift höchstens einmal an (volles Feld)', () => {
+    const board: Record<number, BoardCell> = {};
+    for (let i = 1; i < 16; i++) board[i] = at('l66', 'cpu');
+    const before = SETTINGS.chainDepth;
+    try {
+      SETTINGS.chainDepth = 0;
+      const s = applyMove(setup(board, ['k01']), { handIndex: 0, cell: 0 });
+      const cells = s.lastChain.map((c) => c.cell);
+      expect(new Set(cells).size).toBe(cells.length);
+      expect(s.board.every((c) => !c || c.owner === 'player')).toBe(true);
+      const froms = s.lastChain.map((c) => c.from);
+      // An attacker appears for several captures of one wave, but never in two different waves.
+      for (const f of new Set(froms)) expect(new Set(s.lastChain.filter((c) => c.from === f).map((c) => c.level)).size).toBe(1);
+    } finally {
+      SETTINGS.chainDepth = before;
+    }
+  });
+  it('gleiches Ergebnis bei gleichen Zügen (feste Reihenfolge)', () => {
+    const a = applyMove(line(), { handIndex: 0, cell: 0 });
+    const b = applyMove(line(), { handIndex: 0, cell: 0 });
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   });
 });

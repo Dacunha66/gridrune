@@ -23,6 +23,10 @@ export const EFFECT_ICON: Record<EffectId, string> = {
   frostpanzer: SHIELD_PATH + 'M12 8v8M8.6 10l6.8 4M8.6 14l6.8-4',
   schattenmantel: 'M12 3c-4 0-7 4-7 9v8.5l2.4-1.6 2.3 1.6 2.3-1.6 2.3 1.6 2.3-1.6 2.4 1.6V12c0-5-3-9-7-9zM9.5 11.5h.01M14.5 11.5h.01',
   schwaechender_blick: 'M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  // Two circular arrows.
+  wirbelwind: 'M4.5 11a7.5 7.5 0 0 1 13-4.6M19.5 13a7.5 7.5 0 0 1-13 4.6M17.8 2.8v3.8H14M6.2 21.2v-3.8H10',
+  // Two lightning bolts joined by a link.
+  kettenuebernahme: 'M8.5 2L4 10.5h4.2L6.5 16M17.5 8L13 16.5h4.2L15.5 22M8.2 13.2l7.6-2.4',
 };
 
 export function Icon({ path, className, color, fill = 'none' }: { path: string; className?: string; color?: string; fill?: string }) {
@@ -48,6 +52,8 @@ export const ABILITY_GLYPH: Record<EffectId, { d: string; fill: boolean }> = {
   frostpanzer: { d: 'M12 1.8l3.4 6.6-3.4 13.8-3.4-13.8zM4.5 8.5l3.8 2.2-1.6 8.3M19.5 8.5l-3.8 2.2 1.6 8.3', fill: false }, // ice crystal
   schattenmantel: { d: EFFECT_ICON.schattenmantel, fill: false }, // hood
   schwaechender_blick: { d: EFFECT_ICON.schwaechender_blick, fill: false }, // eye
+  wirbelwind: { d: EFFECT_ICON.wirbelwind, fill: false }, // two circular arrows
+  kettenuebernahme: { d: EFFECT_ICON.kettenuebernahme, fill: false }, // linked lightning bolts
 };
 
 /** Heraldic shield in the class colour with the class symbol – the shape alone says "class". */

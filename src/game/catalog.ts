@@ -1,6 +1,6 @@
 // Card records as stored in the card database (admin dashboard) and how they turn into game cards.
 import { BUILTIN_CARDS, CARD_ID_RE, CardDef, DECK_SIZE, RARITIES, RARITY_ORDER, RARITY_POWER, Rarity, STARTER_DECK, cardPower, suggestedClass } from './cards';
-import { CardClass, EFFECTS, EffectId, isCardClass, isEffectId } from './effects';
+import { CardClass, effectFitsClass, EffectId, EFFECTS, isCardClass, isEffectId } from './effects';
 
 export type CardStatus = 'draft' | 'active' | 'disabled';
 
@@ -66,7 +66,7 @@ export function parseCardRecord(id: string, raw: unknown): CardRecord | null {
   const [top, right, bottom, left] = values as number[];
   // Older documents have no class yet: they get the suggested one. An effect must fit the class.
   const cls = isCardClass(r.cls) ? r.cls : suggestedClass(id);
-  const effect = isEffectId(r.effect) && EFFECTS[r.effect].cls === cls ? r.effect : null;
+  const effect = isEffectId(r.effect) && effectFitsClass(r.effect, cls) ? r.effect : null;
   const hue = typeof r.hue === 'number' && Number.isFinite(r.hue) ? ((Math.round(r.hue) % 360) + 360) % 360 : 260;
   return {
     id,

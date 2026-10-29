@@ -160,7 +160,7 @@ export function RunnerSettingsView({ records, db, saved, onToast, onSaved }: {
   async function save() {
     if (allZero || busy) return;
     setBusy(true);
-    const next: GameSettings = { discoveryShares: { ...shares } };
+    const next: GameSettings = { ...saved, discoveryShares: { ...shares } };
     try {
       await saveGameSettings(db, next);
       onSaved(next);

@@ -2,6 +2,7 @@
 // Special effects (effects.ts) only change values for the current duel; printed values never change.
 import { getCard } from './cards';
 import { CLASS_TERRAIN, EFFECTS, ELEMENT_BONUS, TERRAIN_INFO, Terrain } from './effects';
+import { SETTINGS } from './settings';
 
 export type Side = 'player' | 'cpu';
 
@@ -51,6 +52,8 @@ export interface BoardCell extends HandCard {
   changes?: Change[];
   /** Shield of the Magische Barriere: blocks the next weakening by an enemy effect. */
   barrier?: boolean;
+  /** Orientation in quarter turns clockwise (Wirbelwind, Rune der Verdrehung); 0 = as printed. */
+  rot?: number;
 }
 
 /** Something an effect did during the last move (shown as a short popup). */
@@ -79,6 +82,34 @@ export interface BattleState {
   terrain: Terrain[];
   /** Effects triggered by the most recent move. */
   lastEvents: EffectEvent[];
+  /** Kettenübernahme of the most recent move: each further capture, wave by wave. */
+  lastChain: ChainStep[];
+  /** Equipped rune of each side and whether it was used (null = no rune). */
+  runes: Record<Side, RuneSlot | null>;
+  /** Everything that happened, in order (public duel log). */
+  log: LogEntry[];
+  /** Cell the comparisons of the most recent action start from (placed card or rune target). */
+  lastOrigin: number | null;
+  /** Rune used in the most recent action (for the animation). */
+  lastRune: { side: Side; id: string } | null;
+}
+
+/** One capture of a Kettenübernahme: the captured card `from` took `cell` in wave `level` (1 = after the first capture). */
+export interface ChainStep {
+  from: number;
+  cell: number;
+  level: number;
+}
+
+export interface RuneSlot {
+  id: string;
+  used: boolean;
+}
+
+export interface LogEntry {
+  side: Side;
+  kind: 'place' | 'rune';
+  text: string;
 }
 
 /** One comparison between the placed card and an opposing neighbour. */
@@ -96,6 +127,8 @@ export interface Move {
   cell: number;
   /** Target of "Schwächender Blick" – required when several enemy cards are adjacent. */
   target?: number;
+  /** Wirbelwind: orientation chosen when placing (quarter turns clockwise, 0–3). */
+  rot?: number;
 }
 
 export function other(side: Side): Side {
@@ -106,6 +139,7 @@ export const NORMAL_TERRAIN: Terrain[] = Array<Terrain>(16).fill('normal');
 
 export function createBattle(
   playerHand: HandCard[], cpuHand: HandCard[], first: Side = 'player', rocks: number[] = [], terrain: readonly Terrain[] = NORMAL_TERRAIN,
+  runes: Partial<Record<Side, string | null>> = {},
 ): BattleState {
   if (playerHand.length !== HAND_SIZE || cpuHand.length !== HAND_SIZE) {
     throw new Error(`Each side needs exactly ${HAND_SIZE} cards`);
@@ -121,7 +155,19 @@ export function createBattle(
     rocks: [...new Set(rocks)].filter((c) => Number.isInteger(c) && c >= 0 && c < CELL_COUNT),
     terrain: terrain.length === CELL_COUNT ? [...terrain] : [...NORMAL_TERRAIN],
     lastEvents: [],
+    lastChain: [],
+    runes: { player: runes.player ? { id: runes.player, used: false } : null, cpu: runes.cpu ? { id: runes.cpu, used: false } : null },
+    log: [],
+    lastOrigin: null,
+    lastRune: null,
   };
+}
+
+/** Values turned by quarter turns clockwise: the top value moves to the right, the left value to the top. */
+export function rotateValues(v: Values, rot = 0): Values {
+  let out = [...v] as Values;
+  for (let i = 0; i < ((rot % 4) + 4) % 4; i++) out = [out[3], out[0], out[1], out[2]];
+  return out;
 }
 
 /** A random rock cell for a balanced duel – only on normal (terrain-free) cells. */
@@ -168,7 +214,10 @@ export interface Part {
 }
 
 export interface Breakdown {
+  /** Printed values in the card's current orientation. */
   base: Values;
+  /** Orientation in quarter turns clockwise. */
+  rot: number;
   parts: Part[];
   /** Effective values (1–10) used in every comparison. */
   values: Values;
@@ -185,6 +234,11 @@ function lastingValues(card: HandCard & { changes?: Change[] }): Values {
   let v = sum(printed(card.cardId), [card.mod, card.mod, card.mod, card.mod]);
   for (const ch of card.changes ?? []) v = sum(v, ch.d);
   return v.map(clampValue) as Values;
+}
+
+/** Lasting values turned to the card's orientation on the board (boni turn with their side). */
+function orientedLasting(card: HandCard & { changes?: Change[]; rot?: number }): Values {
+  return rotateValues(lastingValues(card), card.rot ?? 0);
 }
 
 /** Index of the highest/lowest value; ties go to top, right, bottom, left (in this order). */
@@ -241,7 +295,7 @@ function effectAura(board: readonly (BoardCell | null)[], terrain: readonly Terr
     case 'frostpanzer':
       return here === 'eis' ? [{ source: def.name, d: [0, 1, 0, 1], kind: 'aura' }] : [];
     case 'schattenmantel':
-      return here === 'schatten' ? [{ source: def.name, d: onlyAt([extremeIndex(lastingValues(card), 'min')], 2), kind: 'aura' }] : [];
+      return here === 'schatten' ? [{ source: def.name, d: onlyAt([extremeIndex(orientedLasting(card), 'min')], 2), kind: 'aura' }] : [];
     default:
       return [];
   }
@@ -252,12 +306,13 @@ export function cellBreakdown(board: readonly (BoardCell | null)[], terrain: rea
   const card = board[cell];
   if (!card) throw new Error('Empty cell');
   const parts: Part[] = [];
+  const rot = card.rot ?? 0;
   if (card.mod !== 0) parts.push({ source: 'Stolperstein', d: [card.mod, card.mod, card.mod, card.mod], kind: 'stone' });
-  for (const ch of card.changes ?? []) parts.push({ source: ch.source, d: ch.d, kind: 'play' });
+  for (const ch of card.changes ?? []) parts.push({ source: ch.source, d: rotateValues(ch.d, rot), kind: 'play' });
   const auras = auraParts(board, terrain, cell);
   parts.push(...auras);
-  const values = auras.reduce((v, p) => sum(v, p.d), lastingValues(card)).map(clampValue) as Values;
-  return { base: printed(card.cardId), parts, values, barrier: !!card.barrier };
+  const values = auras.reduce((v, p) => sum(v, p.d), orientedLasting(card)).map(clampValue) as Values;
+  return { base: rotateValues(printed(card.cardId), rot), rot, parts, values, barrier: !!card.barrier };
 }
 
 /** Effective value of the card on `cell` in direction `dir` (1–10). */
@@ -275,6 +330,8 @@ export interface Placement {
   board: (BoardCell | null)[];
   clashes: Clash[];
   events: EffectEvent[];
+  /** Further captures of a Kettenübernahme. */
+  chain: ChainStep[];
 }
 
 /**
@@ -283,11 +340,15 @@ export interface Placement {
  * Captures never trigger anything else (no chains, nothing retroactive).
  */
 export function resolvePlacement(
-  board: readonly (BoardCell | null)[], terrain: readonly Terrain[], cell: number, card: HandCard, side: Side, target?: number,
+  board: readonly (BoardCell | null)[], terrain: readonly Terrain[], cell: number, card: HandCard, side: Side, target?: number, rot = 0,
 ): Placement {
   const next = [...board];
   const events: EffectEvent[] = [];
   const placed: BoardCell = { cardId: card.cardId, mod: card.mod, owner: side, placedBy: side };
+  if (rot % 4 !== 0) {
+    placed.rot = ((rot % 4) + 4) % 4;
+    events.push({ cell, text: `↻ ${placed.rot * 90}°`, kind: 'buff' });
+  }
   const effect = getCard(card.cardId).effect;
   if (effect && EFFECTS[effect].trigger === 'play') {
     const name = EFFECTS[effect].name;
@@ -329,21 +390,54 @@ export function resolvePlacement(
     clashes.push({ cell: n.cell, dir: n.mine, attack, defense, captured: attack > defense });
   }
   for (const c of clashes) if (c.captured) next[c.cell] = { ...next[c.cell]!, owner: side };
-  return { board: next, clashes, events };
+  const chain = effect === 'kettenuebernahme' ? runChain(next, terrain, clashes.filter((c) => c.captured).map((c) => c.cell), side, cell) : [];
+  if (chain.length > 0) events.push({ cell, text: `⚡ Kette ×${chain.length}`, kind: 'buff' });
+  return { board: next, clashes, events, chain };
+}
+
+/**
+ * Kettenübernahme: the freshly captured cards attack their enemy neighbours (normal comparison, current
+ * values), wave by wave, at most SETTINGS.chainDepth waves (0 = unlimited). Every card attacks at most once;
+ * order is fixed (wave, then cell number, then top/right/bottom/left), so the result is always the same.
+ * Changes `board` in place.
+ */
+function runChain(board: (BoardCell | null)[], terrain: readonly Terrain[], firstCaptures: number[], side: Side, placedAt: number): ChainStep[] {
+  const steps: ChainStep[] = [];
+  const attacked = new Set<number>([placedAt]);
+  let wave = [...firstCaptures].sort((a, b) => a - b);
+  const maxWaves = SETTINGS.chainDepth > 0 ? SETTINGS.chainDepth : Infinity;
+  for (let level = 1; wave.length > 0 && level <= maxWaves; level++) {
+    const captured: { from: number; cell: number }[] = [];
+    for (const from of wave) {
+      if (attacked.has(from)) continue;
+      attacked.add(from);
+      for (const n of neighbours(from)) {
+        const other = board[n.cell];
+        if (!other || other.owner === side || captured.some((c) => c.cell === n.cell)) continue;
+        if (boardValue(board, terrain, from, n.mine) > boardValue(board, terrain, n.cell, n.theirs)) captured.push({ from, cell: n.cell });
+      }
+    }
+    // All captures of a wave happen together (like the normal capture), then the next wave starts.
+    for (const c of captured) board[c.cell] = { ...board[c.cell]!, owner: side };
+    steps.push(...captured.map((c) => ({ ...c, level })));
+    wave = captured.map((c) => c.cell).sort((a, b) => a - b);
+  }
+  return steps;
 }
 
 /** All comparisons if `card` owned by `side` were placed on `cell` (effects included). */
 export function computeClashes(
-  board: readonly (BoardCell | null)[], cell: number, card: HandCard, side: Side, terrain: readonly Terrain[] = NORMAL_TERRAIN, target?: number,
+  board: readonly (BoardCell | null)[], cell: number, card: HandCard, side: Side, terrain: readonly Terrain[] = NORMAL_TERRAIN, target?: number, rot = 0,
 ): Clash[] {
-  return resolvePlacement(board, terrain, cell, card, side, target).clashes;
+  return resolvePlacement(board, terrain, cell, card, side, target, rot).clashes;
 }
 
-/** Cells that would be captured if `card` owned by `side` were placed on `cell`. */
+/** Cells that would be captured if `card` owned by `side` were placed on `cell` (Kettenübernahme included). */
 export function computeFlips(
-  board: readonly (BoardCell | null)[], cell: number, card: HandCard, side: Side, terrain: readonly Terrain[] = NORMAL_TERRAIN, target?: number,
+  board: readonly (BoardCell | null)[], cell: number, card: HandCard, side: Side, terrain: readonly Terrain[] = NORMAL_TERRAIN, target?: number, rot = 0,
 ): number[] {
-  return computeClashes(board, cell, card, side, terrain, target).filter((c) => c.captured).map((c) => c.cell);
+  const p = resolvePlacement(board, terrain, cell, card, side, target, rot);
+  return [...p.clashes.filter((c) => c.captured).map((c) => c.cell), ...p.chain.map((c) => c.cell)];
 }
 
 /** Coin toss before the duel. */
@@ -367,8 +461,12 @@ export function isLegalMove(state: BattleState, move: Move): boolean {
     state.rocks.includes(move.cell) ||
     !Number.isInteger(move.handIndex) || move.handIndex < 0 || move.handIndex >= state.hands[state.turn].length
   ) return false;
+  // Only Wirbelwind cards may be turned when placed.
+  const card = state.hands[state.turn][move.handIndex];
+  if (move.rot !== undefined && (!Number.isInteger(move.rot) || move.rot < 0 || move.rot > 3)) return false;
+  if (move.rot && getCard(card.cardId).effect !== 'wirbelwind') return false;
   // "Schwächender Blick": with several adjacent enemies the target must be named; it must be one of them.
-  const targets = blickTargets(state.board, move.cell, state.hands[state.turn][move.handIndex], state.turn);
+  const targets = blickTargets(state.board, move.cell, card, state.turn);
   if (move.target === undefined) return targets.length <= 1;
   return targets.includes(move.target);
 }
@@ -380,8 +478,12 @@ export function legalMoves(state: BattleState): Move[] {
     if (cell || state.rocks.includes(i)) return;
     state.hands[state.turn].forEach((card, h) => {
       const targets = blickTargets(state.board, i, card, state.turn);
-      if (targets.length > 1) for (const target of targets) moves.push({ handIndex: h, cell: i, target });
-      else moves.push({ handIndex: h, cell: i });
+      const rots = getCard(card.cardId).effect === 'wirbelwind' ? [0, 1, 2, 3] : [0];
+      for (const rot of rots) {
+        const extra = rot ? { rot } : {};
+        if (targets.length > 1) for (const target of targets) moves.push({ handIndex: h, cell: i, target, ...extra });
+        else moves.push({ handIndex: h, cell: i, ...extra });
+      }
     });
   });
   return moves;
@@ -393,19 +495,30 @@ export function applyMove(state: BattleState, move: Move): BattleState {
   const side = state.turn;
   const hand = [...state.hands[side]];
   const [card] = hand.splice(move.handIndex, 1);
-  const { board, clashes, events } = resolvePlacement(state.board, state.terrain, move.cell, card, side, move.target);
+  const { board, clashes, events, chain } = resolvePlacement(state.board, state.terrain, move.cell, card, side, move.target, move.rot ?? 0);
+  const flips = [...clashes.filter((c) => c.captured).map((c) => c.cell), ...chain.map((c) => c.cell)];
+  const name = getCard(card.cardId).name;
+  const text = `${name} auf ${cellName(move.cell)}${move.rot ? ` (↻ ${move.rot * 90}°)` : ''}${flips.length ? ` – erobert ${flips.length}` : ''}${chain.length ? ` (Kette ×${chain.length})` : ''}`;
   return {
+    ...state,
     board,
     hands: { ...state.hands, [side]: hand },
     turn: other(side),
     moveCount: state.moveCount + 1,
-    lastFlips: clashes.filter((c) => c.captured).map((c) => c.cell),
+    lastFlips: flips,
     lastClashes: clashes,
     lastPlaced: move.cell,
-    rocks: state.rocks,
-    terrain: state.terrain,
     lastEvents: events,
+    lastChain: chain,
+    lastOrigin: move.cell,
+    lastRune: null,
+    log: [...state.log, { side, kind: 'place', text }],
   };
+}
+
+/** Field name for the log, e.g. "B3" (column letter, row number). */
+export function cellName(cell: number): string {
+  return `${'ABCD'[cell % BOARD_SIZE]}${Math.floor(cell / BOARD_SIZE) + 1}`;
 }
 
 /** Number of moves in a duel: one per free field (16, or 15 with a rock). */

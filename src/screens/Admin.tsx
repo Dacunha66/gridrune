@@ -18,7 +18,7 @@ import { DesignerView } from './AdminDesigns';
 import { CampaignView } from './AdminCampaign';
 import { CardStyleView } from './AdminCardStyle';
 import { Design, DesignState } from '../game/designs';
-import { CLASSES, CLASS_INFO, CardClass, EFFECTS, EffectId, effectPreview, effectsForClass } from '../game/effects';
+import { CardClass, CLASS_INFO, CLASSES, effectFitsClass, EffectId, effectPreview, EFFECTS, effectsForClass } from '../game/effects';
 
 interface Props {
   /** Called with the live card list so the game picks up changes right away. */
@@ -378,7 +378,7 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
   const set = <K extends keyof CardRecord>(key: K, value: CardRecord[K]) => setDraft((d) => ({ ...d, [key]: value }));
   const setValue = (k: ValueKey, v: number) => set(k, Math.min(10, Math.max(1, Math.round(v) || 1)));
   // An effect always belongs to the class: changing the class removes an effect of another class.
-  const setClass = (cls: CardClass) => setDraft((d) => ({ ...d, cls, effect: d.effect && EFFECTS[d.effect].cls === cls ? d.effect : null }));
+  const setClass = (cls: CardClass) => setDraft((d) => ({ ...d, cls, effect: d.effect && effectFitsClass(d.effect, cls) ? d.effect : null }));
   const effect = draft.effect ? EFFECTS[draft.effect] : null;
   const fxPreview = draft.effect ? effectPreview([draft.top, draft.right, draft.bottom, draft.left], draft.effect) : null;
 

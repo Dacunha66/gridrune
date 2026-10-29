@@ -27,7 +27,7 @@ export function Rules({ onBack }: { onBack: () => void }) {
         <p>Jede Karte gehört zu einer <b>Klasse</b> (Symbol im Zahnrad oben links): {CLASSES.map((c) => `${CLASS_INFO[c].icon} ${CLASS_INFO[c].label}`).join(' · ')}. Jede Klasse hat ein <b>Element</b>: 🌿 Natur → 🌲 Wald, 🔥 Feuer → 🌋 Lava, ❄️ Frost → ❄️ Eis, 🌑 Schatten → 🌑 Schatten, 🔮 Magier → ᚱ Runenfeld, ⚔️ Krieger → ⚔️ Schlachtfeld.</p>
         <p>Manche Karten haben einen <b>Spezialeffekt</b> – erkennbar am <b style={{ color: 'var(--accent)' }}>goldenen Symbol</b> unten rechts (große Ansicht: Effekttext auf dem Pergament). Effekte gelten nur im laufenden Duell; im nächsten Duell ist alles wieder normal.</p>
         <ul>
-          {EFFECT_IDS.map((id) => <li key={id}>{CLASS_INFO[EFFECTS[id].cls].icon} <b>{EFFECTS[id].name}</b>: {EFFECTS[id].text}</li>)}
+          {EFFECT_IDS.map((id) => <li key={id}>{EFFECTS[id].cls ? CLASS_INFO[EFFECTS[id].cls!].icon : '✦'} <b>{EFFECTS[id].name}</b>: {EFFECTS[id].text}</li>)}
         </ul>
         <p>„Beim Ausspielen“-Effekte wirken <b>vor</b> dem Vergleich und nur einmal. Bedingungen (z. B. „solange eine eigene Karte angrenzt“) werden laufend neu geprüft: Wird eine Nachbarkarte erobert, ändert sich der Bonus sofort – aber es wird dadurch nie nachträglich etwas erobert.</p>
         <p><b>Gelände</b> (farbiger Rand): {TERRAINS.filter((t) => t !== 'normal').map((t) => `${TERRAIN_INFO[t].icon} ${TERRAIN_INFO[t].label}`).join(' · ')}. Liegt eine Karte auf dem Gelände ihres Elements, bekommt sie <b>+1 auf alle Werte</b> (das Feld leuchtet beim Auswählen). Mehr als +1 gibt Gelände nie: Geländeeffekte wie Wurzelkraft wirken nicht zusätzlich zum Element. Der Fels liegt immer auf einem normalen Feld.</p>

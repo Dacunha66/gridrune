@@ -2,9 +2,10 @@
 // every goal is evaluated by replaying the recorded moves with the same rules as the duel itself
 // (a later server check can run the very same function). Turn limits are not offered – every
 // duel lasts exactly 15 or 16 moves, so "win within N moves" cannot be measured meaningfully.
-import { BattleState, CELL_COUNT, HAND_SIZE, Move, Outcome, applyMove, cellBreakdown, outcome, score } from './battle';
+import { BattleState, CELL_COUNT, HAND_SIZE, Outcome, cellBreakdown, outcome, score } from './battle';
+import { Action, applyAction, isRuneUse } from './runes';
 import { getCard } from './cards';
-import { CLASS_INFO, CLASS_TERRAIN, CardClass, EFFECTS, EffectId, Terrain, isCardClass, isEffectId } from './effects';
+import { CardClass, CLASS_INFO, CLASS_TERRAIN, effectFitsClass, EffectId, EFFECTS, isCardClass, isEffectId, Terrain } from './effects';
 
 export type GoalType =
   | 'win' | 'min_fields' | 'min_margin' | 'min_captures' | 'play_class' | 'without_class' | 'terrain_bonus' | 'effect_active' | 'runner_clean';
@@ -74,13 +75,20 @@ function effectWorked(after: BattleState, cell: number, effect: EffectId): boole
 }
 
 /** Replays a duel from its start position and collects everything the goals can ask for. */
-export function duelStats(start: BattleState, moves: readonly Move[], stumbles: number | null = null): DuelStats {
+export function duelStats(start: BattleState, moves: readonly Action[], stumbles: number | null = null): DuelStats {
   let state = start;
   const stats: DuelStats = { outcome: 'draw', fields: 0, margin: 0, captures: 0, played: {}, terrainBonus: 0, effects: {}, stumbles };
   for (const move of moves) {
     const side = state.turn;
+    if (isRuneUse(move)) {
+      // Captures by a rune (Nachhall) count for the player.
+      const next = applyAction(state, move);
+      if (side === 'player') stats.captures += next.lastFlips.length;
+      state = next;
+      continue;
+    }
     const card = state.hands[side][move.handIndex];
-    const next = applyMove(state, move);
+    const next = applyAction(state, move);
     if (side === 'player' && card) {
       const def = getCard(card.cardId);
       stats.captures += next.lastFlips.length;
@@ -198,7 +206,7 @@ export function goalProblems(goal: Goal, ctx: GoalContext): { errors: string[]; 
     case 'effect_active': {
       const t = goal.effect ? EFFECTS[goal.effect].terrain : undefined;
       if (t) errors.push(`${EFFECTS[goal.effect!].name} wirkt nie zusätzlich zum Element-Bonus – nimm stattdessen „Geländeboni auslösen“.`);
-      if (goal.effect && ctx.onlyClass && EFFECTS[goal.effect].cls !== ctx.onlyClass) errors.push(`Nur ${CLASS_INFO[ctx.onlyClass].label}-Karten erlaubt – dieser Effekt gehört zu einer anderen Klasse.`);
+      if (goal.effect && ctx.onlyClass && !effectFitsClass(goal.effect, ctx.onlyClass)) errors.push(`Nur ${CLASS_INFO[ctx.onlyClass].label}-Karten erlaubt – dieser Effekt gehört zu einer anderen Klasse.`);
       break;
     }
     case 'runner_clean':
