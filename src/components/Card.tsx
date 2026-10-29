@@ -1,9 +1,9 @@
 import { CSSProperties } from 'react';
 import { CardDef, RARITY_LABEL, getCard } from '../game/cards';
 import type { Side } from '../game/battle';
-import { CLASS_INFO, EFFECTS } from '../game/effects';
+import { CLASS_INFO, CardClass, EFFECTS } from '../game/effects';
 import { AbilityMedallion, CLASS_ICON, ClassShield, EFFECT_ICON, Icon, SHIELD_PATH } from './cardIcons';
-import { useCardStyle } from '../game/cardStyle';
+import { CardStyle, useCardStyle } from '../game/cardStyle';
 
 export type CardBadge = 'deck' | 'discovery' | null;
 
@@ -33,6 +33,8 @@ interface Props {
   terrainGlow?: boolean;
   /** Large view: parchment with name and effect text, rarity gem under the picture. */
   detail?: boolean;
+  /** Design test: show this card design instead of the one chosen for this device. */
+  styleOverride?: CardStyle;
 }
 
 const DIRS = ['top', 'right', 'bottom', 'left'] as const;
@@ -95,16 +97,18 @@ function Gem({ mythic }: { mythic: boolean }) {
 
 export function Card({
   id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0, def, values, shield,
-  terrainGlow, detail,
+  terrainGlow, detail, styleOverride,
 }: Props) {
-  const cardStyle = useCardStyle();
+  const deviceStyle = useCardStyle();
+  const cardStyle = styleOverride ?? deviceStyle;
+  const premium = cardStyle === 'premium' || cardStyle === 'premiumLite';
   const c = def ?? getCard(id);
   const effective = (i: number) => (values ? values[i] : Math.min(10, Math.max(1, c[DIRS[i]] + mod)));
   const cls = c.cls ? CLASS_ICON[c.cls] : null;
   const effect = c.effect ? EFFECTS[c.effect] : null;
   const style = { '--hue': c.hue, '--cls': cls?.color ?? '#f3c77a' } as CSSProperties;
   const classes = [
-    'card', `card-${size}`, `rarity-${c.rarity}`, `cs-${cardStyle}`,
+    'card', `card-${size}`, `rarity-${c.rarity}`, `cs-${cardStyle}`, premium ? `cs-prem cls-${c.cls ?? 'none'}` : '',
     owner ? `owner-${owner}` : '', locked ? 'locked' : '', selected ? 'selected' : '',
     badge === 'discovery' ? 'discovery' : '', detail ? 'card-detail' : '', terrainGlow ? 'terrain-glow' : '', className,
   ].join(' ');
@@ -115,6 +119,7 @@ export function Card({
   const content = v2 ? (
     <>
       <span className="cs-frame" aria-hidden="true" />
+      {premium && <ClassFrame cls={c.cls} />}
       <span className="art" aria-hidden="true">
         {locked ? <span className="art-emoji">🔒</span> : c.image ? <img src={c.image} alt="" draggable={false} /> : <span className="art-emoji">{c.art}</span>}
       </span>
@@ -196,3 +201,23 @@ export function Card({
     </div>
   );
 }
+
+/** Hybrid Premium: inner frame in the material of the class (wood, glowing iron, silver, obsidian, steel, arcane). */
+function ClassFrame({ cls }: { cls?: CardClass }) {
+  return (
+    <span className="cf" aria-hidden="true">
+      <svg className="cf-orn cf-bl" viewBox="0 0 20 20"><path d={ORNAMENT[cls ?? 'krieger']} /></svg>
+      <svg className="cf-orn cf-br" viewBox="0 0 20 20"><path d={ORNAMENT[cls ?? 'krieger']} /></svg>
+    </span>
+  );
+}
+
+/** Small corner ornament per class (bottom corners only – the top corners hold class and ability). */
+const ORNAMENT: Record<CardClass, string> = {
+  natur: 'M2 18C2 10 7 4 15 3c-1 5-4 8-8 9M5 15c2-1 4-1 6 1', // leafy sprig
+  feuer: 'M2 18l3-7 2 4 3-9 2 6 3-4 2 10z', // embers
+  frost: 'M2 18L10 4l8 14M6 11h8M10 4v14', // ice crystal
+  schatten: 'M2 18l5-12 4 6 3-9 4 15z', // obsidian shards
+  krieger: 'M3 17h14M3 17V7M3 7l4 4M8 15a1.4 1.4 0 1 0 0.01 0M14 15a1.4 1.4 0 1 0 0.01 0', // riveted bracket
+  magier: 'M3 17l4-12 4 12M5 12h4M13 5v12l4-4', // runes
+};

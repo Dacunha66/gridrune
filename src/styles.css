@@ -1263,3 +1263,101 @@ label.btn.disabled { opacity: .45; }
 .cs-cell { position: relative; }
 .cs-hand { display: flex; gap: 6px; margin: 10px auto 0; max-width: 100%; }
 .cs-hand-slot { flex: 1 1 0; min-width: 0; }
+
+/* ---------- Hybrid Premium Fantasy (Test) ----------
+   Priority: 1 owner colour (outer band) · 2 values · 3 picture · 4 class/ability · 5 name · 6 decoration.
+   Layers: outer band (rarity in the hand, owner colour on the board) → inner class frame (material per class)
+   → picture → value medallions, class shield, ability medallion, name plate → owner band on top. */
+.card.cs-prem { --md: 25cqw; --pn: 17cqw; --ic: 19cqw; --pw: 23cqw; --ph: 19.5cqw; --fr1: #6b6f78; --fr2: #2c2f36; --cfo: #e8d6a8; }
+.card.cs-prem.rarity-uncommon { --fr1: #c99a55; --fr2: #5a3f1c; }
+.card.cs-prem.rarity-rare { --fr1: #b9d6ee; --fr2: #3f5f80; }
+.card.cs-prem.rarity-epic { --fr1: #d3a8ff; --fr2: #5b2b8c; }
+.card.cs-prem.rarity-legendary { --fr1: #ffe08a; --fr2: #a86e10; }
+.card.cs-prem .art { top: 6cqw; left: 6cqw; right: 6cqw; bottom: 6cqw; border-radius: 1.6cqw; box-shadow: 0 0 0 max(0.6px, 0.6cqw) rgba(0, 0, 0, 0.8); }
+.card.cs-prem .art::after { box-shadow: inset 0 0 4cqw rgba(0, 0, 0, 0.35); }
+
+/* Inner class frame: a 3cqw band in the material of the class (only the band is painted). */
+.card .cf {
+  position: absolute; z-index: 1; inset: 3cqw; border-radius: 2.6cqw; border: 3cqw solid transparent;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+  background: var(--cf) border-box;
+  box-shadow: inset 0 0 0 max(0.5px, 0.5cqw) rgba(255, 240, 200, 0.45);
+}
+.card.cls-natur { --cf: linear-gradient(120deg, rgba(110, 170, 70, 0.35), transparent 40%, rgba(110, 170, 70, 0.3)), repeating-linear-gradient(95deg, #5b3b1d 0 1.5cqw, #75502a 1.5cqw 3.2cqw, #4a2f17 3.2cqw 4cqw); --cfo: #a8e07a; }
+.card.cls-feuer { --cf: radial-gradient(circle at 12% 92%, rgba(255, 120, 30, 0.75), transparent 22%), radial-gradient(circle at 88% 12%, rgba(255, 150, 40, 0.6), transparent 20%), linear-gradient(160deg, #3a2a22, #140e0c 55%, #2c1d16); --cfo: #ffa040; }
+.card.cls-frost { --cf: linear-gradient(135deg, #f4fbff, #9cb6cb 35%, #e3f1fb 55%, #7d97ac 80%, #d6e8f5); --cfo: #e6f6ff; }
+.card.cls-schatten { --cf: linear-gradient(150deg, #3b3150, #0b0910 45%, #2a2238 70%, #0d0a14); --cfo: #c9a8ff; }
+.card.cls-krieger { --cf: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0 0.5cqw, transparent 0.7cqw) 0 0 / 3cqw 3cqw, linear-gradient(160deg, #a7adb6, #5a6069 50%, #8d939b); --cfo: #f1e3bd; }
+.card.cls-magier { --cf: repeating-linear-gradient(90deg, rgba(200, 170, 255, 0.55) 0 0.4cqw, transparent 0.4cqw 4cqw), linear-gradient(150deg, #4a3585, #1b1438 60%, #3a2a6b); --cfo: #d7c2ff; }
+.card.cls-none { --cf: linear-gradient(160deg, #6b6f78, #2c2f36); }
+.card .cf-orn { position: absolute; bottom: -3cqw; width: 12cqw; height: 12cqw; fill: none; stroke: var(--cfo); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 1px #000); }
+.card .cf-bl { left: -3cqw; }
+.card .cf-br { right: -3cqw; transform: scaleX(-1); }
+
+/* Owner band on top of everything at the edge: strong and clear, a soft glow only inwards. */
+.card.cs-prem .owner-ring { z-index: 7; animation: prem-own 0.45s ease-out; }
+.card.cs-prem.owner-player .owner-ring, .card.cs-prem.owner-cpu .owner-ring {
+  box-shadow: inset 0 0 0 max(2px, 3cqw) var(--own), inset 0 0 0 max(2.6px, 3.7cqw) rgba(0, 0, 0, 0.65), inset 0 0 5cqw var(--own);
+}
+@keyframes prem-own { from { box-shadow: inset 0 0 0 9cqw var(--own), inset 0 0 12cqw var(--own); } }
+.reduced-motion .card.cs-prem .owner-ring { animation: none; }
+
+/* Value medallions: inset metal discs with a gold rim; bonus = green rim + ▲, malus = amber rim + ▼ (never red/blue). */
+.card.cs-prem .pv {
+  width: max(17px, var(--md)); height: max(17px, var(--md)); min-width: 0; padding: 0; border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #545967, #17181e 72%);
+  box-shadow: inset 0 0 0 max(1.2px, 1.3cqw) #d8b86c, inset 0 0 0 max(2px, 2.3cqw) #3a2c12, inset 0 1.4cqw 2cqw rgba(255, 255, 255, 0.22), 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.card.cs-prem .pv .v { font-size: max(12px, var(--pn)); text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+.card.cs-prem .pv.up { background: radial-gradient(circle at 38% 30%, #2f7a4a, #0c2a17 72%); box-shadow: inset 0 0 0 max(1.2px, 1.3cqw) #4ade80, inset 0 0 0 max(2px, 2.3cqw) #0b3a1c, 0 1px 3px rgba(0, 0, 0, 0.9); }
+.card.cs-prem .pv.down { background: radial-gradient(circle at 38% 30%, #6b3a12, #261205 72%); box-shadow: inset 0 0 0 max(1.2px, 1.3cqw) #fb923c, inset 0 0 0 max(2px, 2.3cqw) #3a1a05, 0 1px 3px rgba(0, 0, 0, 0.9); }
+.card.cs-prem .pv .v::after { content: none; }
+.card.cs-prem .pv.up::after, .card.cs-prem .pv.down::after {
+  position: absolute; right: -1.5cqw; top: -1.5cqw; font-size: max(7px, 8.5cqw); line-height: 1; text-shadow: 0 0 2px #000, 0 0 2px #000;
+}
+.card.cs-prem .pv.up::after { content: '▲'; color: #86efac; }
+.card.cs-prem .pv.down::after { content: '▼'; color: #fdba74; }
+.card.cs-prem .pv-top { top: 0.5cqw; }
+.card.cs-prem .pv-bottom { bottom: 0.5cqw; }
+.card.cs-prem .pv-left, .card.cs-prem .pv-right { top: 52cqw; }
+.card.cs-prem .pv-left { left: 0.5cqw; }
+.card.cs-prem .pv-right { right: 0.5cqw; }
+
+/* Restrained variant: flat, half-transparent plaques with a thin gold line (more picture visible). */
+.card.cs-premiumLite .pv {
+  width: auto; min-width: max(15px, var(--pw)); height: max(14px, var(--ph)); padding: 0 1.5cqw; border-radius: 3.5cqw;
+  background: rgba(10, 8, 16, 0.6); box-shadow: 0 0 0 max(1px, 0.8cqw) rgba(216, 184, 108, 0.85), 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.card.cs-premiumLite .pv.up { background: rgba(12, 60, 30, 0.82); box-shadow: 0 0 0 max(1px, 0.8cqw) #4ade80; }
+.card.cs-premiumLite .pv.down { background: rgba(70, 30, 6, 0.82); box-shadow: 0 0 0 max(1px, 0.8cqw) #fb923c; }
+.card.cs-premiumLite .pv-top { top: 1.5cqw; }
+.card.cs-premiumLite .pv-bottom { bottom: 1.5cqw; }
+.card.cs-premiumLite .pv-left { left: 1.2cqw; }
+.card.cs-premiumLite .pv-right { right: 1.2cqw; }
+
+/* Class (top left, shield) and ability (top right, medallion) inside the frame corners. */
+.card.cs-prem .cs-cls { top: 5.5cqw; left: 5.5cqw; }
+.card.cs-prem .cs-fx { top: 5.5cqw; right: 5.5cqw; }
+.card.cs-prem .cs-shield { left: 3cqw; top: 72cqw; }
+
+/* Name plate: narrow, up to two lines, readable sans-serif with a thin gold edge; rarity as a coloured line. */
+.card.cs-prem .cs-name {
+  left: 9cqw; right: 9cqw; bottom: 25cqw; height: auto; padding: 0.8cqw 2cqw; line-height: 1.08; white-space: normal;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word;
+  font-size: max(7px, 10.5cqw); color: #fbecc8;
+  background: linear-gradient(#2c2117, #120d08); border-radius: 2cqw;
+  box-shadow: 0 0 0 max(0.8px, 0.8cqw) #c9a85c, inset 0 -0.8cqw 0 var(--rc), 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.card.cs-prem.rarity-common .cs-name { box-shadow: 0 0 0 max(0.8px, 0.8cqw) #c9a85c, 0 1px 3px rgba(0, 0, 0, 0.8); }
+.card-xs.cs-prem .cf-orn { display: none; }
+
+/* Admin compare view */
+.style-view-seg .seg { font-size: 13px; padding: 6px 10px; }
+.compare-wrap { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.compare-wrap > section { flex: 1 1 300px; min-width: 0; }
+.cs-cell button.card { width: 100%; }
+/* Very small cards (iPhone SE board, ~54 px): no name plate – the picture and the values need the space. */
+@container (max-width: 62px) {
+  .card.cs-prem .cs-name { display: none; }
+}

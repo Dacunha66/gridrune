@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Version 1.18 – Hybrid Premium Fantasy (Test, nur Admin-Gerät)
+
+Neu im Admin-Reiter „Kartendesign (Test)“: zwei weitere Varianten auf Basis des Hybrid-Designs – „Hybrid Premium Fantasy“ (Werte als plastische Metall-Medaillons) und „Hybrid Premium (dezente Werte)“ (flache, halbtransparente Plaketten). Äußerer Rahmen = Spielerfarbe Rot/Blau (oberste Ebene, wechselt bei Übernahme mit kurzer Animation), innerer Rahmen = Material der Klasse (Holz, glühendes Eisen, Silber, Obsidian, Stahl, arkane Runen), Klasse oben links (Wappenschild), Fähigkeit oben rechts (Medaillon), Namensleiste bis zwei Zeilen mit Silbentrennung, Seltenheit als farbige Linie unter dem Namen. Auf sehr kleinen Karten (iPhone SE) ohne Namensleiste. Ansichten: „Bisheriger Hybrid“, „Hybrid Premium Fantasy“, „Beide im Vergleich“; Beispielfeld mit 8 roten und 8 blauen Karten, Antippen wechselt die Besitzerfarbe (nur in der Vorschau). Bisherige Designs, Spielregeln, Werte und Datenbank unverändert.
+
+**Automatische Tests:** 186, alle bestanden.
+
+**Browser:** Voll gespieltes Duell (16 Karten) je Variante auf iPhone, iPhone SE und iPad: 0 verdeckte oder abgeschnittene Werte/Symbole, 0 Fehler. Werte iPhone 12,3 px (bisheriger Hybrid 12), SE 12, iPad 22,1; „10“ passt vollständig. Namensgröße: Messung aller 101 Kartennamen bei 73 px Kartenbreite – 9,5 / 10,5 / 11,5 Einheiten: 90 / 81 / 66 einzeilig, keiner abgeschnitten; gewählt 10,5 (7,7 px), 20 Namen zweizeilig. Besitzerwechsel per Antippen: Blau → Rot, Klassenrahmen und Inhalt unverändert. Klassenrahmen auf dem iPhone nur als schmaler Streifen erkennbar, Ornamente erst auf dem iPad / in der großen Ansicht.
+
 ## Version 1.17 – Kartendesign 2.0 (Test, nur Admin-Gerät)
 
 Neu: Vier umschaltbare Kartendesigns als Vorschau – Design 2 klassisch, Design 2 kompakt (auf dem Spielfeld ohne Namen), Design 3 geteilt, Design 4 hybrid – plus das aktuelle Design zum Vergleich. Umschalten im Admin-Reiter „Kartendesign (Test)“ (mit vollem Beispielfeld in iPhone- und SE-Größe) und im Duell mit dem 🎨-Knopf (nur für Admins). Die Wahl gilt nur für dieses Gerät; alle Spieler sehen weiter das aktuelle Design. Neue Symbolsprache: Klasse = Wappenschild in Klassenfarbe, Fähigkeit = goldenes Medaillon mit eigenem Symbol; Bonus/Malus zusätzlich mit ▲/▼; Seltenheit als Rahmenfarbe (eisengrau, bronze, silberblau, violett, gold, regenbogen). Spielregeln, Werte, Sammlungen und Spielstände unverändert.
