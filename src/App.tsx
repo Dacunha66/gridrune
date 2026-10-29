@@ -180,6 +180,7 @@ export function App() {
           onPlay={startRun}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
+          equippedRune={save.runes.equipped}
           onToggleReducedMotion={() =>
             setSave((s) => ({ ...s, settings: { ...s.settings, reducedMotion: !s.settings.reducedMotion } }))
           }
@@ -189,7 +190,7 @@ export function App() {
       {screen.name === 'deck' && (
         <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={toMenu} />
       )}
-      {screen.name === 'rules' && <Rules onBack={toMenu} />}
+      {screen.name === 'rules' && <Rules onBack={toMenu} runes={runesOn} />}
       {screen.name === 'runes' && (
         <Runes owned={ownedRunes} equipped={save.runes.equipped} lockText={runeLockText} onBack={toMenu}
           onEquip={(id) => setSave((s) => ({ ...s, runes: { ...s.runes, equipped: id } }))} />
@@ -200,6 +201,7 @@ export function App() {
           save={save}
           reducedMotion={reducedMotion}
           skin={getSkin(save.skins.runner).colors}
+          runes={runesOn ? { player: duelRune('league'), equipped: save.runes.equipped } : null}
           onSaveDeck={(leagueDeck) => setSave((s) => ({ ...s, leagueDeck }))}
           onExit={toMenu}
         />

@@ -16,7 +16,7 @@ import { ACTIVE, layoutVars } from '../game/designs';
 import { AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
-import { Action, BUILTIN_RUNES, RuneDef, RuneUse, applyRune, echoCapturable, findRune, runeChoices, runeProblem, runeRules } from '../game/runes';
+import { Action, BUILTIN_RUNES, RuneDef, RuneUse, applyRune, echoCapturable, findRune, placedCount, runeChoices, runeOpen, runeProblem, runeRules } from '../game/runes';
 import { RuneBadge } from '../components/RuneBadge';
 import { CardClass } from '../game/effects';
 import { CARD_STYLE_LABEL, cycleCardStyle, useCardStyle, useDevTools } from '../game/cardStyle';
@@ -544,7 +544,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           mine={runeSheet === 'player'}
           used={!!state.runes[runeSheet]?.used}
           canUse={runeSheet === 'player' && canUseRune}
-          reason={runeSheet === 'player' && !canUseRune ? runeBlockedText(state, phase, over, runeChoice) : ''}
+          reason={runeSheet === 'player' && !canUseRune ? runeBlockedText(state, phase, over, runeChoice, myRune) : ''}
           onUse={() => {
             setRuneSheet(null);
             setSelected(null);
@@ -636,10 +636,11 @@ function runeHint(r: RuneDef, mode: { cells: number[]; cls?: CardClass; dir?: 1 
   }
 }
 
-function runeBlockedText(state: BattleState, phase: string, over: boolean, choice: { cells: number[] } | null): string {
+function runeBlockedText(state: BattleState, phase: string, over: boolean, choice: { cells: number[] } | null, rune: RuneDef | null): string {
   if (state.runes.player?.used) return 'Bereits eingesetzt – in diesem Duell nicht mehr verfügbar.';
   if (over) return 'Das Duell ist vorbei.';
   if (phase !== 'play' || state.turn !== 'player') return 'Einsetzbar in deinem Zug, bevor du eine Karte legst.';
+  if (rune && !runeOpen(state, rune)) return `Einsetzbar ab der Spielmitte: ${placedCount(state)}/${runeRules(rune).minPlaced} Karten auf dem Spielfeld.`;
   if (!choice || choice.cells.length === 0) return 'Gerade gibt es kein gültiges Ziel auf dem Spielfeld.';
   return '';
 }

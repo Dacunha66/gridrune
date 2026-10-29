@@ -35,6 +35,8 @@ export interface RuneDef {
   amount: number;
   /** empower/curse: how many cards may be chosen; echo: how many cards may be captured at most (1–3). */
   maxTargets: number;
+  /** Usable only once at least this many cards lie on the board (0 = from the start; 8 = from mid-duel). */
+  minPlaced: number;
   /** empower: only own cards of this class. */
   cls?: CardClass;
   modes: Record<GameMode, boolean>;
@@ -55,7 +57,7 @@ const ALL_MODES: Record<GameMode, boolean> = { adventure: true, campaign: true, 
 
 function rune(id: string, name: string, effect: RuneEffect, glyph: string, description: string, extra: Partial<RuneDef> = {}): RuneDef {
   return {
-    id, name, description, rarity: 'common', effect, amount: 1, maxTargets: 1, modes: { ...ALL_MODES }, unlock: { kind: 'start' },
+    id, name, description, rarity: 'common', effect, amount: 1, maxTargets: 1, minPlaced: 0, modes: { ...ALL_MODES }, unlock: { kind: 'start' },
     status: 'active', image: null, icon: null, glyph, updatedAt: '', ...extra,
   };
 }
@@ -63,7 +65,7 @@ function rune(id: string, name: string, effect: RuneEffect, glyph: string, descr
 /** The four basic runes – every player has them from the start (fair in ranked play). */
 export const BUILTIN_RUNES: readonly RuneDef[] = [
   rune('rn01', 'Rune der Verdrehung', 'twist', 'ᛃ', 'Drehe die Werte einer eigenen gelegten Karte einmal um 90° nach links oder rechts. Es wird dabei nicht neu gekämpft.'),
-  rune('rn02', 'Rune des Nachhalls', 'echo', 'ᛇ', 'Eine eigene gelegte Karte greift ihre angrenzenden Gegnerkarten erneut an – normale Regeln, höchstens eine Übernahme (bei mehreren wählst du), keine Kettenreaktion.'),
+  rune('rn02', 'Rune des Nachhalls', 'echo', 'ᛇ', 'Eine eigene gelegte Karte greift ihre angrenzenden Gegnerkarten erneut an – normale Regeln, höchstens eine Übernahme (bei mehreren wählst du), keine Kettenreaktion. Einsetzbar ab der Spielmitte (8 Karten auf dem Feld).', { minPlaced: 8 }),
   rune('rn03', 'Rune der Glut', 'empower', 'ᚲ', 'Bis zu zwei eigene Feuerkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'feuer', maxTargets: 2 }),
   rune('rn04', 'Rune des Fluchs', 'curse', 'ᚦ', 'Wähle eine gegnerische Klasse: Bis zu zwei Gegnerkarten dieser Klasse auf dem Spielfeld erhalten −1 auf alle vier Werte bis Duellende.', { maxTargets: 2 }),
 ];
@@ -84,7 +86,7 @@ export function findRune(id: string | null | undefined): RuneDef | null {
 /** The rules of a rune: a variant always uses its base rune's effect (never stronger). */
 export function runeRules(def: RuneDef): RuneDef {
   const base = def.variantOf ? findRune(def.variantOf) : null;
-  return base && !base.variantOf ? { ...def, effect: base.effect, amount: base.amount, maxTargets: base.maxTargets, cls: base.cls } : def;
+  return base && !base.variantOf ? { ...def, effect: base.effect, amount: base.amount, maxTargets: base.maxTargets, minPlaced: base.minPlaced, cls: base.cls } : def;
 }
 
 /** Runes this player may choose in a mode (published, allowed in the mode, owned – ranked: all basic runes). */
@@ -119,6 +121,7 @@ export function isRuneUse(a: Action): a is RuneUse {
 /** What can be chosen right now (for the selection on the board and for the computer). */
 export function runeChoices(state: BattleState, side: Side, def: RuneDef): { cells: number[]; classes: CardClass[] } {
   const r = runeRules(def);
+  if (!runeOpen(state, r)) return { cells: [], classes: [] };
   const mine = (i: number) => state.board[i]?.owner === side;
   const theirs = (i: number) => state.board[i] && state.board[i]!.owner !== side;
   const all = state.board.map((_, i) => i);
@@ -134,6 +137,16 @@ export function runeChoices(state: BattleState, side: Side, def: RuneDef): { cel
       return { cells: all.filter((i) => theirs(i) && !!getCard(state.board[i]!.cardId).cls), classes };
     }
   }
+}
+
+/** Cards on the board (rocks do not count). */
+export function placedCount(state: BattleState): number {
+  return state.board.filter(Boolean).length;
+}
+
+/** Is the rune's mid-duel threshold reached? */
+export function runeOpen(state: BattleState, def: RuneDef): boolean {
+  return placedCount(state) >= runeRules(def).minPlaced;
 }
 
 /**
@@ -157,6 +170,7 @@ export function runeProblem(state: BattleState, use: RuneUse): string | null {
   const def = findRune(slot.id);
   if (!def) return 'Diese Rune gibt es nicht.';
   const r = runeRules(def);
+  if (!runeOpen(state, def)) return `Einsetzbar ab ${r.minPlaced} Karten auf dem Spielfeld.`;
   const choices = runeChoices(state, side, def);
   const okCell = (c: unknown): c is number => Number.isInteger(c) && choices.cells.includes(c as number);
   switch (r.effect) {
@@ -289,6 +303,8 @@ export function parseRune(id: string, raw: unknown): RuneDef | null {
     effect: r.effect as RuneEffect,
     amount: int(r.amount, 1, 2, 1),
     maxTargets: int(r.maxTargets, 1, 3, 1),
+    // Older saved runes have no threshold yet: they keep the built-in value of the same id.
+    minPlaced: int(r.minPlaced, 0, 15, BUILTIN_RUNES.find((b) => b.id === id)?.minPlaced ?? 0),
     modes: { adventure: m.adventure !== false, campaign: m.campaign !== false, league: m.league !== false },
     unlock,
     status: CONTENT_STATUSES.includes(r.status as ContentStatus) ? (r.status as ContentStatus) : 'draft',

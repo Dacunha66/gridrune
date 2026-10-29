@@ -22,7 +22,7 @@ export const DEFAULT_DISCOVERY_SHARES: Readonly<Record<Rarity, number>> = { comm
 export const SHARE_MAX = 1000;
 
 export function defaultSettings(): GameSettings {
-  return { discoveryShares: { ...DEFAULT_DISCOVERY_SHARES }, chainDepth: DEFAULT_CHAIN_DEPTH, features: { runes: 'admin', abilities: 'admin' } };
+  return { discoveryShares: { ...DEFAULT_DISCOVERY_SHARES }, chainDepth: DEFAULT_CHAIN_DEPTH, features: { runes: 'all', abilities: 'all' } };
 }
 
 /** Settings currently used by the game; replaced in place by `setGameSettings`. */

@@ -1,8 +1,11 @@
 import { AbilityMedallion, ClassShield } from '../components/cardIcons';
 import { Header } from './Header';
+import { SETTINGS } from '../game/settings';
+import { RuneBadge } from '../components/RuneBadge';
+import { BUILTIN_RUNES, findRune } from '../game/runes';
 import { CLASSES, CLASS_INFO, CLASS_TERRAIN, EFFECT_IDS, EFFECTS, TERRAINS, TERRAIN_INFO } from '../game/effects';
 
-export function Rules({ onBack }: { onBack: () => void }) {
+export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: boolean }) {
   return (
     <main className="screen rules">
       <Header title="Regeln" onBack={onBack} />
@@ -19,7 +22,7 @@ export function Rules({ onBack }: { onBack: () => void }) {
         <h2>2 · Das Duell</h2>
         <p>Ein 4×4-Feld, du und der Computer habt je 8 Karten und legt abwechselnd eine Karte auf ein freies Feld.</p>
         <p>Jede Karte hat 4 Werte (oben, rechts, unten, links). Liegt daneben eine gegnerische Karte, wird verglichen: <b>deine Seite gegen die zugewandte Seite</b> der Nachbarkarte.</p>
-        <p>Ist dein Wert <b>höher</b>, gehört die Karte jetzt dir. Gleichstand übernimmt nicht. Diagonal zählt nicht, und es gibt keine Kettenreaktionen.</p>
+        <p>Ist dein Wert <b>höher</b>, gehört die Karte jetzt dir. Gleichstand übernimmt nicht. Diagonal zählt nicht. Kettenreaktionen gibt es nur mit der Fähigkeit <b>Kettenübernahme</b>: Eine eroberte Karte greift dann ihre Nachbarn an ({SETTINGS.chainDepth ? `höchstens ${SETTINGS.chainDepth} weitere Stufen` : 'bis keine Karte mehr erobert wird'}).</p>
         <p>Nach 16 Zügen gewinnt, wer mehr Felder besitzt. 8:8 ist unentschieden.</p>
         <p>Vor dem Duell entscheidet ein <b>Münzwurf</b>: Wer gewinnt, wählt, wer beginnt. Tipp: Wer die <b>letzte</b> Karte legt, hat oft einen Vorteil.</p>
 
@@ -49,6 +52,22 @@ export function Rules({ onBack }: { onBack: () => void }) {
             </li>
           ))}
         </ul>
+
+        {runes && (
+          <>
+            <h2>Runen</h2>
+            <p>Unter „Runen“ im Hauptmenü rüstest du eine Rune aus. Im Duell setzt du sie <b>einmal</b> ein – in deinem Zug, bevor du eine Karte legst; dein Zug bleibt dabei erhalten. Der runde Knopf oben links ist deine Rune, oben rechts die des Gegners: antippen zeigt die Erklärung. Die Rune bleibt in deiner Sammlung.</p>
+            <ul className="symbol-legend">
+              {BUILTIN_RUNES.map((r) => (
+                <li key={r.id}>
+                  <span className="legend-icon"><RuneBadge rune={findRune(r.id) ?? r} className="small" /></span>
+                  <span><b>{(findRune(r.id) ?? r).name}</b> · {(findRune(r.id) ?? r).description}</span>
+                </li>
+              ))}
+            </ul>
+            <p>Diese vier Grundrunen hat jeder von Anfang an (in der Liga sind nur sie erlaubt). Weitere Runen gibt es in der Kampagne – nie stärker, nie für Echtgeld.</p>
+          </>
+        )}
 
         <h2>3 · Belohnung</h2>
         <p>Sieg: 🪙 100 und die seltenste neue <b>Entdeckung</b> aus deinem Lauf wird dauerhaft freigeschaltet. Hattest du sie schon, gibt es 🪙 50 extra.</p>

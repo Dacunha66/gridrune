@@ -14,6 +14,8 @@ import { SaveData } from '../game/storage';
 import { Header } from './Header';
 import { Runner } from './Runner';
 import { Battle } from './Battle';
+import { RuneMatchup } from '../components/RuneBadge';
+import { availableRunes, findRune } from '../game/runes';
 
 const RULES = COLLECTION_LEAGUE_RULES;
 
@@ -21,6 +23,8 @@ interface Props {
   save: SaveData;
   reducedMotion: boolean;
   skin: [string, string, string];
+  /** Runes in play for this player (null = not released): the equipped rune if allowed in the league. */
+  runes?: { player: string | null; equipped: string | null } | null;
   onSaveDeck: (deck: string[]) => void;
   onExit: () => void;
 }
@@ -30,7 +34,7 @@ function ownedCounts(save: SaveData): OwnedCounts {
   return Object.fromEntries(ownedActiveIds(save.unlocked).map((id) => [id, RULES.deck.maxCopies]));
 }
 
-export function League({ save, reducedMotion, skin, onSaveDeck, onExit }: Props) {
+export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, onExit }: Props) {
   const owned = useMemo(() => ownedCounts(save), [save]);
   const savedDeck = save.leagueDeck.length ? save.leagueDeck : autoDeck(RULES.deck, owned);
   const [stage, setStage] = useState<'deck' | 'intro' | 'run' | 'match' | 'done'>('deck');
@@ -45,6 +49,15 @@ export function League({ save, reducedMotion, skin, onSaveDeck, onExit }: Props)
 
   const layout = useMemo(() => (seed ? leagueLayout(seed, 'du', deck) : null), [seed, deck]);
   const cpuHand = useMemo(() => (seed ? drawCpuHand(deriveRng(seed, 'cpu-hand')) : []), [seed]);
+  // The computer's rune: one basic rune per match, fixed by the match seed (same in every round).
+  const cpuRune = useMemo(() => {
+    if (!seed || !runes) return null;
+    const basic = availableRunes('league', []);
+    return basic.length ? basic[Math.floor(deriveRng(seed, 'cpu-rune')() * basic.length)].id : null;
+  }, [seed, runes]);
+  const runeNote = runes && runes.equipped && !runes.player
+    ? `In der Liga sind nur die Grundrunen erlaubt – „${findRune(runes.equipped)?.name ?? 'deine Rune'}“ bleibt hier draußen. Ändern unter „Runen“ im Hauptmenü.`
+    : 'Jede Rune einmal pro Duell (in jeder Runde neu). In der Liga nur Grundrunen – für alle gleich. Ändern unter „Runen“ im Hauptmenü.';
 
   function startMatch() {
     const s = newMatchSeed();
@@ -96,6 +109,7 @@ export function League({ save, reducedMotion, skin, onSaveDeck, onExit }: Props)
               <li>⚔️ <b>2 Runden</b> mit derselben Hand, der Start wird getauscht. 2:0 gewinnt, bei 1:1 folgt ein <b>Entscheidungsduell</b>.</li>
               <li>🪨 In jedem Duell blockiert ein <b>Fels</b> ein Feld: 15 Felder, kein Unentschieden, kein Startvorteil.</li>
             </ul>
+            {runes && <RuneMatchup player={runes.player} cpu={cpuRune} note={runeNote} />}
             <p className="muted small">Testmodus gegen den Computer – ohne Belohnung und ohne Wertung.</p>
           </section>
         </div>
@@ -135,6 +149,7 @@ export function League({ save, reducedMotion, skin, onSaveDeck, onExit }: Props)
           label: `${step.decider ? 'Entscheidungsduell' : `Runde ${step.round} von 2`} · Stand ${wins(match, 'player')}:${wins(match, 'cpu')}`,
           tossRng: deriveRng(seed, `toss:${step.round}`),
           finishLabel: 'Weiter',
+          runes: { player: runes?.player ?? null, cpu: runes ? cpuRune : null },
         }}
         onEnd={(result, sc, started) => onRoundEnd(started, result, sc)}
         onQuit={onExit}

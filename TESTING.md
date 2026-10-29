@@ -1,5 +1,20 @@
 # Testprotokoll
 
+## Version 1.22 – Runen für alle, Nachhall ab Spielmitte, Runen in der Liga
+
+Neu (nach deiner Freigabe):
+- **Freigabe für alle Spieler:** Runen sowie Wirbelwind und Kettenübernahme sind jetzt standardmäßig für alle freigegeben. Im Admin-Reiter „Runen“ kannst du jederzeit wieder auf „Nur Admin“ oder „Aus“ stellen.
+- **Nachhall ab Spielmitte:** erst einsetzbar, wenn mindestens 8 Karten auf dem Spielfeld liegen. Vorher zeigt die Runen-Erklärung „Einsetzbar ab der Spielmitte: x/8 Karten“. Die Schwelle ist im Admin je Rune einstellbar („Einsetzbar ab“: Duellbeginn bis 12 Karten); Varianten übernehmen sie. Die anderen Runen gelten weiter ab Duellbeginn.
+- **Runen in der Liga:** Du nutzt deine ausgerüstete Grundrune, der Gegner bekommt pro Match eine Grundrune (fest durch den Match-Seed, in jeder Runde gleich). Jede Rune einmal pro Duell. Das Liga-Intro zeigt beide Runen; eine Kampagnen-Rune wird in der Liga mit Hinweis nicht verwendet.
+- **Runen-Buttons überall:** im Hauptmenü (mit ausgerüsteter Rune), im Kampagnen-Briefing, im Liga-Intro und in den Regeln (neuer Abschnitt „Runen“ mit den vier Grundrunen).
+- **Regeln-Text korrigiert:** „keine Kettenreaktionen“ → Kettenreaktionen nur mit Kettenübernahme (Stufenzahl wie im Admin eingestellt).
+
+**Automatische Tests (219, alle bestanden), neu:** Nachhall mit 7 Karten gesperrt (keine Ziele, Fehlermeldung, KI ohne Optionen), ab 8 Karten einsetzbar; andere Runen ab Duellbeginn; Schwelle im Admin änderbar, für Varianten übernommen, ältere gespeicherte Runen behalten die eingebaute Schwelle.
+
+**Simulation (400 Duelle, mittlere KI):** ohne Rune 41 % Siege, Nachhall 65 % (vorher 63 %), Fluch 55 %, Verdrehung 41 %, Nachhall gegen Fluch 52 % : 26 %. Die Spielmitte-Schwelle schwächt Nachhall also **nicht**: Die KI hat Nachhall ohnehin meist spät eingesetzt, wenn mehr Karten zum Angreifen daliegen.
+
+**Browser (iPhone, Spieler ohne Admin-Rechte):** Menü-Knopf „Runen“ mit Runen-Button und Name der ausgerüsteten Rune; Regeln mit Runen-Abschnitt (4 Buttons) und richtigem Ketten-Text; Kampagnen-Briefing mit Buttons „Deine Rune“/„Gegner“; Liga: Intro mit beiden Runen, Runenleiste im Liga-Duell, Nachhall bei 0 Karten gesperrt („0/8 Karten“), später eingesetzt, ganzes Match (Lauf + Runden) ohne Fehler.
+
 ## Version 1.21 – Nachhall höchstens 1 Übernahme (Freigabe: nur Admin)
 
 Neu (nach deiner Entscheidung): Die **Rune des Nachhalls** übernimmt pro Einsatz höchstens **eine** Gegnerkarte. Könnten mehrere benachbarte Gegnerkarten übernommen werden, wählt der Spieler nach seiner eigenen Karte die Gegnerkarte aus (hervorgehoben, „Welche Gegnerkarte übernehmen? Antippen“); ✓ erst nach der Wahl. Ist nur eine Übernahme möglich, gibt es keine Auswahl. Nie eine Kettenreaktion – auch nicht, wenn die angreifende Karte Kettenübernahme hat. Die Höchstzahl ist im Admin (Reiter „Runen“ → Nachhall → „Höchstens Übernahmen pro Einsatz“, 1–3, Standard 1) einstellbar. Kettenübernahme unverändert: für alle sechs Klassen im Karteneditor vergebbar, keine Bindung an Seltenheit, höchstens 2 weitere Stufen (Reiter „Runen“ → Kettenlänge). Freigabe bleibt „Nur Admin“. Spielregeln und Kartendaten sonst unverändert.

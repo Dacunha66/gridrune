@@ -14,6 +14,7 @@ import { imageUrl } from '../game/catalog';
 import { CLASS_INFO, TERRAIN_INFO, Terrain } from '../game/effects';
 import { createRng } from '../game/rng';
 import { findRune } from '../game/runes';
+import { RuneMatchup } from '../components/RuneBadge';
 import { Pick } from '../game/runner';
 import {
   CampaignContent, ImageRef, KIND_LABEL, LEVEL_LABEL, Mission, MissionCard, Opponent, REWARD_ICON, RANK_LABEL, Reward, World, findArena,
@@ -351,8 +352,7 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
 
         {playerRune && (
           <section className="brief-runes">
-            <p className="small">ᚱ Deine Rune: <b>{findRune(playerRune)?.name ?? '–'}</b>{opponent.rune && findRune(opponent.rune) ? <> · Gegner: <b>{findRune(opponent.rune)!.name}</b></> : ' · Gegner: keine Rune'}</p>
-            <p className="muted small">Ändern unter „Runen“ im Hauptmenü.</p>
+            <RuneMatchup player={playerRune} cpu={opponent.rune && findRune(opponent.rune) ? opponent.rune : null} note="Ändern unter „Runen“ im Hauptmenü." />
           </section>
         )}
 

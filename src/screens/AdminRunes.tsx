@@ -148,7 +148,7 @@ function RuneEditor({ db, assets, initial, all, campaign, onToast, onClose }: {
   const set = (patch: Partial<RuneDef>) => setDraft((d) => ({ ...d, ...patch }));
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
   const base = draft.variantOf ? all.find((r) => r.id === draft.variantOf) : null;
-  const rules = base ? { ...draft, effect: base.effect, amount: base.amount, maxTargets: base.maxTargets, cls: base.cls } : draft;
+  const rules = base ? { ...draft, effect: base.effect, amount: base.amount, maxTargets: base.maxTargets, minPlaced: base.minPlaced, cls: base.cls } : draft;
   const isBuiltin = BUILTIN_RUNES.some((r) => r.id === draft.id);
 
   async function save() {
@@ -232,6 +232,11 @@ function RuneEditor({ db, assets, initial, all, campaign, onToast, onClose }: {
               )}
             </div>
           )}
+          <label className="field"><span>Einsetzbar ab</span>
+            <select className="admin-input" value={draft.minPlaced} onChange={(e) => set({ minPlaced: Number(e.target.value) })}>
+              {[0, 2, 4, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n === 0 ? 'Duellbeginn' : `${n} Karten auf dem Spielfeld${n === 8 ? ' (Spielmitte)' : ''}`}</option>)}
+            </select>
+          </label>
           <small className="muted">Dauer: {rules.effect === 'twist' ? 'dauerhaft bis Duellende (Ausrichtung)' : rules.effect === 'echo' ? 'sofort (einmaliger Angriff, keine Kette)' : 'bis Duellende, nur Karten, die beim Einsatz schon liegen'}. Werte bleiben immer zwischen 1 und 10.</small>
         </>
       )}

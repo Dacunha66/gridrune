@@ -1342,3 +1342,15 @@ label.btn.disabled { opacity: .45; }
 .duel-log { max-height: 50vh; overflow-y: auto; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.35; }
 .duel-log li.player b { color: var(--player-light); }
 .duel-log li.cpu b { color: #ff9b9b; }
+.rune-badge.small { width: 28px; height: 28px; }
+.rune-badge.small .rune-glyph { font-size: 15px; }
+.rune-badge.small .rune-img { inset: 3px; }
+.rune-badge.none { opacity: 0.45; }
+.btn-runes { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.rune-matchup { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.rune-matchup-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.rune-side { flex: 1 1 140px; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.1); min-width: 0; }
+.rune-side > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.rune-side b { font-size: 14px; line-height: 1.2; }
+.rune-side.mine .rune-badge { box-shadow: inset 0 0 0 2px #d8b86c, inset 0 0 0 4px #2a1f0a, 0 0 0 2px var(--player); }
+.rune-side.theirs .rune-badge { box-shadow: inset 0 0 0 2px #d8b86c, inset 0 0 0 4px #2a1f0a, 0 0 0 2px #ff4545; }

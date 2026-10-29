@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BUILTIN_CARDS, CardDef, setCardCatalog } from '../src/game/cards';
 import { BattleState, BoardCell, CELL_COUNT, applyMove, cellBreakdown, createBattle, isGameOver, toHand } from '../src/game/battle';
 import { BUILTIN_RUNES, RUNES, applyAction, applyRune, availableRunes, echoCapturable, parseRune, runeChoices, runeProblem, runeRules, setRunes } from '../src/game/runes';
@@ -35,6 +35,8 @@ function setup(board: Record<number, BoardCell>, rune: string, turn: 'player' | 
   return { ...s, board: b };
 }
 const vals = (s: BattleState, c: number) => cellBreakdown(s.board, s.terrain, c).values;
+/** Nachhall without its mid-duel threshold – for the small test boards below. */
+const echoAnytime = () => setRunes([{ ...BUILTIN_RUNES[1], minPlaced: 0 }]);
 
 describe('Runen: Grundregeln', () => {
   it('einmal pro Duell, nur im eigenen Zug, Zug bleibt beim Spieler, keine Kartenplatzierung verbraucht', () => {
@@ -85,6 +87,7 @@ describe('Rune der Verdrehung', () => {
 });
 
 describe('Rune des Nachhalls', () => {
+  beforeEach(echoAnytime);
   it('greift angrenzende Gegner neu an (aktuelle Werte), ohne Kette', () => {
     // n5 is weak at first; after the Glut-like change of +1 it beats the 5 – here: enemy k5 lost 1 by a curse earlier.
     const s = setup({ 5: at('n5', 'player'), 6: at('k5', 'cpu', { changes: [{ source: 'Test', d: [-1, -1, -1, -1] }] }), 7: at('n1', 'cpu') }, 'rn02');
@@ -102,6 +105,7 @@ describe('Rune des Nachhalls', () => {
 });
 
 describe('Rune des Nachhalls: höchstens eine Übernahme, nie eine Kette', () => {
+  beforeEach(echoAnytime);
   // Own k9 (9 on every side) in the middle at 5, weak enemies on 1, 4, 6 (all capturable), l66 chain bait on 7.
   const crowd = () => setup({ 5: at('k9', 'player'), 1: at('n1', 'cpu'), 4: at('n1', 'cpu'), 6: at('l66', 'cpu'), 7: at('l66', 'cpu') }, 'rn02');
   it('bei mehreren möglichen Übernahmen muss der Spieler genau eine wählen', () => {
@@ -131,7 +135,7 @@ describe('Rune des Nachhalls: höchstens eine Übernahme, nie eine Kette', () =>
     expect(applyRune(s, { rune: true, cell: 5 }).board[6]!.owner).toBe('player');
   });
   it('Höchstzahl im Admin einstellbar (z. B. 2)', () => {
-    setRunes([{ ...BUILTIN_RUNES[1], maxTargets: 2 }]);
+    setRunes([{ ...BUILTIN_RUNES[1], maxTargets: 2, minPlaced: 0 }]);
     const s = crowd();
     expect(runeProblem(s, { rune: true, cell: 5, capture: [1] })).toBeNull();
     const a = applyRune(s, { rune: true, cell: 5, capture: [1, 6] });
@@ -151,6 +155,35 @@ describe('Rune des Nachhalls: höchstens eine Übernahme, nie eine Kette', () =>
     expect(placed.lastChain.map((c) => c.cell)).toEqual([2, 3]);
     // Every card is captured once: no double captures.
     expect(new Set(placed.lastFlips).size).toBe(placed.lastFlips.length);
+  });
+});
+
+describe('Rune des Nachhalls: erst ab der Spielmitte', () => {
+  const board = (n: number) => {
+    const b: Record<number, BoardCell> = { 5: at('n5', 'player'), 6: at('n1', 'cpu') };
+    for (const i of [0, 3, 8, 11, 12, 13, 14, 15].slice(0, Math.max(0, n - 2))) b[i] = at('n5', i % 2 ? 'cpu' : 'player');
+    return setup(b, 'rn02');
+  };
+  it('mit 7 Karten auf dem Feld gesperrt, ab 8 Karten einsetzbar', () => {
+    expect(BUILTIN_RUNES[1].minPlaced).toBe(8);
+    const early = board(7);
+    expect(runeChoices(early, 'player', BUILTIN_RUNES[1]).cells).toEqual([]);
+    expect(runeProblem(early, { rune: true, cell: 5 })).toMatch(/ab 8 Karten/);
+    expect(runeOptions(early)).toEqual([]);
+    const mid = board(8);
+    expect(runeProblem(mid, { rune: true, cell: 5 })).toBeNull();
+    expect(applyRune(mid, { rune: true, cell: 5 }).board[6]!.owner).toBe('player');
+  });
+  it('andere Runen sind weiter von Anfang an einsetzbar; Schwelle im Admin einstellbar und für Varianten übernommen', () => {
+    for (const id of ['rn01', 'rn03', 'rn04']) expect(BUILTIN_RUNES.find((r) => r.id === id)!.minPlaced).toBe(0);
+    setRunes([{ ...BUILTIN_RUNES[1], minPlaced: 4 }]);
+    expect(runeProblem(board(4), { rune: true, cell: 5 })).toBeNull();
+    expect(runeProblem(board(3), { rune: true, cell: 5 })).toMatch(/ab 4 Karten/);
+    setRunes([]);
+    const variant = parseRune('rn09', { name: 'Echo-Variante', effect: 'echo', variantOf: 'rn02', minPlaced: 0, status: 'active' })!;
+    expect(runeRules(variant).minPlaced).toBe(8);
+    // Saved runes from before this rule keep the built-in threshold.
+    expect(parseRune('rn02', { name: 'Rune des Nachhalls', effect: 'echo', status: 'active' })!.minPlaced).toBe(8);
   });
 });
 
@@ -222,6 +255,7 @@ describe('Runen: Daten, Varianten, Fairness', () => {
     expect(BUILTIN_RUNES).toHaveLength(4);
   });
   it('Nachspielen mit Runen ergibt denselben Endstand (Kampagnen-Ziele)', () => {
+    echoAnytime();
     const s = setup({ 5: at('t9', 'player'), 6: at('k5', 'cpu') }, 'rn02');
     const actions = [{ rune: true as const, cell: 5 }, { handIndex: 0, cell: 0 }];
     let end = s;
