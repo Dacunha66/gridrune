@@ -2,7 +2,7 @@
 // Writes are enforced server-side: the database only accepts them from admins (Owner/Editor),
 // and only admins get the picture storage at all. Without the platform (local development)
 // every function degrades to "no database" and the game uses its built-in cards.
-import { CardRecord, parseCardRecord, recordToDoc } from './catalog';
+import { CardRecord, parseCardRecord, recordToDoc, setImageBase } from './catalog';
 import { GameSettings, parseSettings } from './settings';
 import { ARENAS_COLLECTION, Arena, arenaToDoc, parseArena } from './arenas';
 import {
@@ -56,12 +56,27 @@ async function use<T>(name: string): Promise<T | null> {
   }
 }
 
-export const getDb = () => use<Db>('db');
-export const getAssets = () => use<Assets>('assets');
+/**
+ * The web version (Netlify) has no claude.ai platform: it uses Supabase instead. The claude.ai build
+ * (mode "single") never loads the Supabase code.
+ */
+type WebBackend = typeof import('./supabaseBackend');
+let web: Promise<WebBackend | null> | null = null;
+export function webBackend(): Promise<WebBackend | null> {
+  if (import.meta.env.MODE === 'single' || import.meta.env.MODE === 'test' || runtime()) return Promise.resolve(null);
+  web ??= import('./supabaseBackend').then((m) => {
+    setImageBase(m.imageBase);
+    return m;
+  }, () => null);
+  return web;
+}
 
-/** True if this viewer may manage cards (claude.ai Owner or Editor of the game page). */
+export const getDb = async () => (await use<Db>('db')) ?? (await webBackend())?.supabaseDb ?? null;
+export const getAssets = async () => (await use<Assets>('assets')) ?? (await webBackend())?.supabaseAssets ?? null;
+
+/** True if this viewer may manage cards (claude.ai Owner or Editor of the game page; on the web: listed admin). */
 export async function isAdmin(): Promise<boolean> {
-  const user = await use<UserApi>('user');
+  const user = (await use<UserApi>('user')) ?? (await webBackend())?.supabaseUser ?? null;
   if (!user) return false;
   try {
     return (await user.canEdit()) || (await user.isOwner());

@@ -95,8 +95,14 @@ export function recordToDoc(rec: CardRecord): Record<string, unknown> {
   return doc;
 }
 
+/** Where uploaded pictures are served: the claude.ai page itself, or the Supabase picture storage on the web. */
+let imageBase = '/_blob/';
+export function setImageBase(base: string): void {
+  imageBase = base;
+}
+
 export function imageUrl(imageId: string | null): string | undefined {
-  return imageId ? `/_blob/${imageId}` : undefined;
+  return imageId ? `${imageBase}${imageId}` : undefined;
 }
 
 export function recordToCard(rec: CardRecord): CardDef {
