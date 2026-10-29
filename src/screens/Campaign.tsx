@@ -352,7 +352,7 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
 
         {playerRune && (
           <section className="brief-runes">
-            <RuneMatchup player={playerRune} cpu={opponent.rune && findRune(opponent.rune) ? opponent.rune : null} note="Ändern unter „Runen“ im Hauptmenü." />
+            <RuneMatchup player={playerRune} cpu={opponent.rune && findRune(opponent.rune) ? opponent.rune : null} note="Ändern unter „Deck bearbeiten“ → „Rune“." />
           </section>
         )}
 

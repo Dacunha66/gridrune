@@ -56,8 +56,8 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
     return basic.length ? basic[Math.floor(deriveRng(seed, 'cpu-rune')() * basic.length)].id : null;
   }, [seed, runes]);
   const runeNote = runes && runes.equipped && !runes.player
-    ? `In der Liga sind nur die Grundrunen erlaubt – „${findRune(runes.equipped)?.name ?? 'deine Rune'}“ bleibt hier draußen. Ändern unter „Runen“ im Hauptmenü.`
-    : 'Jede Rune einmal pro Duell (in jeder Runde neu). In der Liga nur Grundrunen – für alle gleich. Ändern unter „Runen“ im Hauptmenü.';
+    ? `In der Liga sind nur die Grundrunen erlaubt – „${findRune(runes.equipped)?.name ?? 'deine Rune'}“ bleibt hier draußen. Ändern unter „Deck bearbeiten“ → „Rune“.`
+    : 'Jede Rune einmal pro Duell (in jeder Runde neu). In der Liga nur Grundrunen – für alle gleich. Ändern unter „Deck bearbeiten“ → „Rune“.';
 
   function startMatch() {
     const s = newMatchSeed();

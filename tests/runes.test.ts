@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BUILTIN_CARDS, CardDef, setCardCatalog } from '../src/game/cards';
 import { BattleState, BoardCell, CELL_COUNT, applyMove, cellBreakdown, createBattle, isGameOver, toHand } from '../src/game/battle';
-import { BUILTIN_RUNES, RUNES, applyAction, applyRune, availableRunes, echoCapturable, parseRune, runeChoices, runeProblem, runeRules, setRunes } from '../src/game/runes';
+import { BUILTIN_RUNES, RUNES, RUNE_RARITIES, applyAction, applyRune, availableRunes, echoCapturable, parseRune, runeChoices, runeProblem, runeRules, setRunes } from '../src/game/runes';
 import { runeOptions } from '../src/game/ai';
 import { CardClass, EffectId, Terrain } from '../src/game/effects';
 import { duelStats } from '../src/game/campaignGoals';
@@ -184,6 +184,16 @@ describe('Rune des Nachhalls: erst ab der Spielmitte', () => {
     expect(runeRules(variant).minPlaced).toBe(8);
     // Saved runes from before this rule keep the built-in threshold.
     expect(parseRune('rn02', { name: 'Rune des Nachhalls', effect: 'echo', status: 'active' })!.minPlaced).toBe(8);
+  });
+});
+
+describe('Runen: Seltenheit ab selten', () => {
+  it('Grundrunen sind selten; gespeicherte Runen mit niedrigerer Seltenheit werden zu selten', () => {
+    expect(BUILTIN_RUNES.every((r) => r.rarity === 'rare')).toBe(true);
+    expect(RUNE_RARITIES).toEqual(['rare', 'epic', 'legendary', 'mythic']);
+    expect(parseRune('rn09', { name: 'X', effect: 'twist', rarity: 'common', status: 'active' })!.rarity).toBe('rare');
+    expect(parseRune('rn09', { name: 'X', effect: 'twist', rarity: 'uncommon', status: 'active' })!.rarity).toBe('rare');
+    expect(parseRune('rn09', { name: 'X', effect: 'twist', rarity: 'mythic', status: 'active' })!.rarity).toBe('mythic');
   });
 });
 

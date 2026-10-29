@@ -4,15 +4,22 @@ import { DECK_SIZE, RARITY_ORDER, STARTER_DECK, cardPower, getCard, ownedActiveI
 import { SaveData, isValidDeck } from '../game/storage';
 import { Header } from './Header';
 import { ConfirmButton } from '../components/ConfirmButton';
+import { RuneBadge } from '../components/RuneBadge';
+import { findRune } from '../game/runes';
+import { RuneChoiceProps, RunePicker } from './Runes';
 
 interface Props {
   save: SaveData;
   onSave: (deck: string[]) => void;
+  /** Rune choice (null = runes not released for this player). */
+  runes?: RuneChoiceProps | null;
   onBack: () => void;
 }
 
-export function DeckEditor({ save, onSave, onBack }: Props) {
+export function DeckEditor({ save, onSave, onBack, runes = null }: Props) {
   const [deck, setDeck] = useState<string[]>(save.deck);
+  const [tab, setTab] = useState<'cards' | 'rune'>('cards');
+  const rune = runes ? findRune(runes.equipped) : null;
   const [message, setMessage] = useState('');
   const sorted = useMemo(
     () => ownedActiveIds(save.unlocked).sort((a, b) => {
@@ -35,6 +42,18 @@ export function DeckEditor({ save, onSave, onBack }: Props) {
   return (
     <main className="screen">
       <Header title="Deck" onBack={onBack} backButton={<ConfirmButton label="◀ Zurück" ariaLabel="Zurück" confirmLabel="Verwerfen?" onConfirm={onBack} skipConfirm={!dirty} />} right={<span className={`pill ${valid ? 'ok' : 'warn'}`}>{deck.length}/{DECK_SIZE}</span>} />
+      {runes && (
+        <div className="segmented deck-tabs" role="tablist">
+          <button type="button" role="tab" aria-selected={tab === 'cards'} className={`seg ${tab === 'cards' ? 'active' : ''}`} onClick={() => setTab('cards')}>🃏 Karten {deck.length}/{DECK_SIZE}</button>
+          <button type="button" role="tab" aria-selected={tab === 'rune'} className={`seg ${tab === 'rune' ? 'active' : ''}`} onClick={() => setTab('rune')}>
+            {rune ? <RuneBadge rune={rune} className="small" /> : 'ᚱ'} Rune{rune ? '' : ': keine'}
+          </button>
+        </div>
+      )}
+      {tab === 'rune' && runes ? (
+        <div className="scroll"><RunePicker {...runes} /></div>
+      ) : (
+      <>
       <div className="deck-actions">
         <button type="button" className="btn btn-small" onClick={() => setDeck([...STARTER_DECK])}>Starterdeck</button>
         <button type="button" className="btn btn-small" onClick={() => setDeck(sorted.slice(0, DECK_SIZE))}>Stärkste 20</button>
@@ -51,6 +70,8 @@ export function DeckEditor({ save, onSave, onBack }: Props) {
           ))}
         </div>
       </div>
+      </>
+      )}
       <footer className="bottombar">
         <button
           type="button"

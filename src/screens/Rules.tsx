@@ -56,7 +56,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
         {runes && (
           <>
             <h2>Runen</h2>
-            <p>Unter „Runen“ im Hauptmenü rüstest du eine Rune aus. Im Duell setzt du sie <b>einmal</b> ein – in deinem Zug, bevor du eine Karte legst; dein Zug bleibt dabei erhalten. Der runde Knopf oben links ist deine Rune, oben rechts die des Gegners: antippen zeigt die Erklärung. Die Rune bleibt in deiner Sammlung.</p>
+            <p>Unter „Deck bearbeiten“ → „Rune“ wählst du deine Rune (wenn du eine besitzt, spielst du immer mit einer). Im Duell setzt du sie <b>einmal</b> ein – in deinem Zug, bevor du eine Karte legst; dein Zug bleibt dabei erhalten. Der runde Knopf oben links ist deine Rune, oben rechts die des Gegners: antippen zeigt die Erklärung. Die Rune bleibt in deiner Sammlung.</p>
             <ul className="symbol-legend">
               {BUILTIN_RUNES.map((r) => (
                 <li key={r.id}>

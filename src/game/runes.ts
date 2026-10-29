@@ -5,7 +5,7 @@
 import {
   BattleState, BoardCell, Clash, Move, Side, applyMove, boardValue, cellName, isGameOver, neighbours,
 } from './battle';
-import { Rarity, RARITIES, getCard } from './cards';
+import { Rarity, getCard } from './cards';
 import { CLASS_INFO, CLASSES, CardClass, isCardClass } from './effects';
 import { ContentStatus, CONTENT_STATUSES, ImageRef, parseImage } from './campaign';
 
@@ -52,12 +52,14 @@ export interface RuneDef {
 }
 
 export const RUNES_COLLECTION = 'runes';
+/** Rune rarities (only the look): selten, episch, legendär, mystisch. */
+export const RUNE_RARITIES: Rarity[] = ['rare', 'epic', 'legendary', 'mythic'];
 export const RUNE_ID_RE = /^rn\d{2,4}$/;
 const ALL_MODES: Record<GameMode, boolean> = { adventure: true, campaign: true, league: true };
 
 function rune(id: string, name: string, effect: RuneEffect, glyph: string, description: string, extra: Partial<RuneDef> = {}): RuneDef {
   return {
-    id, name, description, rarity: 'common', effect, amount: 1, maxTargets: 1, minPlaced: 0, modes: { ...ALL_MODES }, unlock: { kind: 'start' },
+    id, name, description, rarity: 'rare', effect, amount: 1, maxTargets: 1, minPlaced: 0, modes: { ...ALL_MODES }, unlock: { kind: 'start' },
     status: 'active', image: null, icon: null, glyph, updatedAt: '', ...extra,
   };
 }
@@ -299,7 +301,8 @@ export function parseRune(id: string, raw: unknown): RuneDef | null {
   const out: RuneDef = {
     id, name,
     description: typeof r.description === 'string' ? r.description.trim().slice(0, 300) : '',
-    rarity: RARITIES.includes(r.rarity as Rarity) ? (r.rarity as Rarity) : 'common',
+    // Runes start at "selten": older saved runes with a lower rarity become "selten".
+    rarity: RUNE_RARITIES.includes(r.rarity as Rarity) ? (r.rarity as Rarity) : 'rare',
     effect: r.effect as RuneEffect,
     amount: int(r.amount, 1, 2, 1),
     maxTargets: int(r.maxTargets, 1, 3, 1),

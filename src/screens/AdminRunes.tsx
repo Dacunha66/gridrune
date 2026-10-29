@@ -5,12 +5,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { RuneBadge } from '../components/RuneBadge';
 import { ImageField, StatusSeg, TextField } from './AdminCampaign';
-import { RARITIES, RARITY_LABEL, Rarity } from '../game/cards';
+import { RARITY_LABEL, Rarity } from '../game/cards';
 import { Assets, Db, describeError, saveGameSettings, saveRune } from '../game/cardStore';
 import { CLASSES, CLASS_INFO, CardClass } from '../game/effects';
 import { STATUS_LABEL, CampaignContent } from '../game/campaign';
 import {
-  BUILTIN_RUNES, GAME_MODES, MODE_NAME, RUNES_COLLECTION, RUNE_EFFECTS, RUNE_EFFECT_LABEL, RuneDef, RuneEffect, nextRuneId, parseRune, runeRules, setRunes,
+  BUILTIN_RUNES, GAME_MODES, MODE_NAME, RUNES_COLLECTION, RUNE_EFFECTS, RUNE_EFFECT_LABEL, RUNE_RARITIES, RuneDef, RuneEffect, nextRuneId, parseRune, runeRules, setRunes,
 } from '../game/runes';
 import { CHAIN_DEPTH_MAX, GameSettings, RELEASES, Release } from '../game/settings';
 
@@ -182,7 +182,7 @@ function RuneEditor({ db, assets, initial, all, campaign, onToast, onClose }: {
       <div className="field-row wrap">
         <label className="field grow"><span>Seltenheit (nur Optik)</span>
           <select className="admin-input" value={draft.rarity} onChange={(e) => set({ rarity: e.target.value as Rarity })}>
-            {RARITIES.map((r) => <option key={r} value={r}>{RARITY_LABEL[r]}</option>)}
+            {RUNE_RARITIES.map((r) => <option key={r} value={r}>{RARITY_LABEL[r]}</option>)}
           </select>
         </label>
         <label className="field emoji-field"><span>Zeichen</span><input className="admin-input" value={draft.glyph} maxLength={4} onChange={(e) => set({ glyph: e.target.value })} /></label>

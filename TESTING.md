@@ -1,5 +1,15 @@
 # Testprotokoll
 
+## Version 1.23 – Runen ab „selten“, Rune im Deck-Editor
+
+Neu (nach deinem Wunsch):
+- **Seltenheit der Runen:** nur noch Selten, Episch, Legendär und Mystisch. Die vier Grundrunen sind „selten“. Gespeicherte Runen mit niedrigerer Seltenheit werden automatisch „selten“. Der Runen-Button hat die Farbe der Seltenheit wie bei den Karten: selten türkis, episch lila, legendär gold, mystisch Regenbogen. Im Duell zeigt ein zusätzlicher äußerer Ring Blau (du) bzw. Rot (Gegner).
+- **Rune in „Deck bearbeiten“:** neuer Reiter „Rune“ neben „Karten“. Der eigene Menü-Knopf „Runen“ ist entfallen; der Knopf „Deck bearbeiten“ zeigt die gewählte Rune. Wer Runen besitzt, spielt immer mit einer (Standard: die erste eigene, bis man eine andere wählt; ein zweites Antippen wählt sie nicht ab). Wer keine besitzt, sieht „Du besitzt noch keine Rune – du spielst ohne Rune“ und spielt ohne. Die Wahl wird sofort gespeichert. Hinweise in Kampagne, Liga und Regeln verweisen auf „Deck bearbeiten“ → „Rune“.
+
+**Automatische Tests (220, alle bestanden), neu:** Grundrunen selten; niedrigere gespeicherte Seltenheit wird selten; mystisch bleibt.
+
+**Browser (iPhone):** Spieler: kein eigener Runen-Knopf mehr, „Deck bearbeiten“ mit Runen-Button; Reiter „Karten 20/20“ / „Rune“; ohne eigene Wahl ist Verdrehung gewählt; Fluch gewählt, zweites Antippen lässt sie gewählt; im Duell „Deine Rune: Rune des Fluchs“. Admin: Seltenheit bietet nur Selten/Episch/Legendär/Mystisch; Vorschau-Ring türkis/lila/gold/Regenbogen. Keine Fehler.
+
 ## Version 1.22 – Runen für alle, Nachhall ab Spielmitte, Runen in der Liga
 
 Neu (nach deiner Freigabe):

@@ -23,7 +23,6 @@ import { GameMode, RUNES, RuneDef, availableRunes, setRunes } from './game/runes
 import { Admin } from './screens/Admin';
 import { League } from './screens/League';
 import { Campaign } from './screens/Campaign';
-import { Runes } from './screens/Runes';
 import { runeUnlocked } from './game/campaignProgress';
 import { setDevTools } from './game/cardStyle';
 import { SymbolTips } from './components/SymbolTips';
@@ -31,7 +30,7 @@ import { CampaignContent, mergeContent, setCampaign } from './game/campaign';
 import { CampaignProgress, loadProgress, writeProgress } from './game/campaignProgress';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'runes' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
   | { name: 'runner'; runId: number; deck: string[] }
@@ -142,9 +141,13 @@ export function App() {
   const runesOn = released(features.runes, admin);
   const ownedRunes = [...new Set([...save.runes.owned, ...RUNES.filter((r) => runeUnlocked(r, campaignProgress, campaign)).map((r) => r.id)])];
   /** Rune the player takes into a duel of this mode (null = none or not allowed there). */
+  // A player who owns runes always plays with one (the chosen one, else the first owned); without runes, none.
+  const ownedActiveRunes = RUNES.filter((r) => r.status === 'active' && (r.unlock.kind === 'start' || ownedRunes.includes(r.id)));
+  const equippedRune = !runesOn ? null
+    : ownedActiveRunes.some((r) => r.id === save.runes.equipped) ? save.runes.equipped : ownedActiveRunes[0]?.id ?? null;
   const duelRune = (mode: GameMode): string | null => {
-    if (!runesOn || !save.runes.equipped) return null;
-    return availableRunes(mode, ownedRunes).some((r) => r.id === save.runes.equipped) ? save.runes.equipped : null;
+    if (!equippedRune) return null;
+    return availableRunes(mode, ownedRunes).some((r) => r.id === equippedRune) ? equippedRune : null;
   };
   const runeLockText = (r: RuneDef) => {
     if (r.unlock.kind === 'mission') {
@@ -180,7 +183,7 @@ export function App() {
           onPlay={startRun}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
-          equippedRune={save.runes.equipped}
+          equippedRune={equippedRune}
           onToggleReducedMotion={() =>
             setSave((s) => ({ ...s, settings: { ...s.settings, reducedMotion: !s.settings.reducedMotion } }))
           }
@@ -188,20 +191,20 @@ export function App() {
       )}
       {screen.name === 'collection' && <Collection save={save} onBack={toMenu} />}
       {screen.name === 'deck' && (
-        <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={toMenu} />
+        <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={toMenu}
+          runes={runesOn ? {
+            owned: ownedRunes, equipped: equippedRune, lockText: runeLockText,
+            onEquip: (id) => setSave((s) => ({ ...s, runes: { ...s.runes, equipped: id } })),
+          } : null} />
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} runes={runesOn} />}
-      {screen.name === 'runes' && (
-        <Runes owned={ownedRunes} equipped={save.runes.equipped} lockText={runeLockText} onBack={toMenu}
-          onEquip={(id) => setSave((s) => ({ ...s, runes: { ...s.runes, equipped: id } }))} />
-      )}
       {screen.name === 'shop' && <Shop save={save} onChange={setSave} onBack={toMenu} />}
       {screen.name === 'league' && (
         <League
           save={save}
           reducedMotion={reducedMotion}
           skin={getSkin(save.skins.runner).colors}
-          runes={runesOn ? { player: duelRune('league'), equipped: save.runes.equipped } : null}
+          runes={runesOn ? { player: duelRune('league'), equipped: equippedRune } : null}
           onSaveDeck={(leagueDeck) => setSave((s) => ({ ...s, leagueDeck }))}
           onExit={toMenu}
         />
