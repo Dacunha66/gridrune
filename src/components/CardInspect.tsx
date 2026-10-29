@@ -25,7 +25,7 @@ export function CardInspect({ board, terrain, cell, onClose }: Props) {
     <div className="inspect-backdrop" role="dialog" aria-modal="true" aria-label={`Details: ${def.name}`} onClick={onClose}>
       <div className="inspect" onClick={(e) => e.stopPropagation()}>
         <div className="inspect-head">
-          <Card id={card.cardId} owner={card.owner} size="md" values={info.values} shield={info.barrier} mod={card.mod} />
+          <Card id={card.cardId} owner={card.owner} size="md" values={info.values} base={info.base} rot={info.rot} shield={info.barrier} mod={card.mod} />
           <div>
             <h2>{def.name}</h2>
             <p className={`rarity-text rarity-${def.rarity}`}>{RARITY_LABEL[def.rarity]}</p>
@@ -50,10 +50,13 @@ export function CardInspect({ board, terrain, cell, onClose }: Props) {
             <tr><th></th>{ARROWS.map((a) => <th key={a}>{a}</th>)}</tr>
           </thead>
           <tbody>
-            <tr><td>Grundwerte</td>{info.base.map((v, i) => <td key={i}>{v}</td>)}</tr>
+            <tr><td>Grundwerte{info.rot ? ` (↻ ${info.rot * 90}°)` : ''}</td>{info.base.map((v, i) => <td key={i}>{v}</td>)}</tr>
             {info.parts.map((p, k) => (
               <tr key={k} className={p.d.some((x) => x < 0) ? 'minus' : 'plus'}>
-                <td>{p.source}{p.kind === 'aura' ? ' (solange aktiv)' : p.kind === 'element' ? ' (auf diesem Feld)' : ''}</td>
+                <td>
+                  {p.kind === 'aura' || p.kind === 'element' ? '📍 ' : '⏳ '}{p.source}
+                  <small className="muted">{p.kind === 'aura' ? ' · solange aktiv' : p.kind === 'element' ? ' · auf diesem Feld' : ' · bis Duellende'}</small>
+                </td>
                 {p.d.map((v, i) => <td key={i}>{v === 0 ? '' : `${v > 0 ? '+' : ''}${v}`}</td>)}
               </tr>
             ))}
@@ -61,6 +64,8 @@ export function CardInspect({ board, terrain, cell, onClose }: Props) {
           </tbody>
         </table>
         {info.parts.length === 0 && <p className="fineprint">Keine Änderungen – es gelten die Grundwerte.</p>}
+        {info.rot > 0 && <p className="fineprint">↻ Ausrichtung: um {info.rot * 90}° nach rechts gedreht – das Bild bleibt aufrecht, nur die Werte haben ihre Seite gewechselt (Boni wandern mit).</p>}
+        {info.parts.length > 0 && <p className="fineprint">⏳ = bis Duellende · 📍 = nur solange die Bedingung gilt (Feld, Nachbarn). ▲ grün = höher, ▼ orange = niedriger als gedruckt.</p>}
         {info.barrier && <p className="fineprint">🛡 Schild aktiv: Die nächste Schwächung durch einen gegnerischen Effekt wird abgewehrt.</p>}
         <p className="fineprint">Werte bleiben immer zwischen 1 und 10. Änderungen gelten nur in diesem Duell.</p>
         <button type="button" className="btn btn-primary btn-wide" onClick={onClose}>Schließen</button>

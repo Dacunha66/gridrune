@@ -219,6 +219,16 @@ export function ownedActiveIds(unlocked: readonly string[]): string[] {
   return unlocked.filter((id) => active.has(id));
 }
 
+/**
+ * A stand-in card with given values and no class or effect – the computer uses it for cards it cannot see
+ * (the player's hand), so it never plays with hidden information. Not part of any catalog or collection.
+ */
+export function virtualCard(v: readonly [number, number, number, number]): string {
+  const id = `__v${v.join('_')}`;
+  if (!BY_ID.has(id)) BY_ID.set(id, { id, name: 'Unbekannte Karte', rarity: 'common', top: v[0], right: v[1], bottom: v[2], left: v[3], art: '?', hue: 0 });
+  return id;
+}
+
 export function getCard(id: string): CardDef {
   const card = BY_ID.get(id);
   if (!card) throw new Error(`Unknown card id: ${id}`);

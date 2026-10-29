@@ -3,8 +3,8 @@ import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import {
-  BOARD_SIZE, BattleState, Breakdown, HandCard, Move, Outcome, Side, applyMove, blickTargets, cellBreakdown, coinToss, cpuChoosesFirst, createBattle, isGameOver,
-  other, outcome, score, totalMoves,
+  BOARD_SIZE, BattleState, Breakdown, HandCard, Move, Outcome, Side, Values, applyMove, blickTargets, cardValue, cellBreakdown, coinToss, cpuChoosesFirst,
+  createBattle, isGameOver, other, outcome, rotateValues, score, totalMoves,
 } from '../game/battle';
 import { Arena, pickArena } from '../game/arenas';
 import { CLASS_INFO, CLASS_TERRAIN, EFFECTS, TERRAIN_INFO, Terrain } from '../game/effects';
@@ -13,10 +13,12 @@ import { CardInspect } from '../components/CardInspect';
 import { BoardArt } from '../components/DesignArt';
 import { isSymbolTipOpen } from '../components/SymbolTips';
 import { ACTIVE, layoutVars } from '../game/designs';
-import { AiOptions, chooseCpuMove, drawCpuHand } from '../game/ai';
+import { AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
-import { Action, BUILTIN_RUNES } from '../game/runes';
+import { Action, BUILTIN_RUNES, RuneDef, RuneUse, applyRune, findRune, runeChoices, runeProblem, runeRules } from '../game/runes';
+import { RuneBadge } from '../components/RuneBadge';
+import { CardClass } from '../game/effects';
 import { CARD_STYLE_LABEL, cycleCardStyle, useCardStyle, useDevTools } from '../game/cardStyle';
 
 interface Props {
@@ -125,6 +127,13 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   const [inspect, setInspect] = useState<number | null>(null);
   /** "Schwächender Blick" waiting for its target: chosen cell and possible targets. */
   const [targeting, setTargeting] = useState<{ cell: number; targets: number[] } | null>(null);
+  /** Wirbelwind: card shown on the field, waiting for the orientation and the confirmation. */
+  const [placing, setPlacing] = useState<{ hand: number; cell: number; rot: number; target?: number } | null>(null);
+  /** Rune activation in progress: chosen cards, class (Fluch) and direction (Verdrehung). */
+  const [runeMode, setRuneMode] = useState<{ cells: number[]; cls?: CardClass; dir?: 1 | -1 } | null>(null);
+  /** Rune details sheet (own or the opponent's). */
+  const [runeSheet, setRuneSheet] = useState<Side | null>(null);
+  const [showLog, setShowLog] = useState(false);
   const terrainsUsed = useMemo(() => [...new Set(arena.cells)].filter((t): t is Exclude<Terrain, 'normal'> => t !== 'normal'), [arena]);
   const [phase, setPhase] = useState<'toss' | 'play'>(setup?.first ? 'play' : 'toss');
   const [selected, setSelected] = useState<number | null>(null);
@@ -157,17 +166,25 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     return () => clearTimeout(t);
   }, [banner]);
 
-  // After every move: show the comparisons, then flip captured cards.
+  // After every action: show the comparisons, then flip captured cards – a Kettenübernahme wave by wave.
   useEffect(() => {
-    if (state.lastPlaced === null) return;
+    if (state.lastOrigin === null && state.lastEvents.length === 0) return;
+    const chainCells = new Set(state.lastChain.map((c) => c.cell));
     setPendingFlips(state.lastFlips);
     setShowClashes(state.lastClashes.length > 0 || state.lastEvents.length > 0);
-    const flip = setTimeout(() => setPendingFlips([]), 550 * fxTime);
-    const hide = setTimeout(() => setShowClashes(false), 1300 * fxTime + 300);
-    return () => {
-      clearTimeout(flip);
-      clearTimeout(hide);
-    };
+    const timers = [setTimeout(() => setPendingFlips((p) => p.filter((c) => chainCells.has(c))), 550 * fxTime)];
+    const levels = [...new Set(state.lastChain.map((c) => c.level))];
+    for (const level of levels) {
+      const cells = new Set(state.lastChain.filter((c) => c.level === level).map((c) => c.cell));
+      timers.push(setTimeout(() => setPendingFlips((p) => p.filter((c) => !cells.has(c))), (550 + 380 * level) * fxTime));
+    }
+    if (state.lastChain.length > 0) setBanner(`⚡ KETTENÜBERNAHME ×${state.lastFlips.length}`);
+    if (state.lastRune) {
+      const def = findRune(state.lastRune.id);
+      if (def) setBanner(`${state.lastRune.side === 'player' ? 'Deine' : 'Gegner:'} ${def.glyph} ${def.name}`);
+    }
+    timers.push(setTimeout(() => setShowClashes(false), (1300 + 380 * levels.length) * fxTime + 300));
+    return () => timers.forEach(clearTimeout);
   }, [state, fxTime]);
 
   // Computer turn.
@@ -175,6 +192,13 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     if (phase !== 'play' || over || state.turn !== 'cpu') return;
     const delay = reducedMotion ? 450 : state.lastClashes.length > 0 || state.lastEvents.length > 0 ? 1250 : 800;
     const t = setTimeout(() => {
+      // The computer may use its rune first (still its turn afterwards), then it places a card.
+      const use = chooseCpuRune(state, rng, setup?.ai);
+      if (use) {
+        record.current.moves.push(use);
+        setState(applyRune(state, use));
+        return;
+      }
       const move = chooseCpuMove(state, rng, setup?.ai);
       record.current.moves.push(move);
       setState(applyMove(state, move));
@@ -190,19 +214,66 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     setBanner(first === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!');
   }, [initial]);
 
-  function play(handIndex: number, cell: number, target?: number) {
-    const move: Move = target === undefined ? { handIndex, cell } : { handIndex, cell, target };
+  function play(handIndex: number, cell: number, target?: number, rot = 0) {
+    const move: Move = { handIndex, cell, ...(target === undefined ? {} : { target }), ...(rot ? { rot } : {}) };
     record.current.moves.push(move);
     setState(applyMove(state, move));
     setHandOrigin(handOrigin.filter((_, i) => i !== handIndex));
     setSelected(null);
     setTargeting(null);
+    setPlacing(null);
+  }
+
+  const myRune: RuneDef | null = state.runes.player ? findRune(state.runes.player.id) : null;
+  const myRuneRules = myRune ? runeRules(myRune) : null;
+  const runeChoice = myRune ? runeChoices(state, 'player', myRune) : null;
+  const canUseRune = !!myRune && !state.runes.player!.used && phase === 'play' && !over && state.turn === 'player' && !animating && !placing
+    && !!runeChoice && runeChoice.cells.length > 0;
+  /** The rune use as chosen so far (complete or not). */
+  const runeUse: RuneUse | null = runeMode && myRuneRules
+    ? myRuneRules.effect === 'twist' || myRuneRules.effect === 'echo'
+      ? { rune: true, cell: runeMode.cells[0], ...(runeMode.dir ? { dir: runeMode.dir } : {}) }
+      : { rune: true, cells: runeMode.cells, ...(runeMode.cls ? { cls: runeMode.cls } : {}) }
+    : null;
+  const runeReady = !!runeUse && runeProblem(state, runeUse) === null;
+  /** Cards that can be chosen right now during a rune activation. */
+  const runeSelectable = (i: number): boolean => {
+    if (!runeMode || !myRuneRules || !runeChoice || !runeChoice.cells.includes(i)) return false;
+    if (myRuneRules.effect === 'curse') return !!runeMode.cls && getCard(state.board[i]!.cardId).cls === runeMode.cls;
+    return true;
+  };
+
+  function tapRuneCell(cell: number) {
+    if (!runeMode || !myRuneRules) return;
+    if (!runeSelectable(cell)) return;
+    const single = myRuneRules.effect === 'twist' || myRuneRules.effect === 'echo';
+    if (single) setRuneMode({ ...runeMode, cells: runeMode.cells[0] === cell ? [] : [cell] });
+    else if (runeMode.cells.includes(cell)) setRuneMode({ ...runeMode, cells: runeMode.cells.filter((c) => c !== cell) });
+    else if (runeMode.cells.length < myRuneRules.maxTargets) setRuneMode({ ...runeMode, cells: [...runeMode.cells, cell] });
+  }
+
+  function confirmRune() {
+    if (!runeUse || !runeReady) return;
+    record.current.moves.push(runeUse);
+    setState(applyRune(state, runeUse));
+    setRuneMode(null);
   }
 
   function tapCell(cell: number) {
+    if (runeMode) {
+      tapRuneCell(cell);
+      return;
+    }
+    if (placing) {
+      // Tapping another free field moves the preview; tapping elsewhere does nothing (no accidental placement).
+      if (!state.board[cell] && !state.rocks.includes(cell) && placing.target === undefined) setPlacing({ ...placing, cell });
+      return;
+    }
     if (targeting) {
-      if (targeting.targets.includes(cell) && selected !== null) play(selected, targeting.cell, cell);
-      else setTargeting(null);
+      if (targeting.targets.includes(cell) && selected !== null) {
+        if (getCard(state.hands.player[selected].cardId).effect === 'wirbelwind') setPlacing({ hand: selected, cell: targeting.cell, rot: 0, target: cell });
+        else play(selected, targeting.cell, cell);
+      } else setTargeting(null);
       return;
     }
     if (state.board[cell]) {
@@ -213,6 +284,8 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     // With several enemies next to the cell, "Schwächender Blick" asks for its target first.
     const targets = blickTargets(state.board, cell, state.hands.player[selected], 'player');
     if (targets.length > 1) setTargeting({ cell, targets });
+    // Wirbelwind: first show the card on the field and let the player turn it.
+    else if (getCard(state.hands.player[selected].cardId).effect === 'wirbelwind') setPlacing({ hand: selected, cell, rot: 0 });
     else play(selected, cell);
   }
 
@@ -230,7 +303,11 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   const selectedElement = selectedDef?.cls && CLASS_TERRAIN[selectedDef.cls] && state.terrain.includes(CLASS_TERRAIN[selectedDef.cls]!) ? CLASS_TERRAIN[selectedDef.cls]! : null;
   const hint = phase === 'toss'
     ? 'Ein Münzwurf entscheidet, wer wählen darf.'
-    : over
+    : runeMode && myRuneRules
+      ? runeHint(myRuneRules, runeMode)
+      : placing
+        ? '↻ Wirbelwind: Ausrichtung wählen, dann „Legen“'
+        : over
       ? ''
       : targeting
         ? '👁 Ziel für −1 antippen · anderes Feld = zurück'
@@ -243,7 +320,12 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
               : selectedElement
                 ? `${CLASS_INFO[selectedDef!.cls!].icon} ${CLASS_INFO[selectedDef!.cls!].label}: auf ${TERRAIN_INFO[selectedElement].icon} ${TERRAIN_INFO[selectedElement].label} +1 auf alle Werte`
                 : 'Tippe auf ein freies Feld.';
-  const placedAt = state.lastPlaced !== null ? cellCenter(state.lastPlaced) : null;
+  const placedAt = state.lastOrigin !== null ? cellCenter(state.lastOrigin) : null;
+  const enemyRune: RuneDef | null = state.runes.cpu ? findRune(state.runes.cpu.id) : null;
+  const placingCard = placing ? state.hands.player[placing.hand] : null;
+  const placingValues = placingCard
+    ? rotateValues([cardValue(placingCard, 'top'), cardValue(placingCard, 'right'), cardValue(placingCard, 'bottom'), cardValue(placingCard, 'left')] as Values, placing!.rot)
+    : null;
 
   return (
     <main className="screen battle">
@@ -266,10 +348,25 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       </header>
 
       {setup && <p className="round-label">{setup.label}</p>}
-      {terrainsUsed.length > 0 && (
-        <p className="arena-label">
-          {arena.name}: {terrainsUsed.map((t) => <span key={t} className={`terrain-chip terrain-${t}`}>{TERRAIN_INFO[t].icon} {TERRAIN_INFO[t].label}</span>)}
-        </p>
+      {(terrainsUsed.length > 0 || myRune || enemyRune) && (
+        <div className="duel-subbar">
+          {myRune ? (
+            <button type="button" className={`rune-chip mine ${state.runes.player!.used ? 'used' : canUseRune ? 'ready' : ''}`} onClick={() => setRuneSheet('player')}
+              aria-label={`Deine Rune: ${myRune.name}, ${state.runes.player!.used ? 'verbraucht' : 'verfügbar'}`}>
+              <RuneBadge rune={myRune} used={state.runes.player!.used} />
+            </button>
+          ) : <span className="rune-chip-space" />}
+          <p className="arena-label">
+            {terrainsUsed.length > 0 && <>{arena.name}: {terrainsUsed.map((t) => <span key={t} className={`terrain-chip terrain-${t}`}>{TERRAIN_INFO[t].icon} {TERRAIN_INFO[t].label}</span>)}</>}
+            {state.log.length > 0 && <button type="button" className="log-btn" onClick={() => setShowLog(true)} aria-label="Spielprotokoll">📜</button>}
+          </p>
+          {enemyRune ? (
+            <button type="button" className={`rune-chip theirs ${state.runes.cpu!.used ? 'used' : ''}`} onClick={() => setRuneSheet('cpu')}
+              aria-label={`Rune des Gegners: ${enemyRune.name}, ${state.runes.cpu!.used ? 'verbraucht' : 'verfügbar'}`}>
+              <RuneBadge rune={enemyRune} used={state.runes.cpu!.used} />
+            </button>
+          ) : <span className="rune-chip-space" />}
+        </div>
       )}
       <div className="play-area">
         <div
@@ -290,7 +387,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
             const canDrop = phase === 'play' && !cell && selected !== null && state.turn === 'player' && !over && !animating && !targeting;
             const terrain = state.terrain[i];
             const info = cell ? cellBreakdown(state.board, state.terrain, i) : null;
-            const isTarget = targeting?.targets.includes(i);
+            const isTarget = targeting?.targets.includes(i) || (runeMode && runeSelectable(i));
+            const runePicked = runeMode?.cells.includes(i);
+            const ghost = placing && placing.cell === i && placingCard;
             // The selected card would get its element bonus here.
             const elementHere = canDrop && selectedDef?.cls && CLASS_TERRAIN[selectedDef.cls] === terrain;
             return (
@@ -298,18 +397,23 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 key={i}
                 type="button"
                 role="gridcell"
-                className={`cell terrain-${terrain} ${canDrop ? 'droppable' : ''} ${elementHere ? 'element-here' : ''} ${isTarget ? 'targetable' : ''} ${targeting?.cell === i ? 'pending' : ''}`}
+                className={`cell terrain-${terrain} ${canDrop && !placing && !runeMode ? 'droppable' : ''} ${elementHere && !placing ? 'element-here' : ''} ${isTarget ? 'targetable' : ''} ${runePicked ? 'rune-picked' : ''} ${targeting?.cell === i || ghost ? 'pending' : ''}`}
                 onClick={() => tapCell(i)}
                 disabled={!cell && (over || phase !== 'play')}
                 aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei${terrain !== 'normal' ? `, ${TERRAIN_INFO[terrain].label}` : ''}`}
               >
-                {!cell && terrain !== 'normal' && <span className="terrain-icon" aria-hidden="true">{TERRAIN_INFO[terrain].icon}</span>}
+                {!cell && terrain !== 'normal' && !ghost && <span className="terrain-icon" aria-hidden="true">{TERRAIN_INFO[terrain].icon}</span>}
+                {ghost && placingValues && (
+                  <Card id={placingCard!.cardId} mod={placingCard!.mod} size="sm" owner="player" values={placingValues} base={placingValues} rot={placing!.rot} className="ghost-card" />
+                )}
                 {cell && owner && (
                   <Card
                     key={`${cell.cardId}-${owner}`}
                     id={cell.cardId}
                     mod={cell.mod}
                     values={info!.values}
+                    base={info!.base}
+                    rot={info!.rot}
                     shield={info!.barrier}
                     terrainGlow={terrainBonus(cell.cardId, info!)}
                     owner={owner}
@@ -348,6 +452,16 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
             );
           })}
 
+          {showClashes && state.lastChain.length > 0 && (
+            <svg className="chain-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              {state.lastChain.map((c, k) => {
+                const a = cellCenter(c.from);
+                const b = cellCenter(c.cell);
+                return <line key={`${state.moveCount}-ch-${k}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} style={{ animationDelay: `${(0.55 + 0.38 * (c.level - 1)) * fxTime}s` }} />;
+              })}
+            </svg>
+          )}
+
           {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={setup?.tossRng ?? rng} onDecide={start} />}
           {banner && <div className="board-banner">{banner}</div>}
           {result && (
@@ -359,6 +473,29 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
         </div>
 
         <p className="hint" aria-live="polite">{hint}</p>
+        {placing && (
+          <div className="action-bar" role="group" aria-label="Wirbelwind: Ausrichtung">
+            <button type="button" className="btn turn-btn" aria-label="Nach links drehen" onClick={() => setPlacing({ ...placing, rot: (placing.rot + 3) % 4 })}>↺</button>
+            <button type="button" className="btn turn-btn" aria-label="Nach rechts drehen" onClick={() => setPlacing({ ...placing, rot: (placing.rot + 1) % 4 })}>↻</button>
+            <button type="button" className="btn btn-primary" onClick={() => play(placing.hand, placing.cell, placing.target, placing.rot)}>✓ Legen</button>
+            <button type="button" className="btn" onClick={() => { setPlacing(null); setTargeting(null); }}>✕</button>
+          </div>
+        )}
+        {runeMode && myRuneRules && (
+          <div className="action-bar" role="group" aria-label="Rune einsetzen">
+            {myRuneRules.effect === 'curse' && !runeMode.cls && runeChoice!.classes.map((c) => (
+              <button key={c} type="button" className="btn btn-small" onClick={() => setRuneMode({ cells: [], cls: c })}>{CLASS_INFO[c].icon} {CLASS_INFO[c].label}</button>
+            ))}
+            {myRuneRules.effect === 'twist' && runeMode.cells.length === 1 && (
+              <>
+                <button type="button" className={`btn turn-btn ${runeMode.dir === -1 ? 'active' : ''}`} aria-label="Nach links drehen" onClick={() => setRuneMode({ ...runeMode, dir: -1 })}>↺</button>
+                <button type="button" className={`btn turn-btn ${runeMode.dir === 1 ? 'active' : ''}`} aria-label="Nach rechts drehen" onClick={() => setRuneMode({ ...runeMode, dir: 1 })}>↻</button>
+              </>
+            )}
+            <button type="button" className="btn btn-primary" disabled={!runeReady} onClick={confirmRune}>✓ Einsetzen</button>
+            <button type="button" className="btn" onClick={() => setRuneMode(null)}>✕</button>
+          </div>
+        )}
 
         {/* Hand: one row to swipe through; tap = select, hold = large preview. */}
         <div className="hand" aria-label="Deine Hand">
@@ -373,8 +510,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 selected={selected === i}
                 onClick={() => {
                   if (pressedLong.current) return;
-                  if (phase !== 'play' || state.turn !== 'player' || over) return;
+                  if (phase !== 'play' || state.turn !== 'player' || over || runeMode) return;
                   setTargeting(null);
+                  setPlacing(null);
                   setSelected(selected === i ? null : i);
                 }}
               />
@@ -389,6 +527,33 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
         </div>
       )}
       {styleToast && <div className="style-toast" role="status">🎨 {styleToast}</div>}
+      {runeSheet && (runeSheet === 'player' ? myRune : enemyRune) && (
+        <RuneSheet
+          rune={(runeSheet === 'player' ? myRune : enemyRune)!}
+          mine={runeSheet === 'player'}
+          used={!!state.runes[runeSheet]?.used}
+          canUse={runeSheet === 'player' && canUseRune}
+          reason={runeSheet === 'player' && !canUseRune ? runeBlockedText(state, phase, over, runeChoice) : ''}
+          onUse={() => {
+            setRuneSheet(null);
+            setSelected(null);
+            setTargeting(null);
+            setRuneMode({ cells: [] });
+          }}
+          onClose={() => setRuneSheet(null)}
+        />
+      )}
+      {showLog && (
+        <div className="inspect-backdrop" role="dialog" aria-modal="true" aria-label="Spielprotokoll" onClick={() => setShowLog(false)}>
+          <div className="inspect log-sheet" onClick={(e) => e.stopPropagation()}>
+            <h2>📜 Spielprotokoll</h2>
+            <ol className="duel-log">
+              {state.log.map((l, k) => <li key={k} className={l.side}><b>{l.side === 'player' ? 'Du' : 'Gegner'}:</b> {l.kind === 'rune' ? 'ᚱ ' : ''}{l.text}</li>)}
+            </ol>
+            <button type="button" className="btn btn-primary btn-wide" onClick={() => setShowLog(false)}>Schließen</button>
+          </div>
+        </div>
+      )}
       {inspect !== null && state.board[inspect] && (
         <CardInspect board={state.board} terrain={state.terrain} cell={inspect} onClose={() => setInspect(null)} />
       )}
@@ -441,6 +606,51 @@ function CoinToss({ reducedMotion, rng, onDecide }: { reducedMotion: boolean; rn
       {stage === 'result' && winner === 'cpu' && (
         <p className="toss-title">Der Gegner gewinnt den Münzwurf<br /><small>und lässt dich beginnen.</small></p>
       )}
+    </div>
+  );
+}
+
+function runeHint(r: RuneDef, mode: { cells: number[]; cls?: CardClass; dir?: 1 | -1 }): string {
+  switch (r.effect) {
+    case 'twist':
+      return mode.cells.length === 0 ? 'ᚱ Eigene Karte zum Drehen antippen' : mode.dir ? 'ᚱ ✓ bestätigt die Drehung' : 'ᚱ Richtung: ↺ links oder ↻ rechts';
+    case 'echo':
+      return mode.cells.length === 0 ? 'ᚱ Eigene Karte antippen, die erneut angreift' : 'ᚱ ✓ – greift die Nachbarn erneut an';
+    case 'empower':
+      return `ᚱ Eigene Karten antippen (${mode.cells.length}/${r.maxTargets}), dann ✓`;
+    case 'curse':
+      return !mode.cls ? 'ᚱ Gegnerische Klasse wählen' : `ᚱ Gegnerkarten antippen (${mode.cells.length}/${r.maxTargets}), dann ✓`;
+  }
+}
+
+function runeBlockedText(state: BattleState, phase: string, over: boolean, choice: { cells: number[] } | null): string {
+  if (state.runes.player?.used) return 'Bereits eingesetzt – in diesem Duell nicht mehr verfügbar.';
+  if (over) return 'Das Duell ist vorbei.';
+  if (phase !== 'play' || state.turn !== 'player') return 'Einsetzbar in deinem Zug, bevor du eine Karte legst.';
+  if (!choice || choice.cells.length === 0) return 'Gerade gibt es kein gültiges Ziel auf dem Spielfeld.';
+  return '';
+}
+
+function RuneSheet({ rune, mine, used, canUse, reason, onUse, onClose }: {
+  rune: RuneDef; mine: boolean; used: boolean; canUse: boolean; reason: string; onUse: () => void; onClose: () => void;
+}) {
+  return (
+    <div className="inspect-backdrop" role="dialog" aria-modal="true" aria-label={rune.name} onClick={onClose}>
+      <div className="inspect rune-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="rune-sheet-head">
+          <RuneBadge rune={rune} used={used} className="big" />
+          <div>
+            <p className="muted small">{mine ? 'Deine Rune' : 'Rune des Gegners'} · {used ? 'verbraucht' : 'verfügbar'}</p>
+            <h2>{rune.name}</h2>
+          </div>
+        </div>
+        <p>{rune.description}</p>
+        <p className="muted small">Einmal pro Duell, im eigenen Zug vor dem Legen einer Karte. Der Zug wird dadurch nicht verbraucht.</p>
+        {mine && !used && (canUse
+          ? <button type="button" className="btn btn-primary btn-wide" onClick={onUse}>ᚱ Aktivieren – Ziel wählen</button>
+          : <p className="small">{reason}</p>)}
+        <button type="button" className="btn btn-wide" onClick={onClose}>Schließen</button>
+      </div>
     </div>
   );
 }

@@ -35,6 +35,10 @@ interface Props {
   detail?: boolean;
   /** Design test: show this card design instead of the one chosen for this device. */
   styleOverride?: CardStyle;
+  /** Printed values in the card's current orientation (for the bonus/malus colours of a turned card). */
+  base?: readonly number[];
+  /** Orientation in quarter turns clockwise (shows a small ↻ marker). */
+  rot?: number;
 }
 
 const DIRS = ['top', 'right', 'bottom', 'left'] as const;
@@ -97,7 +101,7 @@ function Gem({ mythic }: { mythic: boolean }) {
 
 export function Card({
   id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0, def, values, shield,
-  terrainGlow, detail, styleOverride,
+  terrainGlow, detail, styleOverride, base, rot = 0,
 }: Props) {
   const deviceStyle = useCardStyle();
   const cardStyle = styleOverride ?? deviceStyle;
@@ -114,7 +118,7 @@ export function Card({
   ].join(' ');
   const label = ariaLabel ?? (locked
     ? `Gesperrte Karte, ${RARITY_LABEL[c.rarity]}`
-    : `${c.name}${mod < 0 ? ` (geschwächt ${mod})` : ''}, ${RARITY_LABEL[c.rarity]}${c.cls ? `, ${CLASS_INFO[c.cls].label}` : ''}${effect ? `, Effekt ${effect.name}` : ''}, oben ${effective(0)}, rechts ${effective(1)}, unten ${effective(2)}, links ${effective(3)}${shield ? ', Schild aktiv' : ''}`);
+    : `${c.name}${mod < 0 ? ` (geschwächt ${mod})` : ''}, ${RARITY_LABEL[c.rarity]}${c.cls ? `, ${CLASS_INFO[c.cls].label}` : ''}${effect ? `, Effekt ${effect.name}` : ''}, oben ${effective(0)}, rechts ${effective(1)}, unten ${effective(2)}, links ${effective(3)}${shield ? ', Schild aktiv' : ''}${rot % 4 ? `, gedreht um ${(rot % 4) * 90} Grad` : ''}`);
   const v2 = premium;
   const content = v2 ? (
     <>
@@ -124,7 +128,7 @@ export function Card({
         {locked ? <span className="art-emoji">🔒</span> : c.image ? <img src={c.image} alt="" draggable={false} /> : <span className="art-emoji">{c.art}</span>}
       </span>
       {DIRS.map((d, i) => {
-        const delta = values ? effective(i) - c[d] : mod;
+        const delta = values ? effective(i) - (base ? base[i] : c[d]) : mod;
         return (
           <span key={d} className={`pv pv-${d} ${delta > 0 ? 'up' : delta < 0 ? 'down' : ''}`} aria-hidden="true">
             <span className="v">{locked ? '?' : effective(i)}</span>
@@ -134,6 +138,7 @@ export function Card({
       {!locked && c.cls && <span className="cs-cls" data-sym={`cls:${c.cls}`}><ClassShield cls={c.cls} /></span>}
       {!locked && c.effect && <span className="cs-fx" data-sym={`fx:${c.effect}`}><AbilityMedallion effect={c.effect} /></span>}
       {!locked && <span className="cs-name" style={{ '--nl': Math.max(8, c.name.length) } as CSSProperties}>{c.name}</span>}
+      {rot % 4 !== 0 && !locked && <span className="cs-rot" aria-hidden="true">↻{(rot % 4) * 90}°</span>}
       {shield && !locked && (
         <span className="cs-shield" aria-hidden="true"><Icon path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" /></span>
       )}
@@ -159,7 +164,7 @@ export function Card({
           <span className="pm-text">{effect ? effect.text : `${c.cls ? CLASS_INFO[c.cls].label : 'Karte'} · kein Spezialeffekt`}</span>
         </span>
       )}
-      {DIRS.map((d, i) => <Value key={d} dir={d} value={effective(i)} delta={values ? effective(i) - c[d] : mod} locked={locked} />)}
+      {DIRS.map((d, i) => <Value key={d} dir={d} value={effective(i)} delta={values ? effective(i) - (base ? base[i] : c[d]) : mod} locked={locked} />)}
       {!locked && (
         <span className="gear" aria-hidden="true" data-sym={c.cls ? `cls:${c.cls}` : undefined}>
           <svg className="gear-wheel" viewBox="0 0 100 100">
@@ -174,6 +179,7 @@ export function Card({
       {!detail && !locked && effect && c.effect && (
         <span className="brass fx-icon" aria-hidden="true" data-sym={`fx:${c.effect}`}><Icon path={EFFECT_ICON[c.effect]} color="#ffd34d" fill="rgba(255,211,77,.25)" /></span>
       )}
+      {rot % 4 !== 0 && !locked && <span className="cs-rot" aria-hidden="true">↻{(rot % 4) * 90}°</span>}
       {shield && !locked && (
         <span className="brass shield-icon" aria-hidden="true"><Icon path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" /></span>
       )}
