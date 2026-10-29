@@ -13,6 +13,7 @@ import { getCard } from '../game/cards';
 import { imageUrl } from '../game/catalog';
 import { CLASS_INFO, TERRAIN_INFO, Terrain } from '../game/effects';
 import { createRng } from '../game/rng';
+import { findRune } from '../game/runes';
 import { Pick } from '../game/runner';
 import {
   CampaignContent, ImageRef, KIND_LABEL, LEVEL_LABEL, Mission, MissionCard, Opponent, REWARD_ICON, RANK_LABEL, Reward, World, findArena,
@@ -98,7 +99,7 @@ export function Campaign({ content, progress: saved, onProgress, deck, unlocked,
   if (view.k === 'brief') {
     return (
       <Briefing
-        mission={mission} opponent={opponent} content={content} progress={progress} deck={deck} preview={!!preview}
+        mission={mission} opponent={opponent} content={content} progress={progress} deck={deck} preview={!!preview} playerRune={playerRune}
         onBack={back}
         onStart={(hand) => (opponent.intro ? setView({ k: 'intro', missionId: mission.id, hand }) : begin(hand))}
       />
@@ -308,8 +309,8 @@ function WorldMap({ world, content, progress, preview, onMission, onBack }: {
 
 // ---------- Briefing ----------
 
-function Briefing({ mission, opponent, content, progress, deck, preview, onBack, onStart }: {
-  mission: Mission; opponent: Opponent; content: CampaignContent; progress: CampaignProgress; deck: string[]; preview: boolean;
+function Briefing({ mission, opponent, content, progress, deck, preview, playerRune, onBack, onStart }: {
+  mission: Mission; opponent: Opponent; content: CampaignContent; progress: CampaignProgress; deck: string[]; preview: boolean; playerRune: string | null;
   onBack: () => void; onStart: (hand: MissionCard[]) => void;
 }) {
   const arena = findArena(mission.arenaId) ?? CLASSIC_ARENA;
@@ -347,6 +348,13 @@ function Briefing({ mission, opponent, content, progress, deck, preview, onBack,
             {mission.onlyClass && <p className="small">Nur {CLASS_INFO[mission.onlyClass].icon} {CLASS_INFO[mission.onlyClass].label}-Karten erlaubt.</p>}
           </div>
         </section>
+
+        {playerRune && (
+          <section className="brief-runes">
+            <p className="small">ᚱ Deine Rune: <b>{findRune(playerRune)?.name ?? '–'}</b>{opponent.rune && findRune(opponent.rune) ? <> · Gegner: <b>{findRune(opponent.rune)!.name}</b></> : ' · Gegner: keine Rune'}</p>
+            <p className="muted small">Ändern unter „Runen“ im Hauptmenü.</p>
+          </section>
+        )}
 
         <section className="brief-goals">
           <h2>Sterne-Ziele</h2>

@@ -49,6 +49,14 @@ Im Hauptmenü unter **🗺️ Kampagne**: Welten mit je 10 Missionen (Tutorial, 
 
 Empfohlene Bildgrößen: Weltkarte und Boss-Hintergrund 1290 × 2796 px, Welt-Kachel 1200 × 675 px, Missions-Icon und Gegner-Avatar 512 × 512 px, Boss-Porträt 1024 × 1365 px (JPEG/WebP, am besten unter 2 MB).
 
+### Runen und neue Fähigkeiten (Test)
+
+Freigabe im Admin-Reiter **Runen**: „Aus“, „Nur Admin (Test)“ oder „Alle Spieler“ – getrennt für Runen und für die Fähigkeiten Wirbelwind/Kettenübernahme. Bis zur Freigabe spielen Spieler unverändert.
+- **Runen:** Im Hauptmenü unter „Runen“ ausrüsten. Im Duell einmal im eigenen Zug vor dem Legen einsetzen (Runenleiste oben, antippen → Aktivieren → Ziel wählen → ✓). Die Rune bleibt in der Sammlung. Grundrunen: Verdrehung, Nachhall, Glut, Fluch – für alle von Anfang an; weitere Runen über die Kampagne.
+- **Wirbelwind:** Karte wählen, Feld antippen, mit ↺ ↻ drehen, „Legen“.
+- **Kettenübernahme:** eroberte Karten greifen weiter an (Stufen im Admin einstellbar).
+- **Spielprotokoll:** 📜 in der Runenleiste.
+
 ### Collection League (Testmodus)
 Im Hauptmenü **🏆 Collection League**: Liga-Deck bauen (20 Karten, max. 2 gleiche, max. 1 legendäre, 1 mystische, 4 epische), dann ein Match gegen den Computer: Lauf mit je 2 Deckkarten + 1 neutraler Entdeckung pro Tor, danach 2 Runden mit getauschtem Start, bei 1:1 ein Entscheidungsduell. In jedem Duell blockiert ein **Fels** ein Feld (fair, kein Unentschieden). Testmodus: keine Belohnung, keine Wertung. Hintergründe: [BALANCING.md](BALANCING.md).
 

@@ -144,10 +144,19 @@ function hardScore(state: BattleState, move: Move, prefer: ReadonlySet<CardClass
 
 // ---------- Runes ----------
 
-/** Value of a position for `side`: cards owned on the board plus the best placement available now. */
+/**
+ * Value of a position for `side`: cards owned on the board, how well the own cards are protected (values facing
+ * free fields – what Verdrehung and Glut improve), and the best placement available now.
+ */
 function positionValue(state: BattleState, side: Side): number {
   const s = score(state);
-  const material = (side === 'player' ? s.player - s.cpu : s.cpu - s.player) * 100;
+  let guard = 0;
+  state.board.forEach((c, i) => {
+    if (!c || c.owner !== side) return;
+    const v = cellBreakdown(state.board, state.terrain, i).values;
+    for (const n of neighbours(i)) if (state.board[n.cell] === null && !state.rocks.includes(n.cell)) guard += v[DIR_ORDER.indexOf(n.mine)] - 5;
+  });
+  const material = (side === 'player' ? s.player - s.cpu : s.cpu - s.player) * 100 + guard * 8;
   if (isGameOver(state) || state.turn !== side) return material;
   let best = -Infinity;
   for (const m of legalMoves(state)) best = Math.max(best, mediumScore(state, m));

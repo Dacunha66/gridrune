@@ -53,3 +53,23 @@ Ranglisten-Arenen müssen spiegelgleich sein (Feld i = Feld 15 − i), jedes Gel
 Geländefelder; der Fels liegt nur auf normalen Feldern.
 
 **Element-Bonus (v1.13):** Karten auf dem Gelände ihres Elements (Natur→Wald, Feuer→Lava, Frost→Eis, Schatten→Schatten) bekommen +1 auf alle Werte; Krieger und Magier haben kein Element. Simulation Naturkarten gegen Krieger: Waldlichtung 24 % → 47 %, Grenzland 24 % → 40 %, Klassische Arena unverändert 24 %. Seit v1.15 haben auch Magier (ᚱ Runenfeld) und Krieger (⚔️ Schlachtfeld) ein Element. Seit v1.14 gibt Gelände höchstens +1: Geländeeffekte wirken nicht zusätzlich zum Element.
+
+
+## Runen, Wirbelwind, Kettenübernahme (v1.20, Simulation)
+
+Je 400 Duelle, mittlere KI auf beiden Seiten, zufällige Hände aus gewöhnlichen/ungewöhnlichen Karten. Ausgangslage ohne Neuerungen: 40 % Sieg / 37 % Niederlage (Rest unentschieden).
+
+| Variante | Sieg | Niederlage | Hinweis |
+|---|---|---|---|
+| 2 Karten mit Wirbelwind | 46 % | 32 % | mäßiger Vorteil; mit Werten je −1 (Σ −4) schon 33 % → Stärke ≈ Σ 2 |
+| 2 Karten mit Kettenübernahme (max. 2 Stufen) | 69 % | 15 % | sehr stark; ~1,5 Kettenzüge und ~1,6 zusätzliche Übernahmen pro Duell |
+| 4 Karten mit Kettenübernahme | 83 % | 9 % | |
+| Kettenübernahme unbegrenzt | 69 % | 15 % | Ketten werden auf 4×4 selten länger als 2 Stufen |
+| Kettenübernahme mit Werten je −1 / −2 | 58 % / 41 % | 25 % / 40 % | ausgeglichen bei Σ −8 → Stärke ≈ Σ 7 |
+| Rune der Verdrehung | 40 % | 36 % | KI nutzt sie selten (26 %); wirkt vor allem verteidigend |
+| Rune des Nachhalls | 59 % | 20 % | stark (ein zusätzlicher Angriff) |
+| Rune der Glut | 40 % | 37 % | nur mit Feuerkarten auf dem Feld nützlich (gemischte Decks: selten) |
+| Rune des Fluchs | 51 % | 26 % | mittel |
+| Nachhall gegen Fluch | 48 % | 31 % | |
+
+Folgerungen: Stärke-Werte für die Balancing-Hinweise im Karteneditor: Wirbelwind Σ 2, Kettenübernahme Σ 7 (eine Karte mit Kettenübernahme braucht etwa 2 Punkte weniger pro Seite als eine Karte gleicher Seltenheit ohne Fähigkeit). Offene Entscheidung: Nachhall eventuell auf „höchstens 1 Übernahme“ begrenzen; Glut ist nur in Feuer-Decks stark.

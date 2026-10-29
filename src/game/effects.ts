@@ -99,11 +99,11 @@ export const EFFECTS: Record<EffectId, EffectDef> = {
     text: 'Beim Ausspielen: Eine angrenzende gegnerische Karte verliert −1 auf alle Werte (bis Duellende). Bei mehreren Gegnern wählst du das Ziel.',
   },
   wirbelwind: {
-    id: 'wirbelwind', short: 'Beim Legen drehbar (90°-Schritte)', name: 'Wirbelwind', cls: null, trigger: 'play', value: 1.5,
+    id: 'wirbelwind', short: 'Beim Legen drehbar (90°-Schritte)', name: 'Wirbelwind', cls: null, trigger: 'play', value: 2,
     text: 'Beim Legen wählst du die Ausrichtung: Die vier Werte drehen sich in 90°-Schritten mit (das Bild bleibt aufrecht). Die Ausrichtung bleibt bis Duellende.',
   },
   kettenuebernahme: {
-    id: 'kettenuebernahme', short: 'Eroberte Karten greifen weiter an', name: 'Kettenübernahme', cls: null, trigger: 'play', value: 2.5,
+    id: 'kettenuebernahme', short: 'Eroberte Karten greifen weiter an', name: 'Kettenübernahme', cls: null, trigger: 'play', value: 7,
     text: 'Erobert diese Karte beim Legen eine Gegnerkarte, greift die eroberte Karte ihrerseits angrenzende Gegner an – nach den normalen Regeln, höchstens zwei weitere Stufen.',
   },
 };
