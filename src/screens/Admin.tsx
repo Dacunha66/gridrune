@@ -17,6 +17,7 @@ import { ArenaView } from './AdminArenas';
 import { DesignerView } from './AdminDesigns';
 import { CampaignView } from './AdminCampaign';
 import { CardStyleView } from './AdminCardStyle';
+import { RunesView } from './AdminRunes';
 import { Design, DesignState } from '../game/designs';
 import { CardClass, CLASS_INFO, CLASSES, effectFitsClass, EffectId, effectPreview, EFFECTS, effectsForClass } from '../game/effects';
 
@@ -31,11 +32,13 @@ interface Props {
   onCampaignChange: (content: CampaignContent) => void;
   /** Plays a mission in test mode (drafts visible, nothing saved). */
   onTestCampaign: (missionId?: string) => void;
+  /** Campaign content in use (for rune unlock conditions). */
+  campaign: CampaignContent;
   onBack: () => void;
 }
 
-type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'cardstyle';
-const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', cardstyle: 'Kartendesign' };
+type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'runes' | 'cardstyle';
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', runes: 'Runen', cardstyle: 'Kartendesign' };
 /** Tab to come back to (e.g. after testing a mission). */
 let lastTab: Tab = 'cards';
 
@@ -48,7 +51,7 @@ const STATUS_HINT: Record<CardStatus, string> = {
   disabled: 'Vorübergehend aus dem Spiel genommen – nicht gelöscht. Spieler behalten sie; jederzeit wieder aktivierbar.',
 };
 
-export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCampaignChange, onTestCampaign, onBack }: Props) {
+export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCampaignChange, onTestCampaign, campaign, onBack }: Props) {
   const [access, setAccess] = useState<'checking' | 'denied' | 'ok'>('checking');
   const [db, setDb] = useState<Db | null>(null);
   const [assets, setAssets] = useState<Assets | null>(null);
@@ -185,6 +188,13 @@ export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCa
       {tab === 'arenas' && records && records.length > 0 && <ArenaView db={db!} onToast={setToast} />}
       {tab === 'designs' && records && records.length > 0 && <DesignerView db={db!} assets={assets} onToast={setToast} onDesignsChange={onDesignsChange} />}
       {tab === 'cardstyle' && <CardStyleView />}
+      {tab === 'runes' && records && records.length > 0 && settings && (
+        <RunesView db={db!} assets={assets} settings={settings} campaign={campaign} onToast={setToast}
+          onSettingsSaved={(s) => {
+            setSettings(s);
+            onSettingsChange(s);
+          }} />
+      )}
       {tab === 'campaign' && records && records.length > 0 && <CampaignView db={db!} assets={assets} onToast={setToast} onCampaignChange={onCampaignChange} onTest={onTestCampaign} />}
       {toast && <div className="admin-toast" role="status">{toast}</div>}
     </main>

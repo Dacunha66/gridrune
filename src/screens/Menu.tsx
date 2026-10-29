@@ -9,11 +9,13 @@ interface Props {
   /** Owner/Editor of the game page: may open the card administration. */
   isAdmin: boolean;
   onPlay: () => void;
-  onNavigate: (screen: 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'campaign') => void;
+  onNavigate: (screen: 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'campaign' | 'runes') => void;
+  /** Runes released for this viewer: shows the rune collection. */
+  runes?: boolean;
   onToggleReducedMotion: () => void;
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes }: Props) {
   const { wins, draws, losses } = save.stats;
   return (
     <main className="screen menu">
@@ -37,6 +39,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Collection League <span className="btn-sub">Test</span></button>
         <button type="button" className="btn" onClick={() => onNavigate('shop')}>🛒 Shop <span className="btn-sub">🪙 {save.coins}</span></button>
         <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>
+        {runes && <button type="button" className="btn btn-runes" onClick={() => onNavigate('runes')}>ᚱ Runen <span className="btn-sub">Test</span></button>}
         <button type="button" className="btn" onClick={() => onNavigate('deck')}>🗂️ Deck bearbeiten</button>
         <button type="button" className="btn" onClick={() => onNavigate('rules')}>📜 Regeln</button>
         {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}>🛠️ Kartenverwaltung</button>}

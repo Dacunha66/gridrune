@@ -9,6 +9,7 @@ import {
   CampaignContent, MISSIONS_COLLECTION, Mission, OPPONENTS_COLLECTION, Opponent, WORLDS_COLLECTION, World, missionToDoc, opponentToDoc, parseMission,
   parseOpponent, parseWorld, worldToDoc,
 } from './campaign';
+import { RUNES_COLLECTION, RuneDef, parseRune, runeToDoc } from './runes';
 import { DESIGNS_COLLECTION, DESIGN_STATE_DOC, Design, DesignState, designToDoc, displaySize, parseDesign, parseDesignState } from './designs';
 
 export const CARDS_COLLECTION = 'cards';
@@ -251,6 +252,24 @@ export async function prepareCoverImage(file: Blob, target: { w: number; h: numb
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** Runes saved by the admin. null = no database (the four basic runes apply). */
+export async function loadRunes(db: Db | null): Promise<RuneDef[] | null> {
+  if (!db) return null;
+  try {
+    const snap = await db.collection(RUNES_COLLECTION).get();
+    return snap.docs.flatMap((d) => {
+      const r = d.exists ? parseRune(d.id, d.data()) : null;
+      return r ? [r] : [];
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function saveRune(db: Db, r: RuneDef): Promise<void> {
+  await db.collection(RUNES_COLLECTION).doc(r.id).set(runeToDoc(r));
 }
 
 export async function deleteCardRecord(db: Db, id: string): Promise<void> {

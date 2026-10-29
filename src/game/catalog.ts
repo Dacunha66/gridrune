@@ -160,10 +160,21 @@ export interface CatalogResult {
 }
 
 /** Builds the game catalog from database records. */
-export function buildCatalog(records: CardRecord[]): CatalogResult {
+/** Abilities that are only active once released (Freigabe in the admin area). */
+export const NEW_ABILITIES = ['wirbelwind', 'kettenuebernahme'] as const;
+
+/**
+ * Cards in play. Without `newAbilities` (not released for this viewer yet) the new abilities are left off the
+ * cards – the card then plays exactly like before; nothing in the database changes.
+ */
+export function buildCatalog(records: CardRecord[], newAbilities = true): CatalogResult {
   const sorted = [...records].sort((a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity] || a.id.localeCompare(b.id));
-  const known = sorted.map(recordToCard);
-  const active = sorted.filter((r) => r.status === 'active').map(recordToCard);
+  const toCard = (r: CardRecord) => {
+    const c = recordToCard(r);
+    return !newAbilities && c.effect && (NEW_ABILITIES as readonly string[]).includes(c.effect) ? { ...c, effect: undefined } : c;
+  };
+  const known = sorted.map(toCard);
+  const active = sorted.filter((r) => r.status === 'active').map(toCard);
   if (active.length < MIN_ACTIVE_CARDS) return { active: [...BUILTIN_CARDS], known: [...BUILTIN_CARDS, ...known], usable: false };
   return { active, known, usable: true };
 }

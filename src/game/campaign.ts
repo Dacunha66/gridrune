@@ -35,7 +35,7 @@ export interface ImageRef {
   fit: ImageFit;
 }
 
-export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground';
+export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground' | 'runeArt' | 'runeIcon';
 
 /**
  * Recommended sizes, derived from the layout: the world map and boss background fill a phone screen
@@ -49,6 +49,10 @@ export const IMAGE_SPECS: Record<ImageKind, { label: string; w: number; h: numbe
   avatar: { label: 'Gegner-Avatar', w: 512, h: 512, ratio: '1:1 (quadratisch)', aspect: 1 },
   bossPortrait: { label: 'Boss-Porträt', w: 1024, h: 1365, ratio: '3:4 (Hochformat)', aspect: 3 / 4 },
   bossBackground: { label: 'Boss-Hintergrund', w: 1290, h: 2796, ratio: 'ca. 9:19,5 (Hochformat)', aspect: 1290 / 2796 },
+  // Rune artwork: round medallion up to ~320 points in the details (1024 px is sharp at 3×).
+  runeArt: { label: 'Runen-Illustration', w: 1024, h: 1024, ratio: '1:1 (quadratisch, wird rund gezeigt)', aspect: 1 },
+  // Rune symbol: 32–44 points in the duel bar and the collection (256 px is sharp at 3×, transparent PNG).
+  runeIcon: { label: 'Runen-Symbol', w: 256, h: 256, ratio: '1:1 (PNG mit Transparenz)', aspect: 1 },
 };
 
 export type RewardType = 'coins' | 'card' | 'pack' | 'alt_art' | 'frame' | 'title' | 'achievement' | 'unlock';
@@ -149,6 +153,8 @@ export interface Opponent {
   loseText: string;
   portrait: ImageRef | null;
   background: ImageRef | null;
+  /** Rune the opponent brings (only while runes are released). */
+  rune?: string;
   updatedAt: string;
 }
 
@@ -247,6 +253,7 @@ export function parseOpponent(id: string, raw: unknown): Opponent | null {
     rank: r.rank === 'elite' || r.rank === 'boss' ? r.rank : 'normal',
     intro: str(r.intro, TEXT_MAX), winText: str(r.winText, TEXT_MAX), loseText: str(r.loseText, TEXT_MAX),
     portrait: parseImage(r.portrait), background: parseImage(r.background), updatedAt: str(r.updatedAt, 40),
+    ...(typeof r.rune === 'string' && /^rn\d{2,4}$/.test(r.rune) ? { rune: r.rune } : {}),
   };
 }
 
@@ -295,9 +302,10 @@ export const BUILTIN_OPPONENTS: readonly Opponent[] = [
   opp('o005', 'Dornenhexe', '🌵', 'medium', 'normal', ['u10', 'u12', 'c05', 'c11', 'c12', 'c19', 'c21', 'c28'], ['natur'], 'Prüft, ob du allein mit der Kraft der Natur bestehen kannst.'),
   opp('o006', 'Irrlicht', '✨', 'medium', 'normal', ['c04', 'c13', 'c18', 'c22', 'c23', 'c26', 'c27', 'u24'], ['schatten', 'magier'], 'Lockt Wanderer vom Weg ab – und schwächt ihre Karten.'),
   opp('o007', 'Pilzkönig', '🍄', 'medium', 'normal', ['c09', 'c11', 'c12', 'c13', 'c19', 'c20', 'u08', 'u12'], ['natur'], 'Herrscht über die feuchte Pilzhöhle.'),
-  opp('o008', 'Ruinenwächter', '🗿', 'hard', 'elite', ['u01', 'u02', 'u15', 'u20', 'u22', 'c16', 'c24', 'c30'], ['krieger'], 'Ein steinerner Krieger, der jeden Zug des Gegners vorausdenkt.'),
-  opp('o009', 'Torwächterin Lyra', '🔮', 'hard', 'elite', ['u03', 'u04', 'u09', 'u11', 'u13', 'u19', 'c18', 'c22'], ['magier'], 'Bewacht das Tor zum Herzen des Waldes mit alter Magie.'),
+  opp('o008', 'Ruinenwächter', '🗿', 'hard', 'elite', ['u01', 'u02', 'u15', 'u20', 'u22', 'c16', 'c24', 'c30'], ['krieger'], 'Ein steinerner Krieger, der jeden Zug des Gegners vorausdenkt.', { rune: 'rn02' }),
+  opp('o009', 'Torwächterin Lyra', '🔮', 'hard', 'elite', ['u03', 'u04', 'u09', 'u11', 'u13', 'u19', 'c18', 'c22'], ['magier'], 'Bewacht das Tor zum Herzen des Waldes mit alter Magie.', { rune: 'rn01' }),
   opp('o010', 'Waldwächter', '🌳', 'hard', 'boss', ['r06', 'r15', 'u06', 'u09', 'u10', 'u12', 'u14', 'c06'], ['natur'], 'Der uralte Wächter des Flüsterwalds. Er spielt nach denselben Regeln wie du – aber er kennt jedes Waldfeld.', {
+    rune: 'rn04',
     intro: 'Die Bäume verstummen. Aus dem Herz des Waldes erhebt sich der Waldwächter: „Beweise, dass du diesen Wald verdienst.“',
     winText: 'Der Waldwächter neigt sein Haupt. Der Flüsterwald gehört dir.',
     loseText: 'Die Wurzeln ziehen sich zurück. „Komm wieder, wenn du stärker bist.“',

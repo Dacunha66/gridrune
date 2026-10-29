@@ -16,7 +16,7 @@ import { ACTIVE, layoutVars } from '../game/designs';
 import { AiOptions, chooseCpuMove, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
-import { Action } from '../game/runes';
+import { Action, BUILTIN_RUNES } from '../game/runes';
 import { CARD_STYLE_LABEL, cycleCardStyle, useCardStyle, useDevTools } from '../game/cardStyle';
 
 interface Props {
@@ -28,6 +28,8 @@ interface Props {
   onQuit: () => void;
   /** League round: fixed opponent hand, rock cells, given or tossed start. Without it: adventure duel. */
   setup?: BattleSetup;
+  /** Equipped runes (null = none). 'random' = a random basic rune for the computer. */
+  runes?: { player: string | null; cpu: string | null | 'random' };
 }
 
 export interface BattleSetup {
@@ -45,6 +47,8 @@ export interface BattleSetup {
   ai?: AiOptions;
   /** Marker on discovery cards in the hand (default "Neutral"). */
   badgeText?: string;
+  /** Runes of both sides for this duel. */
+  runes?: { player: string | null; cpu: string | null };
 }
 
 /** A finished duel that can be replayed exactly: start position (after the toss) and all moves. */
@@ -73,15 +77,21 @@ function cellCenter(cell: number): { x: number; y: number } {
   return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE) };
 }
 
-export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }: Props) {
+export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes }: Props) {
   const rng = useMemo(() => createRng(), []);
   // Adventure duels take a random active arena; league rounds bring their own.
   const arena = useMemo(() => setup?.arena ?? pickArena(rng), [setup, rng]);
   // Board picture and grid layout chosen in the board designer (only looks – the 16 cells stay the same).
   const [boardDesign] = useState(() => ACTIVE.board);
-  const [initial] = useState<BattleState>(() =>
-    createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells),
-  );
+  const [initial] = useState<BattleState>(() => {
+    const r = setup?.runes ?? runes;
+    const basic = BUILTIN_RUNES.map((x) => x.id);
+    const cpuRune = r?.cpu === 'random' ? basic[Math.floor(rng() * basic.length)] : r?.cpu ?? null;
+    return createBattle(
+      picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells,
+      { player: r?.player ?? null, cpu: cpuRune },
+    );
+  });
   const [state, setState] = useState<BattleState>(initial);
   const record = useRef<DuelRecord>({ start: initial, moves: [] });
   /** Hand card shown large while it is held. */

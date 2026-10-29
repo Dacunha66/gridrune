@@ -4,6 +4,7 @@
 import { CampaignContent, Mission, STARS_PER_MISSION, World, maxWorldStars, worldMissions } from './campaign';
 import { DuelStats, goalMet } from './campaignGoals';
 import { KeyValueStore } from './storage';
+import type { RuneDef } from './runes';
 
 export const CAMPAIGN_KEY = 'gridrune/campaign-v1';
 
@@ -181,3 +182,10 @@ export function nextMilestone(w: World, stars: number) {
 }
 
 export { maxWorldStars };
+
+/** Is a rune unlocked for this player (basic runes always; campaign runes by mission or stars)? */
+export function runeUnlocked(r: RuneDef, p: CampaignProgress, content: CampaignContent): boolean {
+  if (r.unlock.kind === 'start') return true;
+  if (r.unlock.kind === 'mission') return missionDone(p, r.unlock.missionId);
+  return totalStars(content, p) >= r.unlock.n;
+}

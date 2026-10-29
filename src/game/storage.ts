@@ -13,6 +13,8 @@ export interface SaveData {
   skins: { owned: string[]; card: string; runner: string };
   /** Deck for the Collection League test mode (up to 2 copies per card). */
   leagueDeck: string[];
+  /** Runes: unlocked extra runes (the basic ones everyone has) and the equipped rune. */
+  runes: { owned: string[]; equipped: string | null };
 }
 
 // Kept from the original working title "Project Card Rush" – changing it would lose every existing save.
@@ -33,6 +35,7 @@ export function defaultSave(): SaveData {
     settings: { reducedMotion: false },
     skins: { owned: [DEFAULT_SKINS.card, DEFAULT_SKINS.runner], card: DEFAULT_SKINS.card, runner: DEFAULT_SKINS.runner },
     leagueDeck: [],
+    runes: { owned: [], equipped: null },
   };
 }
 
@@ -40,6 +43,8 @@ export function isValidDeck(deck: string[], unlocked: string[]): boolean {
   const owned = new Set(unlocked);
   return deck.length === DECK_SIZE && new Set(deck).size === DECK_SIZE && deck.every((id) => owned.has(id));
 }
+
+const RUNE_RE = /^rn\d{2,4}$/;
 
 function num(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
@@ -70,6 +75,10 @@ export function sanitize(raw: unknown): SaveData {
     settings: { reducedMotion: Boolean(r.settings?.reducedMotion) },
     skins: { owned, card: equipped('card'), runner: equipped('runner') },
     leagueDeck: Array.isArray(r.leagueDeck) ? r.leagueDeck.filter(isPlausibleCardId).slice(0, DECK_SIZE) : [],
+    runes: {
+      owned: Array.isArray(r.runes?.owned) ? [...new Set(r.runes.owned.filter((x: unknown) => typeof x === 'string' && RUNE_RE.test(x)))] as string[] : [],
+      equipped: typeof r.runes?.equipped === 'string' && RUNE_RE.test(r.runes.equipped) ? r.runes.equipped : null,
+    },
   };
 }
 

@@ -20,6 +20,7 @@ import {
 } from '../game/campaign';
 import { GOAL_LABEL, GOAL_NEEDS, GOAL_TYPES, Goal, GoalType, goalProblems, goalText } from '../game/campaignGoals';
 import { DEFAULT_FIT, ImageFit, UPLOAD_MAX_BYTES, ZOOM_MAX, ZOOM_MIN, clampFit } from '../game/designs';
+import { RUNES } from '../game/runes';
 import { CLASSES, CLASS_INFO, CardClass, EFFECTS, EffectId } from '../game/effects';
 
 type Sub = 'worlds' | 'missions' | 'opponents' | 'check';
@@ -295,7 +296,7 @@ function MissingCards({ world, content }: { world: World; content: CampaignConte
   return <p className="field-error">Fehlende Karten: {missing.map((id) => (isCardId(id) ? `${getCard(id).name} (${id})` : id)).join(', ')}</p>;
 }
 
-function StatusSeg({ value, onChange }: { value: ContentStatus; onChange: (s: ContentStatus) => void }) {
+export function StatusSeg({ value, onChange }: { value: ContentStatus; onChange: (s: ContentStatus) => void }) {
   return (
     <div className="segmented" role="radiogroup" aria-label="Status">
       {CONTENT_STATUSES.map((s) => (
@@ -316,7 +317,7 @@ function EditorHead({ title, dirty, status, onClose }: { title: string; dirty: b
   );
 }
 
-function TextField({ label, value, max, onChange, multiline, placeholder }: { label: string; value: string; max: number; onChange: (v: string) => void; multiline?: boolean; placeholder?: string }) {
+export function TextField({ label, value, max, onChange, multiline, placeholder }: { label: string; value: string; max: number; onChange: (v: string) => void; multiline?: boolean; placeholder?: string }) {
   return (
     <label className="field">
       <span>{label}</span>
@@ -368,7 +369,7 @@ function RewardEditor({ value, onChange, allowNone = true }: { value: Reward | n
 }
 
 /** Upload with recommended size and the pan/zoom frame from the board designer. */
-function ImageField({ kind, value, onChange, assets, onToast }: { kind: ImageKind; value: ImageRef | null; onChange: (v: ImageRef | null) => void; assets: Assets | null; onToast: (m: string) => void }) {
+export function ImageField({ kind, value, onChange, assets, onToast }: { kind: ImageKind; value: ImageRef | null; onChange: (v: ImageRef | null) => void; assets: Assets | null; onToast: (m: string) => void }) {
   const spec = IMAGE_SPECS[kind];
   const [busy, setBusy] = useState(false);
   const setFit = (fit: ImageFit) => value && onChange({ ...value, fit: clampFit(fit) });
@@ -744,6 +745,13 @@ function OpponentEditor({ db, assets, initial, content, onToast, onDone, onClose
           <button key={l} type="button" className={`seg ${draft.level === l ? 'active' : ''}`} aria-pressed={draft.level === l} onClick={() => set({ level: l })}>{LEVEL_LABEL[l]}</button>
         ))}</div>
         <small className="muted">Leicht: oft zufällig, nimmt manchmal einfache Eroberungen. Mittel: Werte, Nachbarn, Effekte, Gelände. Schwer: denkt zusätzlich deine Antwort voraus und rechnet die letzten Züge durch. Keine Stufe verändert Werte oder Regeln.</small>
+      </div>
+      <div className="field"><span>Rune des Gegners</span>
+        <select className="admin-input" value={draft.rune ?? ''} onChange={(e) => set({ rune: e.target.value || undefined })}>
+          <option value="">Keine Rune</option>
+          {RUNES.filter((r) => !r.variantOf).map((r) => <option key={r.id} value={r.id}>{r.glyph} {r.name}</option>)}
+        </select>
+        <small className="muted">Nur aktiv, solange Runen für den Spieler freigegeben sind. Der Gegner setzt sie nach denselben Regeln ein wie du.</small>
       </div>
       <div className="field"><span>Bevorzugte Klassen (höchstens 3)</span>
         <div className="segmented class-seg">{CLASSES.map((c) => (

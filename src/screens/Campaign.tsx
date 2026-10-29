@@ -37,6 +37,8 @@ interface Props {
   preview?: boolean;
   /** Admin test: open this mission's briefing right away. */
   startMissionId?: string;
+  /** Rune the player takes into missions (null = none / runes not released). */
+  playerRune?: string | null;
   onExit: () => void;
 }
 
@@ -51,7 +53,7 @@ type View =
 
 const KIND_ICON: Record<Mission['kind'], string> = { tutorial: '📖', normal: '⚔️', special: '✴️', elite: '💀', boss: '👑' };
 
-export function Campaign({ content, progress: saved, onProgress, deck, unlocked, reducedMotion, skin, preview, startMissionId, onExit }: Props) {
+export function Campaign({ content, progress: saved, onProgress, deck, unlocked, reducedMotion, skin, preview, startMissionId, playerRune = null, onExit }: Props) {
   // In the admin test, progress lives only in memory.
   const [testProgress, setTestProgress] = useState<CampaignProgress>(saved);
   const progress = preview ? testProgress : saved;
@@ -123,7 +125,7 @@ export function Campaign({ content, progress: saved, onProgress, deck, unlocked,
       setView({ k: 'result', missionId: mission.id, outcome, score, stats, result, starsBefore });
     };
     return (
-      <MissionBattle key={view.runId} mission={mission} opponent={opponent} picks={view.picks} unlocked={unlocked} reducedMotion={reducedMotion}
+      <MissionBattle key={view.runId} mission={mission} opponent={opponent} picks={view.picks} unlocked={unlocked} reducedMotion={reducedMotion} playerRune={playerRune}
         onEnd={finish} onQuit={() => setView({ k: 'brief', missionId: mission.id })} />
     );
   }
@@ -433,8 +435,8 @@ function BossIntro({ opponent, mission, reducedMotion, onGo, onBack }: { opponen
   );
 }
 
-function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, onEnd, onQuit }: {
-  mission: Mission; opponent: Opponent; picks: Pick[]; unlocked: string[]; reducedMotion: boolean;
+function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, playerRune, onEnd, onQuit }: {
+  mission: Mission; opponent: Opponent; picks: Pick[]; unlocked: string[]; reducedMotion: boolean; playerRune: string | null;
   onEnd: (outcome: Outcome, score: { player: number; cpu: number }, first: unknown, record: DuelRecord) => void; onQuit: () => void;
 }) {
   const [setup] = useState<BattleSetup>(() => {
@@ -449,6 +451,8 @@ function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, onEn
       finishLabel: 'Weiter',
       ai: { level: opponent.level, prefer: opponent.prefer },
       badgeText: '★',
+      // The opponent brings its rune only while runes are in play for this player.
+      runes: { player: playerRune, cpu: playerRune !== null ? opponent.rune ?? null : null },
     };
   });
   const boss = opponent.rank === 'boss';

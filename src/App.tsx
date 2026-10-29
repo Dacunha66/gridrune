@@ -14,21 +14,24 @@ import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
 import { CARDS, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
-import { getDb, isAdmin, loadArenas, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings } from './game/cardStore';
+import { getDb, isAdmin, loadArenas, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes } from './game/cardStore';
 import { ACTIVE, Design, DesignState, setActiveDesigns } from './game/designs';
 import { PageArt } from './components/DesignArt';
 import { setArenas } from './game/arenas';
-import { GameSettings, setGameSettings } from './game/settings';
+import { GameSettings, SETTINGS, released, setGameSettings } from './game/settings';
+import { GameMode, RUNES, RuneDef, availableRunes, setRunes } from './game/runes';
 import { Admin } from './screens/Admin';
 import { League } from './screens/League';
 import { Campaign } from './screens/Campaign';
+import { Runes } from './screens/Runes';
+import { runeUnlocked } from './game/campaignProgress';
 import { setDevTools } from './game/cardStyle';
 import { SymbolTips } from './components/SymbolTips';
 import { CampaignContent, mergeContent, setCampaign } from './game/campaign';
 import { CampaignProgress, loadProgress, writeProgress } from './game/campaignProgress';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'runes' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
   | { name: 'runner'; runId: number; deck: string[] }
@@ -64,13 +67,18 @@ export function App() {
   const screenRef = useRef(screen.name);
   screenRef.current = screen.name;
 
+  // New features (runes, Wirbelwind/Kettenübernahme) are only for whom they are released (admin test or everyone).
+  const viewerIsAdmin = useRef(false);
+  const lastRecords = useRef<CardRecord[] | null>(null);
+  const [features, setFeatures] = useState(SETTINGS.features);
   const applyRecords = useCallback((records: CardRecord[]) => {
+    lastRecords.current = records;
     if (screenRef.current === 'runner' || screenRef.current === 'battle' || screenRef.current === 'league' || screenRef.current === 'campaign') {
       pendingRecords.current = records;
       return;
     }
     pendingRecords.current = null;
-    const catalog = buildCatalog(records);
+    const catalog = buildCatalog(records, released(SETTINGS.features.abilities, viewerIsAdmin.current));
     setCardCatalog(catalog.active, catalog.known);
     setSave((s) => {
       const fixed = repairDeck(s.deck, s.unlocked, CARDS);
@@ -102,12 +110,16 @@ export function App() {
     let alive = true;
     (async () => {
       const db = await getDb();
-      const [records, settings, arenas, designs, designState, savedCampaign] = await Promise.all([
-        loadCardRecords(db), loadGameSettings(db), loadArenas(db), loadDesigns(db), loadDesignState(db), loadCampaign(db),
+      const [records, settings, arenas, designs, designState, savedCampaign, savedRunes] = await Promise.all([
+        loadCardRecords(db), loadGameSettings(db), loadArenas(db), loadDesigns(db), loadDesignState(db), loadCampaign(db), loadRunes(db),
       ]);
       if (alive && savedCampaign) applyCampaign(mergeContent(savedCampaign));
+      if (alive && savedRunes) setRunes(savedRunes);
       if (alive && designs && designState) applyDesigns(designs, designState);
-      if (alive && settings) setGameSettings(settings);
+      if (alive && settings) {
+        setGameSettings(settings);
+        setFeatures(settings.features);
+      }
       // Arenas are picked when a duel starts, so they can be applied right away.
       if (alive && arenas) setArenas(arenas);
       if (alive && records && records.length > 0) applyRecords(records);
@@ -115,6 +127,9 @@ export function App() {
       if (alive) {
         setAdmin(ok);
         setDevTools(ok);
+        viewerIsAdmin.current = ok;
+        // Admins may see features released for testing: rebuild the card catalog with them.
+        if (ok && lastRecords.current && lastRecords.current.length > 0) applyRecords(lastRecords.current);
       }
     })();
     return () => {
@@ -123,6 +138,22 @@ export function App() {
   }, [applyRecords, applyDesigns, applyCampaign]);
 
   // Only cards that are in play right now (the database may have changed since the deck was built).
+  // Runes: everyone has the basic runes; campaign runes are unlocked by missions or stars.
+  const runesOn = released(features.runes, admin);
+  const ownedRunes = [...new Set([...save.runes.owned, ...RUNES.filter((r) => runeUnlocked(r, campaignProgress, campaign)).map((r) => r.id)])];
+  /** Rune the player takes into a duel of this mode (null = none or not allowed there). */
+  const duelRune = (mode: GameMode): string | null => {
+    if (!runesOn || !save.runes.equipped) return null;
+    return availableRunes(mode, ownedRunes).some((r) => r.id === save.runes.equipped) ? save.runes.equipped : null;
+  };
+  const runeLockText = (r: RuneDef) => {
+    if (r.unlock.kind === 'mission') {
+      const missionId = r.unlock.missionId;
+      return `Kampagne: Mission „${campaign.missions.find((m) => m.id === missionId)?.name ?? missionId}“ gewinnen`;
+    }
+    return r.unlock.kind === 'stars' ? `Kampagne: ${r.unlock.n} ★ sammeln` : '';
+  };
+
   const startRun = () => setScreen({ name: 'runner', runId: Date.now(), deck: repairDeck(save.deck, save.unlocked, CARDS).deck });
   const toMenu = useCallback(() => {
     setScreen({ name: 'menu' });
@@ -148,6 +179,7 @@ export function App() {
           isAdmin={admin}
           onPlay={startRun}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
+          runes={runesOn}
           onToggleReducedMotion={() =>
             setSave((s) => ({ ...s, settings: { ...s.settings, reducedMotion: !s.settings.reducedMotion } }))
           }
@@ -158,6 +190,10 @@ export function App() {
         <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={toMenu} />
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} />}
+      {screen.name === 'runes' && (
+        <Runes owned={ownedRunes} equipped={save.runes.equipped} lockText={runeLockText} onBack={toMenu}
+          onEquip={(id) => setSave((s) => ({ ...s, runes: { ...s.runes, equipped: id } }))} />
+      )}
       {screen.name === 'shop' && <Shop save={save} onChange={setSave} onBack={toMenu} />}
       {screen.name === 'league' && (
         <League
@@ -171,10 +207,15 @@ export function App() {
       {screen.name === 'admin' && (
         <Admin
           onCatalogChange={applyRecords}
-          onSettingsChange={(s: GameSettings) => setGameSettings(s)}
+          onSettingsChange={(s: GameSettings) => {
+            setGameSettings(s);
+            setFeatures(s.features);
+            if (lastRecords.current) pendingRecords.current = lastRecords.current;
+          }}
           onDesignsChange={applyDesigns}
           onCampaignChange={applyCampaign}
           onTestCampaign={(missionId) => setScreen({ name: 'campaign', preview: true, missionId })}
+          campaign={campaign}
           onBack={toMenu}
         />
       )}
@@ -190,6 +231,7 @@ export function App() {
           skin={getSkin(save.skins.runner).colors}
           preview={screen.preview}
           startMissionId={screen.missionId}
+          playerRune={duelRune('campaign')}
           onExit={screen.preview ? () => setScreen({ name: 'admin' }) : toMenu}
         />
       )}
@@ -211,6 +253,7 @@ export function App() {
           reducedMotion={reducedMotion}
           onEnd={(outcome, score) => finishBattle(screen.picks, outcome, score)}
           onQuit={toMenu}
+          runes={{ player: duelRune('adventure'), cpu: runesOn ? 'random' : null }}
         />
       )}
       {screen.name === 'result' && (
