@@ -14,4 +14,4 @@ const hash = createHash('sha256').update(code).digest('hex').slice(0, 12);
 mkdirSync('public/server', { recursive: true });
 for (const f of readdirSync('public/server')) if (f.startsWith('engine-')) rmSync(`public/server/${f}`);
 writeFileSync(`public/server/engine-${hash}.js`, code);
-console.log(`https://gridrune.netlify.app/server/engine-${hash}.js`);
+console.log(`public/server/engine-${hash}.js – after pushing: https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@<commit>/public/server/engine-${hash}.js`);

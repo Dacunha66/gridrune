@@ -3,8 +3,8 @@
 // duel with the game's own rules (engine.js, bundled from src/server/engine.ts), pays the reward into the save.
 // A finished ticket gives the same answer again (safe to retry after a lost connection), never a second reward.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-// The game's rules, bundled by scripts/build-engine.mjs and published with the web version (fingerprinted name).
-import { finishAdventure, loadContent, prepareAdventure } from 'https://gridrune.netlify.app/server/engine-030f1e3a2fb8.js';
+// The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
+import { finishAdventure, loadContent, prepareAdventure } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@656889645702753589e8be1b13f6da25b8358453/public/server/engine-030f1e3a2fb8.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -62,28 +62,23 @@ Deno.serve(async (req) => {
     if (t.finished_at) return json({ ...(t.result ?? {}), repeated: true, save: saveRow.save, campaign: saveRow.campaign, version: saveRow.version });
     if (Date.now() - new Date(t.created_at).getTime() > TICKET_HOURS * 3600_000) return json({ error: 'expired' }, 410);
 
-    const res = finishAdventure({ ...t.ticket, id: t.id }, body.log as never, saveRow.save);
-    const result = res.ok
-      ? { ok: true, outcome: res.outcome, score: res.score, reward: res.reward }
-      : { ok: false, error: res.error };
-    // Claim the ticket first (only one request can do this), then pay out.
-    const { data: claimed } = await db.from('game_tickets').update({ finished_at: new Date().toISOString(), result }).eq('id', t.id).is('finished_at', null).select('id').maybeSingle();
-    if (!claimed) {
-      const { data: again } = await db.from('player_saves').select('save, campaign, version').eq('player_id', uid).single();
-      return json({ ...result, repeated: true, ...again });
-    }
-    if (!res.ok) return json({ ...result, save: saveRow.save, campaign: saveRow.campaign, version: saveRow.version }, 422);
-
-    // Pay out: write the new save (retry if a save from the game came in between).
-    for (let attempt = 0; attempt < 4; attempt++) {
+    // Replay, then finish the ticket and pay out in one step (pay_ticket); retry if the save changed in between.
+    for (let attempt = 0; attempt < 5; attempt++) {
       const { data: cur } = await db.from('player_saves').select('save, campaign, version').eq('player_id', uid).single();
-      const again = finishAdventure({ ...t.ticket, id: t.id }, body.log as never, cur!.save);
-      if (!again.ok) break;
-      const next = cur!.version + 1;
-      const { data: upd } = await db.from('player_saves')
-        .update({ save: again.save, version: next, updated_at: new Date().toISOString() })
-        .eq('player_id', uid).eq('version', cur!.version).select('version').maybeSingle();
-      if (upd) return json({ ...result, reward: again.reward, save: again.save, campaign: cur!.campaign, version: next });
+      const res = finishAdventure({ ...t.ticket, id: t.id }, body.log as never, cur!.save);
+      const result = res.ok ? { ok: true, outcome: res.outcome, score: res.score, reward: res.reward } : { ok: false, error: res.error };
+      const { data: paid, error } = await db.rpc('pay_ticket', {
+        p_ticket: t.id, p_player: uid, p_result: result, p_save: res.ok ? res.save : null, p_campaign: null, p_version: cur!.version,
+      });
+      if (error) return json({ error: 'database' }, 500);
+      if (paid === 'conflict') continue;
+      if (paid === 'already') {
+        const { data: done } = await db.from('game_tickets').select('result').eq('id', t.id).single();
+        const { data: now } = await db.from('player_saves').select('save, campaign, version').eq('player_id', uid).single();
+        return json({ ...(done?.result ?? {}), repeated: true, ...now });
+      }
+      if (!res.ok) return json({ ...result, save: cur!.save, campaign: cur!.campaign, version: cur!.version }, 422);
+      return json({ ...result, save: res.save, campaign: cur!.campaign, version: cur!.version + 1 });
     }
     return json({ error: 'busy' }, 503);
   }
