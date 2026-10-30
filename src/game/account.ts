@@ -21,7 +21,7 @@ export const NAME_MAX = 20;
 export const PASSWORD_MIN = 8;
 const GUEST_KEY = 'gridrune/guest-v1';
 /** Accounts are switched on once the database and the e-mail links are set up (until then: no sign-in screen). */
-export const ACCOUNTS_LIVE = false;
+export const ACCOUNTS_LIVE = true;
 /** Where the confirmation and new-password e-mails lead back to. */
 const SITE_URL = 'https://gridrune.netlify.app/';
 

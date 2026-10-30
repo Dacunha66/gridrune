@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Web-Version Phase 2 – Anmeldung (nur gridrune.netlify.app)
+
+Neu: Willkommen-Bildschirm mit „Anmelden“, „Konto erstellen“ (Spielername, E-Mail, Passwort ≥ 8 Zeichen) und „Als Gast spielen“ (Fortschritt nur im Browser; Wahl wird gemerkt). „Passwort vergessen“ mit Link per E-Mail und Bildschirm „Neues Passwort“. Menü-Chip mit Spielername bzw. „Gast · Anmelden / Konto erstellen“; „Mein Konto“: Name ändern, Passwort-Link, Abmelden. Beim Registrieren legt die Datenbank automatisch das Spielerprofil an (Migration 008; ungültige Namen werden „Spieler“; Profile nur für einen selbst lesbar). E-Mail-Links funktionieren auch auf einem anderen Gerät (Implicit-Flow). Die claude.ai-Version hat weiterhin keine Konten. Spielstand im Konto folgt in Phase 3.
+
+**Browser (iPhone-Größe, lokale Kopie der Web-Version gegen die echte Datenbank):** Willkommen-Bildschirm statt Menü; leere Anmeldung → „Bitte eine gültige E-Mail-Adresse eingeben.“; falsches Passwort → „E-Mail oder Passwort stimmt nicht.“ (Antwort der echten Datenbank); ungültiger Name → Regel-Hinweis; „Als Gast spielen“ → Menü mit Gast-Chip, bleibt nach Neuladen; Chip → zurück zur Anmeldung. Keine Fehler. Echte Registrierung mit Bestätigungs-E-Mail: noch nicht getestet (erstes Konto legt der Admin selbst an).
+
 ## Version 1.25 – Deck und Shop überarbeitet, Booster-Bilder im Admin
 
 Neu:

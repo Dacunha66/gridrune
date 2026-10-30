@@ -84,7 +84,7 @@ export function Welcome({ onGuest }: { onGuest: () => void }) {
           ) : (
             <>
               {mode === 'register' && (
-                <Field label="Spielername" hint={`2–${NAME_MAX} Zeichen, sichtbar für andere Spieler`}>
+                <Field label="Spielername" hint={`2–${NAME_MAX} Zeichen, später in der Liga für andere sichtbar`}>
                   <input className="admin-input" value={name} maxLength={NAME_MAX} autoComplete="nickname" onChange={(e) => setName(e.target.value)} />
                 </Field>
               )}
