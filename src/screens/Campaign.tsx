@@ -16,6 +16,7 @@ import { CLASS_INFO, TERRAIN_INFO, Terrain } from '../game/effects';
 import { createRng } from '../game/rng';
 import { RUNES, RuneDef, findRune } from '../game/runes';
 import { MissionLog, MissionTicket, handPicks, missionRngs } from '../game/verify';
+import { RevealItem, RewardReveal, runeFacts } from '../components/RewardReveal';
 import { GrantedReward } from '../game/campaignRewards';
 import { finishMissionRemote, readPending, startMission as startMissionRemote, writePending } from '../game/adventureApi';
 import type { CloudSave } from '../game/cloudSave';
@@ -101,7 +102,7 @@ export function Campaign({
     if (!world) return <WorldList content={content} progress={progress} preview={!!preview} onOpen={(worldId) => setView({ k: 'world', worldId })} onBack={onExit} />;
     return (
       <WorldMap
-        world={world} content={content} progress={progress} preview={!!preview}
+        world={world} content={content} progress={progress} preview={!!preview} runesOn={runesOn}
         onMission={(missionId) => setView({ k: 'brief', missionId })}
         onBack={() => (worlds.length > 1 ? setView({ k: 'worlds' }) : onExit())}
       />
@@ -328,9 +329,14 @@ function WorldList({ content, progress, preview, onOpen, onBack }: { content: Ca
 
 // ---------- World map ----------
 
-function WorldMap({ world, content, progress, preview, onMission, onBack }: {
-  world: World; content: CampaignContent; progress: CampaignProgress; preview: boolean; onMission: (id: string) => void; onBack: () => void;
+function WorldMap({ world, content, progress, preview, runesOn, onMission, onBack }: {
+  world: World; content: CampaignContent; progress: CampaignProgress; preview: boolean; runesOn: boolean; onMission: (id: string) => void; onBack: () => void;
 }) {
+  /** What the first win of a mission brings (shown on the map): its runes, else its first-win reward. */
+  const loot = (m: Mission) => {
+    const runes = runesOn ? missionRunes(m.id) : [];
+    return { runes, reward: m.firstReward };
+  };
   const missions = worldMissions(content, world.id, preview);
   const stars = worldStars(content, progress, world.id, preview);
   const max = missions.reduce((n, m) => n + Math.min(3, m.goals.length), 0);
@@ -349,6 +355,20 @@ function WorldMap({ world, content, progress, preview, onMission, onBack }: {
       <Header title={world.name} onBack={onBack} right={<span className="pct">{worldPercent(content, progress, world.id, preview)} %</span>} />
       {preview && <p className="test-banner">🧪 Testmodus – alle Missionen offen, nichts wird gespeichert</p>}
       <StarBar world={world} stars={stars} max={max} />
+      {current && (() => {
+        const l = loot(current);
+        if (!l.runes.length && !l.reward) return null;
+        return (
+          <button type="button" className="next-loot" onClick={() => onMission(current.id)}>
+            {l.runes[0] ? <RuneBadge rune={l.runes[0]} className="small" /> : <span className="tile-icon">{REWARD_ICON[l.reward!.type]}</span>}
+            <span>
+              <small>Nächste Mission: {current.name}</small>
+              <b>Erster Sieg: {[...l.runes.map((r) => r.name), ...(l.reward ? [rewardText(l.reward)] : [])].join(' + ')}</b>
+            </span>
+            <span aria-hidden="true">▶</span>
+          </button>
+        );
+      })()}
       <div className="scroll map-scroll">
         <div className={`map-canvas ${world.map ? 'has-map' : ''}`}>
           {world.map && <CampaignImage img={world.map} className="map-bg" />}
@@ -368,7 +388,7 @@ function WorldMap({ world, content, progress, preview, onMission, onBack }: {
                 style={{ left: `${m.pos.x * 100}%`, top: `${m.pos.y * 100}%` }}
                 onClick={() => open && onMission(m.id)}
                 aria-disabled={!open}
-                aria-label={`${i + 1}. ${m.name}, ${KIND_LABEL[m.kind]}, ${done ? 'geschafft' : open ? 'verfügbar' : 'gesperrt'}`}
+                aria-label={`${i + 1}. ${m.name}, ${KIND_LABEL[m.kind]}, ${done ? 'geschafft' : open ? 'verfügbar' : 'gesperrt'}${!done && (loot(m).runes[0] || loot(m).reward) ? `, erster Sieg: ${[...loot(m).runes.map((r) => r.name), ...(loot(m).reward ? [rewardText(loot(m).reward!)] : [])].join(' und ')}` : ''}`}
               >
                 <span className="station-orb">
                   {state === 'locked' ? (
@@ -376,6 +396,12 @@ function WorldMap({ world, content, progress, preview, onMission, onBack }: {
                   ) : m.icon ? <CampaignImage img={m.icon} /> : <span className="station-icon">{KIND_ICON[m.kind]}</span>}
                   {done && <span className="station-check" aria-hidden="true">✓</span>}
                 </span>
+                {!done && (() => {
+                  const l = loot(m);
+                  if (l.runes[0]) return <span className="station-loot rune" title={`Erster Sieg: ${l.runes[0].name}`}><RuneBadge rune={l.runes[0]} className="tiny" /></span>;
+                  if (l.reward) return <span className="station-loot" title={`Erster Sieg: ${rewardText(l.reward)}`} aria-hidden="true">{REWARD_ICON[l.reward.type]}</span>;
+                  return null;
+                })()}
                 <Stars earned={starSlots(progress, m)} className="station-stars" />
                 <span className="station-name">{m.name}</span>
               </button>
@@ -419,6 +445,8 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
           </div>
         </section>
 
+        <BriefRewards mission={mission} world={world ?? null} content={content} progress={progress} runesOn={runesOn} preview={preview} />
+
         <section className="brief-arena">
           <TerrainMini cells={arena.cells} />
           <div>
@@ -433,11 +461,6 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
           <section className="brief-runes">
             <RuneMatchup player={playerRune} cpu={opponent.rune && findRune(opponent.rune) ? opponent.rune : null}
               note={playerRune ? 'Ändern unter „Deck bearbeiten“ → „Rune“.' : 'Du hast noch keine Rune – Runen spielst du in der Kampagne frei.'} />
-            {missionRunes(mission.id).map((r) => (
-              <p key={r.id} className={`rune-reward ${missionDone(progress, mission.id) ? 'done' : ''}`}>
-                <RuneBadge rune={r} className="small" /> <span>{missionDone(progress, mission.id) ? 'Freigespielt: ' : 'Erster Sieg schaltet frei: '}<b>{r.name}</b></span>
-              </p>
-            ))}
           </section>
         )}
 
@@ -504,6 +527,56 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
         {starting ? '☁️ Wird gestartet …' : mission.kind === 'boss' ? '👑 Zum Boss' : runner ? '🏃 Lauf starten' : '⚔️ Duell starten'}
       </button>
     </main>
+  );
+}
+
+/** "What you can win" at the top of the briefing: rune, first-win reward, star rewards, next milestone. */
+function BriefRewards({ mission, world, content, progress, runesOn, preview }: {
+  mission: Mission; world: World | null; content: CampaignContent; progress: CampaignProgress; runesOn: boolean; preview: boolean;
+}) {
+  const done = missionDone(progress, mission.id);
+  const slots = starSlots(progress, mission);
+  const runes = runesOn ? missionRunes(mission.id) : [];
+  const stars = world ? worldStars(content, progress, world.id, preview) : 0;
+  const next = world ? nextMilestone(world, stars) : null;
+  const starRewards = mission.goalRewards.map((r, i) => ({ r, i })).filter((x) => x.r && !slots[x.i]);
+  if (!runes.length && !mission.firstReward && !starRewards.length && !next) return null;
+  return (
+    <section className="brief-rewards">
+      <h2>🎁 Zu gewinnen</h2>
+      {runes.map((r) => (
+        <div key={r.id} className={`reward-tile rune-tile rarity-${r.rarity} ${done ? 'won' : ''}`}>
+          <RuneBadge rune={r} className="big" />
+          <div>
+            <p className="tile-label">{done ? '✓ Freigespielt' : 'Erster Sieg schaltet frei'}</p>
+            <p className="tile-name">{r.name}</p>
+            <p className="small">{r.description}</p>
+            <p className="muted small">{runeFacts(r).join(' ')}</p>
+          </div>
+        </div>
+      ))}
+      {mission.firstReward && (
+        <div className={`reward-tile ${done ? 'won' : ''}`}>
+          <span className="tile-icon">{REWARD_ICON[mission.firstReward.type]}</span>
+          <div><p className="tile-label">{done ? '✓ Erhalten' : 'Erster Sieg'}</p><p className="tile-name">{rewardText(mission.firstReward)}</p></div>
+        </div>
+      )}
+      {starRewards.map(({ r, i }) => (
+        <div key={i} className="reward-tile">
+          <span className="tile-icon">{REWARD_ICON[r!.type]}</span>
+          <div><p className="tile-label">★ Stern {i + 1}: {mission.goals[i] ? goalText(mission.goals[i]) : ''}</p><p className="tile-name">{rewardText(r!)}</p></div>
+        </div>
+      ))}
+      {next && world && (
+        <div className="reward-tile milestone">
+          <span className="tile-icon">{REWARD_ICON[next.reward.type]}</span>
+          <div>
+            <p className="tile-label">Welt-Meilenstein: {next.stars} ★ (du hast {stars})</p>
+            <p className="tile-name">{world.milestones.filter((ms) => ms.stars === next.stars).map((ms) => rewardText(ms.reward)).join(' + ')}</p>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -582,13 +655,32 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
   const newRunes = !runesOn || preview || view.status === 'rejected' ? [] : RUNES.filter((r) => r.status === 'active' && (
     (r.unlock.kind === 'mission' && r.unlock.missionId === mission.id && result.firstWin)
     || (r.unlock.kind === 'stars' && r.unlock.n > totalBefore && r.unlock.n <= totalNow)));
-  const newRewards = [
-    ...(result.firstWin && mission.firstReward ? [mission.firstReward] : []),
-    ...result.newStars.flatMap((i) => (mission.goalRewards[i] ? [mission.goalRewards[i]!] : [])),
-    ...reached.map((ms) => ms.reward),
+  const sourced: { reward: Reward; source: string }[] = [
+    ...(result.firstWin && mission.firstReward ? [{ reward: mission.firstReward, source: `${mission.name} – erster Sieg` }] : []),
+    ...result.newStars.flatMap((i) => (mission.goalRewards[i] ? [{ reward: mission.goalRewards[i]!, source: `${mission.name} – ${i + 1}. Stern` }] : [])),
+    ...reached.map((ms) => ({ reward: ms.reward, source: `${world?.name ?? 'Welt'} – ${ms.stars} ★` })),
   ];
+  const newRewards = sourced.map((x) => x.reward);
   // Paid rewards are listed as credited; the rest stays a preview. A refused result shows nothing.
   const previewRewards = view.status === 'rejected' ? [] : view.status === 'paid' ? newRewards.filter((r) => !PAID_TYPES.has(r.type)) : newRewards;
+  // The big reveal: runes first, then what was credited (coins, cards), then rewards that are still a preview.
+  const reveal: RevealItem[] = view.status === 'checking' || view.status === 'rejected' || view.status === 'pending' ? [] : [
+    ...newRunes.map((rune): RevealItem => ({ kind: 'rune', rune })),
+    ...(view.status === 'paid'
+      ? [
+        ...((view.granted ?? []).some((g) => g.coins > 0)
+          ? [{ kind: 'coins', amount: (view.granted ?? []).reduce((n, g) => n + g.coins, 0), sources: (view.granted ?? []).filter((g) => g.coins > 0).map((g) => `${g.source}: 🪙 ${g.coins}${g.duplicates.length ? ' (inkl. doppelte Karten)' : ''}`) } as RevealItem]
+          : []),
+        ...(view.granted ?? []).flatMap((g) => g.cards.map((cardId): RevealItem => ({ kind: 'card', cardId, source: g.source }))),
+        ...sourced.filter((x) => !PAID_TYPES.has(x.reward.type)).map((x): RevealItem => ({ kind: 'preview', ...x })),
+      ]
+      : sourced.map((x): RevealItem => ({ kind: 'preview', ...x }))),
+  ];
+  const [revealOpen, setRevealOpen] = useState<boolean | null>(null);
+  // Opens by itself once, as soon as the result is final.
+  useEffect(() => {
+    if (revealOpen === null && reveal.length > 0) setRevealOpen(true);
+  }, [revealOpen, reveal.length]);
   return (
     <main className={`screen result campaign-result result-${outcome} ${boss ? 'boss-result' : ''}`}>
       {outcome === 'win' && !reducedMotion && <Confetti count={boss ? 110 : 60} />}
@@ -646,7 +738,11 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
         )}
         {preview && <p className="test-banner">🧪 Testmodus – nichts wurde gespeichert</p>}
       </div>
+      {revealOpen && reveal.length > 0 && (
+        <RewardReveal items={reveal} reducedMotion={reducedMotion} guest={!view.status} onClose={() => setRevealOpen(false)} />
+      )}
       <div className="menu-buttons">
+        {revealOpen === false && reveal.length > 0 && <button type="button" className="btn btn-reward" onClick={() => setRevealOpen(true)}>🎁 Belohnungen ansehen</button>}
         {onNext && outcome === 'win' && <button type="button" className="btn btn-primary btn-big" onClick={onNext}>▶ Nächste Mission</button>}
         <button type="button" className={`btn ${onNext && outcome === 'win' ? '' : 'btn-primary'}`} onClick={onAgain}>↻ Nochmal</button>
         <button type="button" className="btn" onClick={onMap}>🗺️ Zur Karte</button>

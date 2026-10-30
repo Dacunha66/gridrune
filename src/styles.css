@@ -1472,3 +1472,78 @@ label.btn.disabled { opacity: .45; }
 .code-input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 700; text-align: center; }
 .turn-timer { display: inline-block; padding: 1px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); font-variant-numeric: tabular-nums; margin-right: 4px; }
 .turn-timer.urgent { background: #b91c1c; color: #fff; }
+
+/* ---------- Campaign rewards: map, briefing, reveal ---------- */
+.station-loot {
+  position: absolute; top: -6px; left: calc(50% + 18px); z-index: 3; display: grid; place-items: center;
+  width: 28px; height: 28px; border-radius: 50%; font-size: 16px; background: #2a1f5c; box-shadow: 0 0 0 2px #ffcc33, 0 0 12px rgba(255, 204, 51, 0.7);
+  animation: loot-bob 2.2s ease-in-out infinite;
+}
+.station-loot.rune { background: none; box-shadow: none; }
+.rune-badge.tiny { width: 28px; height: 28px; }
+.rune-badge.tiny .rune-glyph { font-size: 14px; }
+@keyframes loot-bob { 50% { transform: translateY(-4px); } }
+.next-loot {
+  display: flex; align-items: center; gap: 10px; width: 100%; margin: 4px 0 8px; padding: 8px 12px; border-radius: 14px; text-align: left;
+  background: linear-gradient(90deg, rgba(255, 204, 51, 0.18), rgba(255, 204, 51, 0.04)); border: 1px solid rgba(255, 204, 51, 0.55); color: var(--text); cursor: pointer;
+}
+.next-loot > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.next-loot small { color: var(--muted); }
+.brief-rewards { display: flex; flex-direction: column; gap: 8px; }
+.brief-rewards h2 { margin: 0 0 2px; }
+.reward-tile {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--panel);
+  border: 1px solid rgba(255, 204, 51, 0.45); box-shadow: 0 0 14px rgba(255, 204, 51, 0.12);
+}
+.reward-tile p { margin: 0; }
+.reward-tile.won { opacity: 0.6; border-color: rgba(255, 255, 255, 0.15); box-shadow: none; }
+.reward-tile.milestone { border-style: dashed; }
+.reward-tile.rune-tile { border-color: var(--ring, #22d3ee); box-shadow: 0 0 18px var(--glow, rgba(34, 211, 238, 0.3)); }
+.reward-tile.rarity-rare { --ring: #22d3ee; --glow: rgba(34, 211, 238, 0.3); }
+.reward-tile.rarity-epic { --ring: #c084fc; --glow: rgba(192, 132, 252, 0.4); }
+.reward-tile.rarity-legendary { --ring: #fbbf24; --glow: rgba(251, 191, 36, 0.45); }
+.reward-tile.rarity-mythic { --ring: #f472b6; --glow: rgba(244, 114, 182, 0.45); }
+.tile-icon { font-size: 28px; width: 40px; text-align: center; flex-shrink: 0; }
+.tile-label { font-size: 0.8rem; color: var(--accent); font-weight: 700; }
+.tile-name { font-weight: 800; }
+.btn-reward { background: linear-gradient(180deg, #ffcc33, #f59e0b); color: var(--accent-text); }
+
+.reveal-overlay {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px;
+  background: radial-gradient(circle at 50% 40%, rgba(40, 30, 90, 0.92), rgba(5, 3, 15, 0.96)); animation: reveal-fade 0.35s ease-out;
+}
+.reveal-stage {
+  --ring: #22d3ee; --glow: rgba(34, 211, 238, 0.55);
+  position: relative; width: min(100%, 380px); max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+}
+.reveal-stage.rarity-epic { --ring: #c084fc; --glow: rgba(192, 132, 252, 0.6); }
+.reveal-stage.rarity-legendary { --ring: #fbbf24; --glow: rgba(251, 191, 36, 0.65); }
+.reveal-stage.rarity-mythic { --ring: #f472b6; --glow: rgba(244, 114, 182, 0.65); }
+.reveal-rays {
+  position: absolute; top: 40px; left: 50%; width: 520px; height: 520px; margin-left: -260px; z-index: -1; pointer-events: none; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, var(--glow) 0deg 9deg, transparent 9deg 24deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0, #000 22%, transparent 62%); mask-image: radial-gradient(circle, #000 0, #000 22%, transparent 62%);
+  animation: reveal-spin 14s linear infinite, reveal-fade 0.8s ease-out;
+}
+.reveal-title { margin: 0; font-size: 1.5rem; font-weight: 900; color: var(--accent); text-shadow: 0 0 18px rgba(255, 204, 51, 0.7); animation: reveal-drop 0.5s ease-out both; }
+.reveal-count { margin: 0; color: var(--muted); font-size: 0.8rem; }
+.reveal-item { margin: 10px 0 4px; animation: reveal-pop 0.75s cubic-bezier(0.2, 1.4, 0.4, 1) 0.15s both; filter: drop-shadow(0 0 24px var(--glow)); }
+.rune-badge.huge { width: 150px; height: 150px; }
+.rune-badge.huge .rune-glyph { font-size: 76px; }
+.reveal-rune-art { display: block; width: 190px; height: 190px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 4px var(--ring), 0 0 40px var(--glow); }
+.reveal-card .card { margin: 0 auto; }
+.reveal-coins { font-size: 3rem; font-weight: 900; color: var(--accent); }
+.reveal-icon { font-size: 5rem; }
+.reveal-name { margin: 0; font-size: 1.4rem; animation: reveal-drop 0.5s ease-out 0.45s both; }
+.reveal-rarity { padding: 2px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 800; border: 2px solid var(--ring); color: var(--ring); animation: reveal-drop 0.5s ease-out 0.55s both; }
+.reveal-text { margin: 4px 0 0; line-height: 1.4; animation: reveal-drop 0.5s ease-out 0.65s both; }
+.reveal-facts { margin: 0; padding: 0; list-style: none; font-size: 0.85rem; color: var(--muted); animation: reveal-drop 0.5s ease-out 0.75s both; }
+.reveal-facts li::before { content: '✦ '; color: var(--ring); }
+.reveal-hint { margin: 0; font-size: 0.85rem; color: var(--accent); animation: reveal-drop 0.5s ease-out 0.85s both; }
+.reveal-next { margin-top: 12px; width: 100%; animation: reveal-drop 0.5s ease-out 0.95s both; }
+@keyframes reveal-fade { from { opacity: 0; } }
+@keyframes reveal-spin { to { transform: rotate(360deg); } }
+@keyframes reveal-pop { 0% { transform: scale(0.2) rotate(-12deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes reveal-drop { from { transform: translateY(10px); opacity: 0; } }
+.reveal-overlay.still *, .reveal-overlay.still { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .reveal-overlay *, .reveal-overlay, .station-loot { animation: none !important; } }
