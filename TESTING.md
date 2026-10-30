@@ -1,5 +1,15 @@
 # Testprotokoll
 
+## Web-Version Phase 4b–4d – Kampagne, Shop und Spielstand über den Server
+
+Neu für angemeldete Spieler (Gäste unverändert):
+- **Kampagne:** Vor jeder Mission holt das Spiel ein Ticket vom Server (Funktion `game`, kurz Internet nötig). Münzwurf und Gegnerzüge folgen aus dem Ticket; nach dem Duell spielt der Server es nach, speichert die Sterne und zahlt Belohnungen aus (Münzen, Karten, Booster – je Belohnung genau einmal: erster Sieg, jeder Stern, jeder Welt-Meilenstein). Illustrationen, Rahmen, Titel bleiben Vorschau. Ohne Verbindung nach dem Duell: Ergebnis wartet auf dem Gerät und wird innerhalb von 24 h gutgeschrieben.
+- **Nachzahlung:** Beim Anmelden werden Belohnungen für schon verdiente Sterne einmalig gutgeschrieben (Hinweis im Menü).
+- **Shop:** Booster und Skins werden auf dem Server gekauft, die Karten zieht der Server.
+- **Spielstand gesperrt:** `save-sync` übernimmt nur noch Deck, Liga-Deck, Einstellungen, ausgerüstete Skins und Rune. Münzen, Karten, Statistik und Kampagne ändern nur die geprüften Funktionen (`adventure`, `game`).
+
+Geprüft: 236 automatische Tests (u. a. ehrlich gespielte Duell- und Lauf-Missionen werden bestätigt, manipulierte abgelehnt; Belohnungen nur einmal; Shop-Preise; gesperrtes Speichern), Build ok, beide Server-Funktionen gestartet und antworten. Noch nicht getestet: echtes Spielen auf gridrune.netlify.app mit Konto.
+
 ## Schnellere Bilder
 
 Neu: Karten haben zusätzlich ein kleines Vorschaubild (360 × 480 JPEG, `thumbId`) für Hand, Spielfeld, Sammlung, Deck und Lauf; die große Kartenansicht lädt weiter das Originalbild. Neue Uploads im Karteneditor erzeugen beide automatisch. Für die vorhandenen 35 Kartenbilder erstellt: 12,5 MB → 1,9 MB. Seitenhintergründe und Spielfeld als WebP (z. B. „Hintergrund Sterne“ 5,95 MB → 0,63 MB), Runenbilder 768 px WebP (je 1,4–2,4 MB → 0,13–0,24 MB); Originale bleiben im Speicher. Programmdateien werden ein Jahr im Browser zwischengespeichert.
