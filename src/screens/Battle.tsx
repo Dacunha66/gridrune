@@ -389,7 +389,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           <span className="moves" aria-label={`Zug ${Math.min(state.moveCount + 1, totalMoves(state))} von ${totalMoves(state)}, Gegner hat noch ${state.hands.cpu.length} Karten`}>
             Zug {Math.min(state.moveCount + 1, totalMoves(state))}/{totalMoves(state)}
           </span>
-          <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} {online ? online.opponentName : 'Gegner'}</span>
+          <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner</span>
         </div>
         {devTools && (
           <button type="button" className="btn btn-small style-btn" aria-label={`Kartendesign wechseln, jetzt ${CARD_STYLE_LABEL[cardStyle]}`} onClick={() => setStyleToast(CARD_STYLE_LABEL[cycleCardStyle()])}>🎨</button>

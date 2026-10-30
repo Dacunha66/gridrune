@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Web-Version – Online-Duelle gegen echte Spieler
+
+Neu (nur mit Konto): Menüpunkt „⚔️ Online-Duell“. 8 Karten aus dem Deck wählen, dann Freund herausfordern (6-stelliger Code, teilbar), Code eingeben oder Zufallsgegner suchen. Der Server (Funktion `pvp`) prüft jeden Zug; jeder Spieler sieht nur die eigene Hand. 30 s pro Zug (sonst zufällige Karte), 20 s ohne Verbindung = Sieg für den anderen, Aufgeben = Niederlage. Sieg: 🪙 100 (höchstens 3 bezahlte Siege pro Tag gegen denselben Gegner; bei Abbruch/Aufgabe erst ab 4 Zügen). Online-Bilanz im Online-Bereich. Liga-Arena mit Felsfeld, Runen nach Liga-Regeln.
+
+Geprüft live mit zwei Test-Konten: Einladung, eigener Code abgelehnt, fremde Karte abgelehnt, ganzes Duell bis zum Ende (Züge kommen live beim Gegner an, falscher Spieler abgelehnt, Gegnerhand verdeckt, Gegner kann die Partie-Tabelle nicht lesen), Münzen und Statistik, Sieg bei Abwesenheit nach 20 s, Aufgeben, Zufallsgegner. Oberfläche im Browser (iPhone-Größe) mit zwei Fenstern: Lobby, Code, Duell, Ergebnis. Korrigiert: eigener Code brach die eigene Einladung ab; langer Gegnername verdeckte den ✕-Knopf. Noch nicht getestet: zwei echte Geräte (iPhone/iPad), Zeitablauf im Browser.
+
 ## Web-Version Phase 4b–4d – Kampagne, Shop und Spielstand über den Server
 
 Neu für angemeldete Spieler (Gäste unverändert):
