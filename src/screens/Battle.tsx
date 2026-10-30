@@ -35,6 +35,17 @@ interface Props {
   runes?: { player: string | null; cpu: string | null | 'random' };
   /** Adventure checked by the server: arena, opponent, coin toss and the computer's moves follow from the seed. */
   ticket?: AdventureTicket;
+  /** Online duel: the server's duel state (from this player's side), own actions go to the server. */
+  online?: OnlineLink;
+}
+
+export interface OnlineLink {
+  state: BattleState;
+  /** When the current move must be made (ISO time); a random card is played after that. */
+  deadline: string | null;
+  opponentName: string;
+  /** `before` = the duel just before this action (the server checks it is still current). */
+  onAction: (action: Action, before: BattleState) => void;
 }
 
 export interface BattleSetup {
@@ -84,7 +95,7 @@ function cellCenter(cell: number): { x: number; y: number } {
   return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE) };
 }
 
-export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket }: Props) {
+export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket, online }: Props) {
   // Checked adventures use the seed's random sources (the server replays them); otherwise a fresh random source.
   const [seeded] = useState(() => {
     if (!ticket) return null;
@@ -97,6 +108,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   // Board picture and grid layout chosen in the board designer (only looks – the 16 cells stay the same).
   const [boardDesign] = useState(() => ACTIVE.board);
   const [initial] = useState<BattleState>(() => {
+    if (online) return online.state;
     if (seeded) return seeded.start;
     const r = setup?.runes ?? runes;
     const basic = basicRunes().map((x) => x.id);
@@ -107,6 +119,21 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     );
   });
   const [state, setState] = useState<BattleState>(initial);
+  // Online: the server's state replaces the local one whenever it is ahead or different (opponent's move, time-out).
+  const onlineKey = online ? `${online.state.moveCount}:${online.state.log.length}` : '';
+  useEffect(() => {
+    if (!online) return;
+    setState((s) => (`${s.moveCount}:${s.log.length}` === onlineKey ? s : online.state));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlineKey]);
+  // Online: seconds left for the current move.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!online?.deadline) return;
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, [online?.deadline]);
+  const secondsLeft = online?.deadline ? Math.max(0, Math.ceil((new Date(online.deadline).getTime() - now) / 1000)) : null;
   const record = useRef<DuelRecord>({ start: initial, moves: [] });
   /** Hand card shown large while it is held. */
   const [preview, setPreview] = useState<{ id: string; mod: number } | null>(null);
@@ -201,7 +228,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
 
   // Computer turn.
   useEffect(() => {
-    if (phase !== 'play' || over || state.turn !== 'cpu') return;
+    if (online || phase !== 'play' || over || state.turn !== 'cpu') return;
     const delay = reducedMotion ? 450 : state.lastClashes.length > 0 || state.lastEvents.length > 0 ? 1250 : 800;
     const t = setTimeout(() => {
       // The computer may use its rune first (still its turn afterwards), then it places a card.
@@ -230,6 +257,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     const move: Move = { handIndex, cell, ...(target === undefined ? {} : { target }), ...(rot ? { rot } : {}) };
     record.current.moves.push(move);
     setState(applyMove(state, move));
+    online?.onAction(move, state);
     setHandOrigin(handOrigin.filter((_, i) => i !== handIndex));
     setSelected(null);
     setTargeting(null);
@@ -279,6 +307,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     if (!runeUse || !runeReady) return;
     record.current.moves.push(runeUse);
     setState(applyRune(state, runeUse));
+    online?.onAction(runeUse, state);
     setRuneMode(null);
   }
 
@@ -335,7 +364,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       : targeting
         ? '👁 Ziel für −1 antippen · anderes Feld = zurück'
         : state.turn === 'cpu'
-          ? 'Der Gegner überlegt …'
+          ? online ? `${online.opponentName} ist am Zug …` : 'Der Gegner überlegt …'
           : selected === null
             ? 'Karte wählen · Feldkarte antippen = Details'
             : selectedEffect
@@ -360,7 +389,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           <span className="moves" aria-label={`Zug ${Math.min(state.moveCount + 1, totalMoves(state))} von ${totalMoves(state)}, Gegner hat noch ${state.hands.cpu.length} Karten`}>
             Zug {Math.min(state.moveCount + 1, totalMoves(state))}/{totalMoves(state)}
           </span>
-          <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner</span>
+          <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} {online ? online.opponentName : 'Gegner'}</span>
         </div>
         {devTools && (
           <button type="button" className="btn btn-small style-btn" aria-label={`Kartendesign wechseln, jetzt ${CARD_STYLE_LABEL[cardStyle]}`} onClick={() => setStyleToast(CARD_STYLE_LABEL[cycleCardStyle()])}>🎨</button>
@@ -495,7 +524,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           )}
         </div>
 
-        <p className="hint" aria-live="polite">{hint}</p>
+        <p className="hint" aria-live="polite">
+          {secondsLeft !== null && !over && <span className={`turn-timer ${secondsLeft <= 10 ? 'urgent' : ''}`}>⏱ {secondsLeft}s</span>} {hint}
+        </p>
         {placing && (
           <div className="action-bar" role="group" aria-label="Wirbelwind: Ausrichtung">
             <button type="button" className="btn turn-btn" aria-label="Nach links drehen" onClick={() => setPlacing({ ...placing, rot: (placing.rot + 3) % 4 })}>↺</button>

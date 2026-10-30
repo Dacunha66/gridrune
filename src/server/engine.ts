@@ -13,6 +13,7 @@ import { GrantedReward, owedRewards, payRewards } from '../game/campaignRewards'
 import { deriveRng } from '../game/league';
 import { PackCard, buyPack, buySkin } from '../game/shop';
 import { SaveData, sanitize } from '../game/storage';
+import { validPvpHand } from '../game/pvp';
 import { AdventureLog, AdventureTicket, MissionLog, MissionTicket, checkAdventure, checkMission, validMissionHand } from '../game/verify';
 import { Reward, applyReward, computeReward } from '../game/rewards';
 import { Outcome, Side } from '../game/battle';
@@ -60,7 +61,7 @@ const validDeck = (save: SaveData, deck: unknown): deck is string[] => {
 };
 
 /** The rune the player may take into this mode (null = none / not allowed). */
-function allowedRune(save: SaveData, progress: CampaignProgress, rune: unknown, mode: 'adventure' | 'campaign', isAdmin: boolean): string | null {
+function allowedRune(save: SaveData, progress: CampaignProgress, rune: unknown, mode: 'adventure' | 'campaign' | 'league', isAdmin: boolean): string | null {
   if (typeof rune !== 'string' || !released(SETTINGS.features.runes, isAdmin)) return null;
   const ownedRunes = [...new Set([...save.runes.owned, ...RUNES.filter((r) => runeUnlocked(r, progress, CAMPAIGN)).map((r) => r.id)])];
   return availableRunes(mode, ownedRunes).some((r) => r.id === rune) ? rune : null;
@@ -176,4 +177,20 @@ export function buyPackServer(saveRaw: unknown, packId: unknown, seed: string): 
 export function buySkinServer(saveRaw: unknown, skinId: unknown): { ok: true; save: SaveData } | { ok: false; error: string } {
   const r = buySkin(sanitize(saveRaw), String(skinId));
   return r.ok ? { ok: true, save: r.save } : { ok: false, error: r.reason };
+}
+
+// ---------- Online duels (PvP) ----------
+
+export {
+  PVP_ABSENT_SECONDS, PVP_DAILY_PAID_WINS, PVP_MIN_MOVES_FOR_COINS, PVP_TURN_SECONDS, PVP_WIN_COINS, inviteCode, normalizeCode, otherSeat, pvpAction,
+  pvpScore, pvpWinner, seatSide, startPvp, timeoutMove, viewState,
+} from '../game/pvp';
+export { isGameOver } from '../game/battle';
+
+/** Checks the hand (8 different owned cards) and the rune (league rules: owned basic runes only) for an online duel. */
+export function preparePvp(saveRaw: unknown, campaignRaw: unknown, hand: unknown, rune: unknown, isAdmin: boolean):
+  { ok: true; hand: string[]; rune: string | null } | { ok: false; error: string } {
+  const save = sanitize(saveRaw);
+  if (!validPvpHand(hand, save.unlocked)) return { ok: false, error: 'hand' };
+  return { ok: true, hand, rune: allowedRune(save, sanitizeProgress(campaignRaw), rune, 'league', isAdmin) };
 }

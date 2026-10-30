@@ -24,9 +24,11 @@ interface Props {
   sync?: 'saved' | 'saving' | 'waiting' | 'offline' | null;
   notice?: string;
   onNotice?: () => void;
+  /** Signed in: online duels against real players. */
+  onOnline?: () => void;
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline }: Props) {
   const equipped = findRune(equippedRune);
   const { wins, draws, losses } = save.stats;
   return (
@@ -58,6 +60,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
       <nav className="menu-buttons">
         <button type="button" className="btn btn-primary btn-big" onClick={onPlay}>▶ Spielen</button>
         <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}>🗺️ Kampagne</button>
+        {onOnline && <button type="button" className="btn btn-online" onClick={onOnline}>⚔️ Online-Duell <span className="btn-sub">gegen echte Spieler</span></button>}
         <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Collection League <span className="btn-sub">Test</span></button>
         <button type="button" className="btn" onClick={() => onNavigate('shop')}>🛒 Shop <span className="btn-sub">🪙 {save.coins}</span></button>
         <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>

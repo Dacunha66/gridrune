@@ -1458,3 +1458,17 @@ label.btn.disabled { opacity: .45; }
 .result-status.status-paid { color: #86efac; }
 .result-status.status-pending { color: #fde68a; }
 .result-status.status-rejected { color: #fca5a5; }
+
+/* ---------- Online duel ---------- */
+.btn-online { background: linear-gradient(180deg, #8a2f2f, #5a1b1b); border-color: #ff8a8a; }
+.online-body { display: flex; flex-direction: column; gap: 14px; }
+.online-card { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; padding: 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); }
+.invite-code { font-size: 2.4rem; font-weight: 800; letter-spacing: 0.25em; font-family: ui-monospace, monospace; margin: 0; }
+.searching { font-size: 1.2rem; animation: searching 1.6s ease-in-out infinite; }
+@keyframes searching { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .searching { animation: none; } }
+.online-actions { display: flex; flex-direction: column; gap: 10px; }
+.code-form { display: flex; gap: 8px; }
+.code-input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 700; text-align: center; }
+.turn-timer { display: inline-block; padding: 1px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.turn-timer.urgent { background: #b91c1c; color: #fff; }
