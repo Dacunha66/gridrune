@@ -1452,3 +1452,5 @@ label.btn.disabled { opacity: .45; }
 .image-frame.kind-packArt { max-width: 240px; }
 .deck-grid { padding-top: 16px; row-gap: 34px; }
 .deck-grid .grid-item.picked .card { box-shadow: 0 0 0 2px var(--accent), 0 0 12px rgba(255, 204, 51, 0.35); border-radius: 8px; }
+.menu-notice { align-self: center; margin: 8px auto 0; max-width: 420px; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(96, 165, 250, 0.6); background: rgba(30, 64, 175, 0.35); color: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.menu-notice b { margin-left: 6px; color: #ffe08a; }

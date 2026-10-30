@@ -1,5 +1,15 @@
 # Testprotokoll
 
+## Web-Version Phase 3 – Spielstand im Konto
+
+Neu: Angemeldete Spieler spielen mit dem Spielstand ihres Kontos (Münzen, Karten, Deck, Skins, Runen, Statistik, Kampagne). Beim ersten Anmelden: „Spielstand übernehmen“ (einmalig aus dem Browser) oder „Neu beginnen“. Jede Änderung wird sofort auf dem Gerät gesichert und kurz danach über die Server-Funktion `save-sync` gespeichert; ohne Verbindung wird automatisch erneut versucht. Menü-Hinweis: „☁️ Dein Spielstand ist in deinem Konto gespeichert“. Zwei Geräte: Der neuere Stand vom Server gewinnt (Hinweis im Menü). Gäste: unverändert im Browser; der Gast-Spielstand bleibt auch nach dem Übernehmen erhalten.
+
+Sicherheit: Tabelle `player_saves` (Migration 010) – jeder liest nur den eigenen Stand, schreiben kann nur die Server-Funktion. Sie bereinigt alle Werte und lehnt unplausible Sprünge ab (Karten/Skins/Sterne/Statistik werden nie weniger; höchstens 12 neue Karten und 2500 Münzen pro Speichern plus 300 pro Minute seit dem letzten Speichern). Exakte Nachprüfung jedes Duells folgt in Phase 4.
+
+**Automatische Tests (225, alle bestanden), neu:** normales Weiterspielen angenommen (Sieg, Booster, Deck, Sterne); Münzsprung, verschwundene Karten, >12 neue Karten, gesunkene Sterne/Statistik abgelehnt; Offline-Zeit erlaubt mehr Münzen; fremde/kaputte Werte bereinigt.
+
+**Server:** ohne Anmeldung → „not_signed_in“; Tabelle ohne Anmeldung leer; direktes Schreiben → von der Datenbank abgelehnt (Zeilenrechte). **Browser:** Gast-Modus unverändert (Spielstand bleibt nach Neuladen, Duell startet). Anmeldung mit Übernahme: vom Admin mit seinem Konto zu testen.
+
 ## Web-Version – Anmeldung mit Spielername
 
 Neu: Anmelden mit **Spielername oder E-Mail** + Passwort. Spielernamen sind eindeutig (Groß-/Kleinschreibung zählt als gleich; Migration 009: eindeutiger Index, Prüffunktion `name_available`, Schutz beim Registrieren). Beim Registrieren wird vorher geprüft, ob der Name frei ist. Die E-Mail hinter einem Namen sucht nur die Server-Funktion `sign-in` heraus; sie gibt nur die Sitzung zurück, nie die E-Mail. Unbekannter Name und falsches Passwort ergeben dieselbe Antwort. Namensänderung auf einen vergebenen Namen wird abgelehnt.

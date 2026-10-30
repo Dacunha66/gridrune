@@ -30,7 +30,8 @@ import { SymbolTips } from './components/SymbolTips';
 import { CampaignContent, mergeContent, setCampaign } from './game/campaign';
 import { CampaignProgress, loadProgress, writeProgress } from './game/campaignProgress';
 import { AccountState, isGuest, watchAccount } from './game/account';
-import { AccountPage, NewPassword, Welcome } from './screens/Account';
+import { AccountPage, CloudGate, NewPassword, Welcome } from './screens/Account';
+import { useCloudSync } from './game/useCloudSync';
 
 export type Screen =
   | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' }
@@ -54,8 +55,10 @@ export function App() {
   const [saveOk, setSaveOk] = useState(true);
   const reducedMotion = save.settings.reducedMotion || prefersReducedMotion();
 
+  // Guests save in the browser; a signed-in player's save goes to the account (see useCloudSync below).
+  const accountModeRef = useRef(false);
   useEffect(() => {
-    setSaveOk(writeSave(save));
+    if (!accountModeRef.current) setSaveOk(writeSave(save));
   }, [save]);
 
   useEffect(() => {
@@ -113,8 +116,10 @@ export function App() {
   }, []);
   const [campaignProgress, setCampaignProgress] = useState<CampaignProgress>(() => loadProgress());
   useEffect(() => {
-    writeProgress(campaignProgress);
+    if (!accountModeRef.current) writeProgress(campaignProgress);
   }, [campaignProgress]);
+  const cloud = useCloudSync({ account, save, setSave, progress: campaignProgress, setProgress: setCampaignProgress });
+  accountModeRef.current = cloud.accountMode;
 
   // Published designs (board picture, page background). A running duel keeps the board it started with.
   const [pageDesign, setPageDesign] = useState<Design | null>(null);
@@ -201,8 +206,14 @@ export function App() {
       {screen.name === 'account' && account?.kind === 'signedIn' && (
         <AccountPage account={account.account} onBack={toMenu} onRenamed={(name) => setAccount({ kind: 'signedIn', account: { ...account.account, name } })} />
       )}
-      {screen.name === 'menu' && account?.kind !== 'recovery' && !(account?.kind === 'signedOut' && !guest) && (
+      {cloud.accountMode && cloud.phase !== 'ready' && account?.kind !== 'recovery' && (
+        <CloudGate phase={cloud.phase} notice={cloud.notice} browserSave={loadSave()} onChoose={cloud.choose} onRetry={cloud.retry} />
+      )}
+      {screen.name === 'menu' && account?.kind !== 'recovery' && !(account?.kind === 'signedOut' && !guest) && !(cloud.accountMode && cloud.phase !== 'ready') && (
         <Menu
+          sync={cloud.accountMode ? cloud.sync : null}
+          notice={cloud.notice}
+          onNotice={cloud.clearNotice}
           account={account?.kind === 'signedIn' ? account.account.name : account?.kind === 'signedOut' ? 'guest' : null}
           onAccount={() => {
             if (account?.kind === 'signedIn') setScreen({ name: 'account' });

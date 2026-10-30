@@ -4,6 +4,9 @@ import { FormEvent, ReactNode, useState } from 'react';
 import logoMark from '../assets/gridrune-mark.png';
 import logoWord from '../assets/gridrune-wordmark.png';
 import { Header } from './Header';
+import { SaveData } from '../game/storage';
+import { loadProgress } from '../game/campaignProgress';
+import { ownedActiveIds } from '../game/cards';
 import {
   Account, NAME_MAX, PASSWORD_MIN, describeAuthError, emailProblem, loginProblem, nameProblem, passwordProblem, sendPasswordMail, setDisplayName,
   setGuest, setNewPassword, signIn, signOut, signUp,
@@ -202,5 +205,52 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {children}
       {hint && <small className="muted">{hint}</small>}
     </label>
+  );
+}
+
+/** Signed in, but the account save is not ready: loading, first sign-in (take over browser progress?) or offline. */
+export function CloudGate({ phase, notice, browserSave, onChoose, onRetry }: {
+  phase: 'loading' | 'choose' | 'offline' | 'guest' | 'ready';
+  notice: string;
+  browserSave: SaveData;
+  onChoose: (takeOver: boolean) => void;
+  onRetry: () => void;
+}) {
+  const progress = loadProgress();
+  const stars = Object.values(progress.missions).reduce((n, m) => n + m.stars.filter(Boolean).length, 0);
+  const cards = ownedActiveIds(browserSave.unlocked).length;
+  return (
+    <main className="screen account-screen">
+      <div className="logo small-logo">
+        <h1 className="brand">
+          <img className="brand-mark" src={logoMark} alt="" />
+          <img className="brand-word" src={logoWord} alt="GridRune" />
+        </h1>
+      </div>
+      <div className="account-card">
+        {phase === 'choose' ? (
+          <>
+            <h2>Willkommen in deinem Konto!</h2>
+            {notice && <p className="admin-warning">{notice}</p>}
+            <p>Möchtest du deinen bisherigen Spielstand aus diesem Browser in dein Konto übernehmen? Das geht nur jetzt, einmal.</p>
+            <ul className="plain-list">
+              <li>🃏 {cards} Karten · 🪙 {browserSave.coins} Münzen</li>
+              <li>⭐ {stars} Kampagnen-Sterne · 🏆 {browserSave.stats.wins} Siege</li>
+            </ul>
+            <button type="button" className="btn btn-primary btn-big" onClick={() => onChoose(true)}>Spielstand übernehmen</button>
+            <button type="button" className="btn" onClick={() => onChoose(false)}>Neu beginnen</button>
+            <p className="fineprint">Der Browser-Spielstand bleibt außerdem für das Spielen als Gast erhalten.</p>
+          </>
+        ) : phase === 'offline' ? (
+          <>
+            <h2>Keine Verbindung</h2>
+            <p>Dein Spielstand konnte nicht geladen werden. Bitte prüfe deine Internetverbindung.</p>
+            <button type="button" className="btn btn-primary" onClick={onRetry}>Erneut versuchen</button>
+          </>
+        ) : (
+          <p className="center">☁️ Dein Spielstand wird geladen …</p>
+        )}
+      </div>
+    </main>
   );
 }

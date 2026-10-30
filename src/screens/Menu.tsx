@@ -20,9 +20,13 @@ interface Props {
   /** Web version: the signed-in player's name, 'guest', or null (no accounts, e.g. claude.ai). */
   account?: string | 'guest' | null;
   onAccount?: () => void;
+  /** Signed in: state of saving to the account. */
+  sync?: 'saved' | 'saving' | 'waiting' | 'offline' | null;
+  notice?: string;
+  onNotice?: () => void;
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice }: Props) {
   const equipped = findRune(equippedRune);
   const { wins, draws, losses } = save.stats;
   return (
@@ -39,6 +43,10 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         <button type="button" className={`account-chip ${account === 'guest' ? 'guest' : ''}`} onClick={onAccount}>
           {account === 'guest' ? <>👤 Gast · <b>Anmelden / Konto erstellen</b></> : <>👤 <b>{account}</b></>}
         </button>
+      )}
+
+      {notice && (
+        <button type="button" className="menu-notice" onClick={onNotice}>{notice} <b>OK</b></button>
       )}
 
       <div className="wallet" aria-label="Spielstand">
@@ -67,8 +75,10 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
       </label>
 
       <p className="fineprint">
-        {account && account !== 'guest'
-          ? 'Du bist angemeldet. Das Speichern des Spielstands im Konto folgt im nächsten Schritt – bis dahin bleibt er in diesem Browser.'
+        {sync
+          ? sync === 'offline'
+            ? '⚠️ Keine Verbindung – dein Fortschritt ist auf diesem Gerät gesichert und wird gespeichert, sobald du wieder online bist.'
+            : sync === 'saved' ? '☁️ Dein Spielstand ist in deinem Konto gespeichert – auf jedem Gerät.' : '☁️ Wird gespeichert …'
           : saveOk
           ? 'Dein Fortschritt wird nur in diesem Browser auf diesem Gerät gespeichert. Ohne Konto gibt es keine Sicherung auf anderen Geräten.'
           : '⚠️ Speichern ist in diesem Browser gerade nicht möglich (z. B. im privaten Modus). Fortschritt geht beim Schließen verloren.'}
