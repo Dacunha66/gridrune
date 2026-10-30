@@ -58,7 +58,7 @@ export function Welcome({ onGuest }: { onGuest: () => void }) {
     } else if (mode === 'forgot') {
       run([emailProblem(email)], async () => {
         await sendPasswordMail(email);
-        return 'Wenn es zu dieser E-Mail ein Konto gibt, bekommst du gleich einen Link, mit dem du ein neues Passwort festlegst.';
+        return 'Wenn es zu dieser E-Mail ein Konto gibt, bekommst du gleich einen Link, mit dem du ein neues Passwort festlegst. Kommt keine E-Mail an, sag dem Spielleiter Bescheid – er kann dein Passwort zurücksetzen.';
       });
     }
   };
@@ -96,7 +96,7 @@ export function Welcome({ onGuest }: { onGuest: () => void }) {
                   <input className="admin-input" type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={email} onChange={(e) => setEmail(e.target.value)} />
                 </Field>
               ) : (
-                <Field label="E-Mail" hint={mode === 'register' ? 'nur für die Bestätigung und „Passwort vergessen“ – nicht sichtbar für andere' : undefined}>
+                <Field label="E-Mail" hint={mode === 'register' ? 'nur für die Anmeldung und „Passwort vergessen“ – nicht sichtbar für andere' : undefined}>
                   <input className="admin-input" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </Field>
               )}
@@ -151,9 +151,10 @@ export function NewPassword({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** The signed-in player's account page: name, e-mail, new password by e-mail, sign out. */
+/** The signed-in player's account page: name, e-mail, new password, sign out. */
 export function AccountPage({ account, onBack, onRenamed }: { account: Account; onBack: () => void; onRenamed: (name: string) => void }) {
   const [name, setName] = useState(account.name);
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -185,9 +186,20 @@ export function AccountPage({ account, onBack, onRenamed }: { account: Account; 
             Name speichern
           </button>
           <p className="small">E-Mail: <b>{account.email}</b></p>
-          <button type="button" className="btn" disabled={busy}
-            onClick={() => act(async () => { await sendPasswordMail(account.email); return 'Wir haben dir einen Link für ein neues Passwort geschickt.'; })}>
-            Passwort ändern (Link per E-Mail)
+          <Field label="Neues Passwort" hint={`mindestens ${PASSWORD_MIN} Zeichen`}>
+            <input className="admin-input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
+          <button type="button" className="btn" disabled={busy || !password}
+            onClick={() => {
+              const problem = passwordProblem(password);
+              if (problem) return setError(problem);
+              act(async () => {
+              await setNewPassword(password);
+              setPassword('');
+              return 'Neues Passwort gespeichert ✓';
+              });
+            }}>
+            Passwort ändern
           </button>
           {message && <p className="account-done" role="status">{message}</p>}
           {error && <p className="admin-warning" role="alert">{error}</p>}
