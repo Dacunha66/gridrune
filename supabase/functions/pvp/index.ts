@@ -170,18 +170,20 @@ Deno.serve(async (req) => {
     if (!saveRow) return json({ error: 'no_save' }, 409);
     const prep = preparePvp(saveRow.save, saveRow.campaign, body.hand, body.rune ?? null, isAdmin);
     if (!prep.ok) return json({ error: prep.error }, 422);
-    await cancelWaiting();
-    if (action === 'invite') {
-      const m = await create('invite', prep.hand, prep.rune);
-      return m ? json({ view: viewOf(m, 'a') }) : json({ error: 'database' }, 500);
-    }
     if (action === 'join') {
+      // Check the code first: entering your own code must not cancel your own invitation.
       const code = normalizeCode(String(body.code ?? ''));
       const { data: m } = await db.from('pvp_matches').select('*').eq('code', code).eq('kind', 'invite').maybeSingle();
       if (!m || m.status !== 'waiting') return json({ error: 'unknown_code' }, 404);
       if (m.player_a === uid) return json({ error: 'own_code' }, 422);
+      await cancelWaiting();
       const started = await claim(m, prep.hand, prep.rune);
       return started ? json({ view: viewOf(started, 'b') }) : json({ error: 'unknown_code' }, 404);
+    }
+    await cancelWaiting();
+    if (action === 'invite') {
+      const m = await create('invite', prep.hand, prep.rune);
+      return m ? json({ view: viewOf(m, 'a') }) : json({ error: 'database' }, 500);
     }
     // Random opponent: take the oldest waiting player who is still there, else wait yourself.
     const fresh = new Date(Date.now() - PVP_ABSENT_SECONDS * 1000).toISOString();
