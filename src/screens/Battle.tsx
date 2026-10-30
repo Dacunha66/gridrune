@@ -47,6 +47,8 @@ export interface BattleSetup {
   /** Shown above the board, e.g. "Runde 2 · Stand 1:0". */
   label: string;
   tossRng: Rng;
+  /** Random source of the computer's moves (campaign missions checked by the server: from the ticket's seed). */
+  rng?: Rng;
   finishLabel: string;
   /** Computer strength (campaign); default = the classic opponent. */
   ai?: AiOptions;
@@ -89,7 +91,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     const rngs = adventureRngs(ticket.seed);
     return { rngs, ...adventureDuel(ticket, picks, rngs) };
   });
-  const rng = useMemo(() => seeded?.rngs.ai ?? createRng(), [seeded]);
+  const rng = useMemo(() => seeded?.rngs.ai ?? setup?.rng ?? createRng(), [seeded, setup]);
   // Adventure duels take a random active arena; league rounds bring their own.
   const arena = useMemo(() => seeded?.arena ?? setup?.arena ?? pickArena(rng), [seeded, setup, rng]);
   // Board picture and grid layout chosen in the board designer (only looks – the 16 cells stay the same).

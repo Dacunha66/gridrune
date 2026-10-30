@@ -1,6 +1,7 @@
-// Stores the signed-in player's progress (phase 3). The game sends its whole save; this function compares it
-// with the stored one and only accepts plausible changes: owned cards, skins, stars and statistics never go
-// down, coins and new cards only grow in realistic steps. Exact checks of every duel follow in phase 4.
+// Stores the signed-in player's progress (phase 3, locked down in phase 4d). The very first save of an account
+// may take over the browser progress (plausibility-checked). After that only the player's choices are taken from
+// the game (deck, league deck, settings, equipped skins and rune); coins, cards, statistics and the campaign only
+// change through the checked server functions "adventure" and "game". The stored result is sent back.
 // Optimistic locking: the game sends the version it started from; if another device saved in between,
 // the stored save is returned instead (the newer save wins, nothing is overwritten).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -11,7 +12,7 @@ const CORS = {
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-import { Obj, START_COINS_MAX, cleanCampaign, cleanSave, implausible } from './logic.ts';
+import { Obj, START_COINS_MAX, cleanCampaign, cleanSave, mergeChoices } from './logic.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -45,18 +46,17 @@ Deno.serve(async (req) => {
   }
   if (base !== row.version) return json({ conflict: true, version: row.version, save: row.save, campaign: row.campaign });
 
-  const minutes = Math.max(0, (Date.now() - new Date(row.updated_at).getTime()) / 60000);
-  const reason = implausible(row.save as Obj, save, row.campaign as Obj, campaign, minutes);
-  if (reason) return json({ error: 'implausible', reason, version: row.version, save: row.save, campaign: row.campaign }, 422);
+  const merged = mergeChoices(row.save as Obj, save);
+  if (JSON.stringify(merged) === JSON.stringify(mergeChoices(row.save as Obj, row.save as Obj))) return json({ version: row.version, save: row.save, campaign: row.campaign });
 
   const next = row.version + 1;
   const { data: updated, error: e } = await admin.from('player_saves')
-    .update({ save, campaign, version: next, updated_at: new Date().toISOString() })
+    .update({ save: merged, version: next, updated_at: new Date().toISOString() })
     .eq('player_id', uid).eq('version', row.version).select('version').maybeSingle();
   if (e) return json({ error: 'database' }, 500);
   if (!updated) {
     const { data: fresh } = await admin.from('player_saves').select('save, campaign, version').eq('player_id', uid).single();
     return json({ conflict: true, ...fresh });
   }
-  return json({ version: next, save, campaign });
+  return json({ version: next, save: merged, campaign: row.campaign });
 });

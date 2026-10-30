@@ -4,7 +4,7 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import { RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
-import { AdventureTicket, adventureRunner } from '../game/verify';
+import { RunTicket, adventureRunner } from '../game/verify';
 import { FINAL_GATE, GATE_COUNT, LANES, Pick, RunInput, RunnerEvent, RunnerLayout, RunnerSim, STUMBLE_PENALTY } from '../game/runner';
 
 interface Props {
@@ -14,8 +14,8 @@ interface Props {
   /** Runner skin colours: main, dark, light. */
   skin: [string, string, string];
   onFinish: (picks: Pick[], inputs: RunInput[], skippedAt: number | null) => void;
-  /** Adventure checked by the server: the track follows from the ticket's seed. */
-  ticket?: AdventureTicket;
+  /** Checked by the server (adventure or campaign run): the track follows from the ticket's seed. */
+  ticket?: RunTicket;
   onQuit: () => void;
   /** League: a fixed, seed-generated track (no fast-forward, no skipping). */
   layout?: RunnerLayout;

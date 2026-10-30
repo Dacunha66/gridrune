@@ -23,6 +23,8 @@ export interface MissionProgress {
 export interface CampaignProgress {
   version: 1;
   missions: Record<string, MissionProgress>;
+  /** Campaign rewards already paid out (keys like "first:m001", "goal:m001:1", "ms:w01:5") – each only once. */
+  paid?: string[];
   updatedAt: string;
 }
 
@@ -51,6 +53,7 @@ export function sanitizeProgress(raw: unknown): CampaignProgress {
       lastPlayedAt: text(p.lastPlayedAt),
     };
   }
+  if (Array.isArray(r.paid)) out.paid = [...new Set(r.paid.filter((k): k is string => typeof k === 'string' && k.length <= 60))].slice(0, 5000);
   out.updatedAt = text(r.updatedAt) ?? '';
   return out;
 }

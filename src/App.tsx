@@ -32,7 +32,10 @@ import { CampaignProgress, loadProgress, writeProgress } from './game/campaignPr
 import { AccountState, isGuest, watchAccount } from './game/account';
 import { AccountPage, CloudGate, NewPassword, Welcome } from './screens/Account';
 import { useCloudSync } from './game/useCloudSync';
-import { finishAdventureRemote, readPending, startAdventure, writePending } from './game/adventureApi';
+import {
+  claimCampaignRewards, finishAdventureRemote, finishMissionRemote, readPending, startAdventure, writePending,
+} from './game/adventureApi';
+import { grantedText } from './game/campaignRewards';
 import { AdventureLog, AdventureTicket } from './game/verify';
 import type { DuelRecord } from './screens/Battle';
 
@@ -232,6 +235,7 @@ export function App() {
   };
 
   // Results that could not be sent yet: try again when the account is ready and every minute.
+  const claimed = useRef(new Set<string>());
   useEffect(() => {
     if (!cloud.uid || cloud.phase !== 'ready') return;
     const uid = cloud.uid;
@@ -241,14 +245,30 @@ export function App() {
       busy = true;
       let list = readPending(uid);
       for (const p of list) {
-        const r = await finishAdventureRemote(p.ticketId, p.log);
-        if (r.kind === 'offline') break;
-        if (r.cloud) cloud.adoptServer(r.cloud);
-        if (r.kind === 'paid') cloud.notify(`Nachträglich gutgeschrieben: 🪙 ${r.reward.coins}${r.reward.newCard ? ' und eine neue Karte' : ''}.`);
+        if (p.kind === 'mission') {
+          const r = await finishMissionRemote(p.ticketId, p.log);
+          if (r.kind === 'offline') break;
+          if (r.cloud) cloud.adoptServer(r.cloud);
+          if (r.kind === 'paid') cloud.notify(`Kampagnen-Duell nachträglich gewertet${r.granted.length ? ` – ${grantedText(r.granted)}` : ''}.`);
+        } else {
+          const r = await finishAdventureRemote(p.ticketId, p.log);
+          if (r.kind === 'offline') break;
+          if (r.cloud) cloud.adoptServer(r.cloud);
+          if (r.kind === 'paid') cloud.notify(`Nachträglich gutgeschrieben: 🪙 ${r.reward.coins}${r.reward.newCard ? ' und eine neue Karte' : ''}.`);
+        }
         list = list.filter((x) => x.ticketId !== p.ticketId);
         writePending(uid, list);
       }
       busy = false;
+      // Campaign rewards earned before they were paid out (once per account; the server knows what is paid).
+      if (!claimed.current.has(uid)) {
+        const c = await claimCampaignRewards();
+        if (c !== 'offline') claimed.current.add(uid);
+        if (c && c !== 'offline') {
+          cloud.adoptServer(c.cloud);
+          cloud.notify(`Kampagnen-Belohnungen gutgeschrieben: ${grantedText(c.granted)}.`);
+        }
+      }
     };
     flush();
     const t = setInterval(flush, 60000);
@@ -300,7 +320,7 @@ export function App() {
           } : null} />
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} runes={runesOn} />}
-      {screen.name === 'shop' && <Shop save={save} onChange={setSave} onBack={toMenu} />}
+      {screen.name === 'shop' && <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} />}
       {screen.name === 'league' && (
         <League
           save={save}
@@ -340,6 +360,7 @@ export function App() {
           startMissionId={screen.missionId}
           playerRune={duelRune('campaign')}
           runesOn={runesOn}
+          account={cloud.uid && cloud.phase === 'ready' ? { uid: cloud.uid, adopt: cloud.adoptServer } : null}
           onExit={screen.preview ? () => setScreen({ name: 'admin' }) : toMenu}
         />
       )}

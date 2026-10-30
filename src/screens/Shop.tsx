@@ -4,6 +4,8 @@ import { RARITY_COLORS } from './Result';
 import { Card } from '../components/Card';
 import { CARDS, ownedActiveIds, RARITIES, RARITY_LABEL, RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
+import { buyPackRemote, buySkinRemote } from '../game/adventureApi';
+import type { CloudSave } from '../game/cloudSave';
 import { DUPLICATE_REFUND, PACKS, PackCard, PackDef, PackLook, buyPack, buySkin, equipSkin, packView } from '../game/shop';
 import { CampaignImage } from './Campaign';
 import { SKINS, SkinDef } from '../game/skins';
@@ -13,6 +15,8 @@ import { Header } from './Header';
 interface Props {
   save: SaveData;
   onChange: (save: SaveData) => void;
+  /** Signed in: purchases happen on the server (it draws the cards); the returned save is taken over. */
+  server?: { adopt: (c: CloudSave) => void } | null;
   onBack: () => void;
 }
 
@@ -54,7 +58,8 @@ function odds(pack: PackDef): { rarity: Rarity; text: string }[] {
   return RARITIES.map((r) => ({ rarity: r, text: pct(pack.weights[r]) }));
 }
 
-export function Shop({ save, onChange, onBack }: Props) {
+export function Shop({ save, onChange, onBack, server = null }: Props) {
+  const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<'packs' | 'skins'>('packs');
   const [opened, setOpened] = useState<{ pack: PackDef; cards: PackCard[]; key: number; stage: 'shake' | 'open' } | null>(null);
   const [justBought, setJustBought] = useState<string | null>(null);
@@ -77,7 +82,20 @@ export function Shop({ save, onChange, onBack }: Props) {
   const rng = useMemo(() => createRng(), []);
   const complete = ownedActiveIds(save.unlocked).length >= CARDS.length;
 
-  function openPack(pack: PackDef) {
+  async function openPack(pack: PackDef) {
+    if (server) {
+      if (busy) return;
+      if (save.coins < pack.price) return setMessage(`Dir fehlen noch 🪙 ${pack.price - save.coins}.`);
+      setBusy(true);
+      setMessage('☁️ Kauf wird bestätigt …');
+      const r = await buyPackRemote(pack.id);
+      setBusy(false);
+      if (r.cloud) server.adopt(r.cloud);
+      if (!r.ok) return setMessage(r.reason);
+      setMessage('');
+      setOpened({ pack, cards: r.cards, key: Date.now(), stage: 'shake' });
+      return;
+    }
     const r = buyPack(save, pack.id, rng);
     if (!r.ok) return setMessage(r.reason);
     setMessage('');
@@ -85,10 +103,22 @@ export function Shop({ save, onChange, onBack }: Props) {
     setOpened({ pack, cards: r.cards, key: Date.now(), stage: 'shake' });
   }
 
-  function skinAction(skin: SkinDef) {
+  async function skinAction(skin: SkinDef) {
     if (save.skins.owned.includes(skin.id)) {
       onChange(equipSkin(save, skin.id));
       setMessage(`${skin.name} ausgerüstet ✓`);
+      return;
+    }
+    if (server) {
+      if (busy) return;
+      setBusy(true);
+      setMessage('☁️ Kauf wird bestätigt …');
+      const r = await buySkinRemote(skin.id);
+      setBusy(false);
+      if (r.cloud) server.adopt(r.cloud);
+      if (!r.ok) return setMessage(r.reason);
+      setJustBought(skin.id);
+      setMessage(`${skin.name} gekauft und ausgerüstet ✓`);
       return;
     }
     const r = buySkin(save, skin.id);
@@ -118,13 +148,13 @@ export function Shop({ save, onChange, onBack }: Props) {
                 return (
                   <article key={pack.id} className={`pack-tile pack-${pack.id}`}>
                     {pack.guaranteed && <span className="pack-ribbon">Episch+ garantiert</span>}
-                    <button type="button" className="pack-tile-art" disabled={missing > 0} onClick={() => openPack(pack)} aria-label={`${view.name} kaufen und öffnen`}>
+                    <button type="button" className="pack-tile-art" disabled={missing > 0 || busy} onClick={() => openPack(pack)} aria-label={`${view.name} kaufen und öffnen`}>
                       <PackArt pack={pack} />
                     </button>
                     <h2>{view.name}</h2>
                     <p className="pack-size">{pack.size} Karten</p>
                     <p className="pack-desc">{view.description}</p>
-                    <button type="button" className="btn btn-primary pack-buy" disabled={missing > 0} onClick={() => openPack(pack)}>
+                    <button type="button" className="btn btn-primary pack-buy" disabled={missing > 0 || busy} onClick={() => openPack(pack)}>
                       {missing > 0 ? `Noch 🪙 ${missing}` : `🪙 ${pack.price}`}
                     </button>
                     <details className="pack-odds">

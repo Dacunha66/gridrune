@@ -12,7 +12,8 @@ export interface CloudSave {
 }
 
 export type SyncResult =
-  | { kind: 'saved'; version: number }
+  /** Stored; `cloud` = what the server actually keeps (it only takes the player's choices, phase 4d). */
+  | { kind: 'saved'; version: number; cloud: CloudSave | null }
   /** Another device saved in between: its (newer) save replaces this one. */
   | { kind: 'conflict'; cloud: CloudSave }
   /** The server refused the change (implausible jump): the stored save stays. */
@@ -50,7 +51,9 @@ export async function pushCloudSave(save: SaveData, campaign: CampaignProgress, 
   if (body.error === 'implausible') {
     return { kind: 'rejected', reason: String(body.reason ?? ''), cloud: body.save ? toCloud(body as { version: number; save: unknown; campaign: unknown }) : null };
   }
-  if (typeof body.version === 'number') return { kind: 'saved', version: body.version };
+  if (typeof body.version === 'number') {
+    return { kind: 'saved', version: body.version, cloud: body.save ? toCloud(body as { version: number; save: unknown; campaign: unknown }) : null };
+  }
   return { kind: 'offline' };
 }
 

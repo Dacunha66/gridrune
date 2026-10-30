@@ -75,3 +75,27 @@ export function implausible(oldS: Obj, newS: Obj, oldC: Obj, newC: Obj, minutes:
   }
   return null;
 }
+
+/**
+ * Phase 4d: coins, cards, skins owned, runes owned, statistics and the campaign only change through the checked
+ * server functions (adventure, game). From the game's own save only harmless choices are taken over: deck,
+ * league deck, settings, equipped skins and rune – and only with things the stored save owns.
+ */
+export function mergeChoices(stored: Obj, incoming: Obj): Obj {
+  const s = cleanSave(stored) as { unlocked: string[]; skins: { owned: string[]; card: string; runner: string }; runes: { owned: string[]; equipped: string | null } } & Obj;
+  const n = cleanSave(incoming) as typeof s;
+  const deck = (n.deck as string[]).filter((id) => s.unlocked.includes(id));
+  return {
+    ...s,
+    deck: deck.length === 20 ? deck : s.deck,
+    leagueDeck: (n.leagueDeck as string[]).filter((id) => s.unlocked.includes(id)),
+    settings: n.settings,
+    skins: {
+      owned: s.skins.owned,
+      card: s.skins.owned.includes(n.skins.card) ? n.skins.card : s.skins.card,
+      runner: s.skins.owned.includes(n.skins.runner) ? n.skins.runner : s.skins.runner,
+    },
+    // Campaign runes are unlocked by progress (checked by the game when used), so any known rune id may be equipped.
+    runes: { owned: s.runes.owned, equipped: n.runes.equipped },
+  };
+}

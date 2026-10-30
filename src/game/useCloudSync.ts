@@ -82,8 +82,9 @@ export function useCloudSync({ account, save, setSave, progress, setProgress }: 
     setPhase('loading');
     const r = await pushCloudSave(s, c, null);
     if (r.kind === 'saved') {
-      adopt({ version: r.version, save: s, campaign: c });
-      writeCache(uid, { version: r.version, save: s, campaign: c }, false);
+      const stored = r.cloud ?? { version: r.version, save: s, campaign: c };
+      adopt(stored);
+      writeCache(uid, stored, false);
       setPhase('ready');
     } else if (r.kind === 'conflict') {
       adopt(r.cloud);
@@ -106,9 +107,15 @@ export function useCloudSync({ account, save, setSave, progress, setProgress }: 
       setSync('saving');
       const r = await pushCloudSave(save, progress, version.current);
       if (r.kind === 'saved') {
-        version.current = r.version;
-        synced.current = json;
-        writeCache(uid, { version: r.version, save, campaign: progress }, false);
+        // The server keeps only the player's choices; anything else it changed back is taken over.
+        if (r.cloud && JSON.stringify([r.cloud.save, r.cloud.campaign]) !== json) {
+          adopt(r.cloud);
+          writeCache(uid, r.cloud, false);
+        } else {
+          version.current = r.version;
+          synced.current = json;
+          writeCache(uid, { version: r.version, save, campaign: progress }, false);
+        }
         setSync('saved');
       } else if (r.kind === 'conflict') {
         adopt(r.cloud);

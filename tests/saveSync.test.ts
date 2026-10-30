@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // The server function's rules (Deno file without Deno APIs – the same code runs on the server).
-import { COIN_STEP, cleanCampaign, cleanSave, implausible } from '../supabase/functions/save-sync/logic';
+import { COIN_STEP, cleanCampaign, cleanSave, implausible, mergeChoices } from '../supabase/functions/save-sync/logic';
 import { defaultSave } from '../src/game/storage';
 import { emptyProgress } from '../src/game/campaignProgress';
 
@@ -39,5 +39,30 @@ describe('Spielstand im Konto: Prüfung auf dem Server', () => {
     expect(s.runes).toEqual({ owned: ['rn01'], equipped: null });
     const c = cleanCampaign({ missions: { m001: { wins: 2, stars: [true, 'yes'] }, bad: {} } });
     expect(Object.keys(c.missions as object)).toEqual(['m001']);
+  });
+});
+
+describe('Spielstand gesperrt (Phase 4d)', () => {
+  it('nur Deck, Einstellungen, ausgerüstete Skins und Rune kommen vom Spiel', () => {
+    const stored = cleanSave({ ...defaultSave(), coins: 300 });
+    const owned = stored.unlocked as string[];
+    const deck = [...(stored.deck as string[])].reverse();
+    const cheat = { ...stored, coins: 99999, unlocked: [...owned, 'l03'], deck, stats: { wins: 50, draws: 0, losses: 0, runs: 50 },
+      settings: { reducedMotion: true }, skins: { owned: ['card-saphir', 'runner-blau', 'card-smaragd'], card: 'card-smaragd', runner: 'runner-blau' },
+      runes: { owned: ['rn01', 'rn02'], equipped: 'rn01' } };
+    const m = mergeChoices(stored, cheat) as unknown as ReturnType<typeof defaultSave>;
+    expect(m.coins).toBe(300);
+    expect(m.unlocked).toEqual(owned);
+    expect(m.stats.wins).toBe(0);
+    expect(m.deck).toEqual(deck);
+    expect(m.settings.reducedMotion).toBe(true);
+    expect(m.skins.card).toBe('card-saphir');
+    expect(m.skins.owned).toEqual(stored.skins && (stored.skins as { owned: string[] }).owned);
+    expect(m.runes).toEqual({ owned: [], equipped: 'rn01' });
+  });
+  it('ein Deck mit fremden Karten wird nicht übernommen', () => {
+    const stored = cleanSave(defaultSave());
+    const bad = [...(stored.deck as string[]).slice(1), 'l03'];
+    expect((mergeChoices(stored, { ...stored, deck: bad }) as { deck: string[] }).deck).toEqual(stored.deck);
   });
 });

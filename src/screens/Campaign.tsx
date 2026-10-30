@@ -1,5 +1,6 @@
 // Campaign for players: world selection → world map with stations → mission briefing → (run) → duel → stars.
-// Progress stays on this device for now; rewards are shown as a preview until player accounts exist.
+// Guests keep their progress on this device and see rewards as a preview. Signed-in players get a ticket from the
+// server before each mission; the server replays the duel, stores the stars and pays coins, cards and packs.
 import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
@@ -14,6 +15,10 @@ import { imageUrl } from '../game/catalog';
 import { CLASS_INFO, TERRAIN_INFO, Terrain } from '../game/effects';
 import { createRng } from '../game/rng';
 import { RUNES, RuneDef, findRune } from '../game/runes';
+import { MissionLog, MissionTicket, handPicks, missionRngs } from '../game/verify';
+import { GrantedReward } from '../game/campaignRewards';
+import { finishMissionRemote, readPending, startMission as startMissionRemote, writePending } from '../game/adventureApi';
+import type { CloudSave } from '../game/cloudSave';
 import { RuneBadge, RuneMatchup } from '../components/RuneBadge';
 import { Pick } from '../game/runner';
 import {
@@ -48,21 +53,33 @@ interface Props {
   playerRune?: string | null;
   /** Runes are released for this player (opponents bring theirs, rune rewards are shown). */
   runesOn?: boolean;
+  /** Signed in: missions are checked by the server, which stores the result and pays the rewards. */
+  account?: { uid: string; adopt: (c: CloudSave) => void } | null;
   onExit: () => void;
 }
+
+type CheckStatus = 'checking' | 'paid' | 'pending' | 'rejected';
 
 type View =
   | { k: 'worlds' }
   | { k: 'world'; worldId: string }
   | { k: 'brief'; missionId: string }
   | { k: 'intro'; missionId: string; hand: MissionCard[] }
-  | { k: 'runner'; missionId: string; runId: number }
-  | { k: 'battle'; missionId: string; picks: Pick[]; stumbles: number | null; runId: number }
-  | { k: 'result'; missionId: string; outcome: Outcome; score: { player: number; cpu: number }; stats: DuelStats; result: MissionResult; starsBefore: number };
+  | { k: 'runner'; missionId: string; runId: number; ticket?: MissionTicket }
+  | { k: 'battle'; missionId: string; picks: Pick[]; stumbles: number | null; runId: number; ticket?: MissionTicket; run?: MissionLog['run'] }
+  | {
+    k: 'result'; missionId: string; outcome: Outcome; score: { player: number; cpu: number }; stats: DuelStats; result: MissionResult; starsBefore: number;
+    runId: number; status?: CheckStatus; granted?: GrantedReward[];
+  };
 
 const KIND_ICON: Record<Mission['kind'], string> = { tutorial: '📖', normal: '⚔️', special: '✴️', elite: '💀', boss: '👑' };
 
-export function Campaign({ content, progress: saved, onProgress, deck, unlocked, reducedMotion, skin, preview, startMissionId, playerRune = null, runesOn = false, onExit }: Props) {
+export function Campaign({
+  content, progress: saved, onProgress, deck, unlocked, reducedMotion, skin, preview, startMissionId, playerRune = null, runesOn = false, account = null, onExit,
+}: Props) {
+  const server = preview ? null : account;
+  const [notice, setNotice] = useState('');
+  const [starting, setStarting] = useState(false);
   // In the admin test, progress lives only in memory.
   const [testProgress, setTestProgress] = useState<CampaignProgress>(saved);
   const progress = preview ? testProgress : saved;
@@ -99,16 +116,34 @@ export function Campaign({ content, progress: saved, onProgress, deck, unlocked,
     );
   }
   const back = () => (startMission ? onExit() : toWorld(mission.worldId));
-  const begin = (hand: MissionCard[]) => {
-    if (mission.mode === 'runner') setView({ k: 'runner', missionId: mission.id, runId: Date.now() });
-    else setView({ k: 'battle', missionId: mission.id, picks: hand.map((c, i) => ({ cardId: c.cardId, kind: 'deck', gate: i, mod: 0 })), stumbles: null, runId: Date.now() });
+  const begin = async (hand: MissionCard[]) => {
+    const ids = hand.map((c) => c.cardId);
+    let ticket: MissionTicket | undefined;
+    if (server) {
+      // Signed in: the server checks the start and hands out the seed (toss and opponent follow from it).
+      if (starting) return;
+      setStarting(true);
+      const r = await startMissionRemote(mission.id, deck, mission.mode === 'runner' ? null : ids, playerRune);
+      setStarting(false);
+      if (r.kind !== 'ticket') {
+        setView({ k: 'brief', missionId: mission.id });
+        setNotice(r.kind === 'offline' ? 'Keine Verbindung – zum Starten einer Mission mit deinem Konto brauchst du kurz Internet.'
+          : `Die Mission konnte nicht gestartet werden (${r.error === 'deck' ? 'Deck ungültig – bitte im Deck-Editor prüfen' : r.error === 'mission' ? 'Mission noch gesperrt' : r.error}).`);
+        return;
+      }
+      ticket = r.ticket;
+    }
+    setNotice('');
+    if (mission.mode === 'runner') setView({ k: 'runner', missionId: mission.id, runId: Date.now(), ticket });
+    else setView({ k: 'battle', missionId: mission.id, picks: handPicks(ticket?.hand ?? ids), stumbles: null, runId: Date.now(), ticket });
   };
 
   if (view.k === 'brief') {
     return (
       <Briefing
         mission={mission} opponent={opponent} content={content} progress={progress} deck={deck} preview={!!preview} playerRune={playerRune} runesOn={runesOn}
-        onBack={back}
+        paid={!!server} notice={notice} starting={starting}
+        onBack={() => { setNotice(''); back(); }}
         onStart={(hand) => (opponent.intro ? setView({ k: 'intro', missionId: mission.id, hand }) : begin(hand))}
       />
     );
@@ -119,23 +154,47 @@ export function Campaign({ content, progress: saved, onProgress, deck, unlocked,
   if (view.k === 'runner') {
     return (
       <Runner
-        key={view.runId} deck={deck} unlocked={unlocked} reducedMotion={reducedMotion} skin={skin}
-        onFinish={(picks) => setView({ k: 'battle', missionId: mission.id, picks, stumbles: picks.filter((p) => p.mod < 0).length, runId: Date.now() })}
+        key={view.runId} deck={view.ticket?.deck ?? deck} unlocked={unlocked} reducedMotion={reducedMotion} skin={skin} ticket={view.ticket}
+        onFinish={(picks, inputs, skippedAt) => setView({
+          k: 'battle', missionId: mission.id, picks, stumbles: picks.filter((p) => p.mod < 0).length, runId: Date.now(), ticket: view.ticket, run: { inputs, skippedAt },
+        })}
         onQuit={() => setView({ k: 'brief', missionId: mission.id })}
       />
     );
   }
   if (view.k === 'battle') {
-    const finish = (outcome: Outcome, score: { player: number; cpu: number }, _first: unknown, record: DuelRecord) => {
+    const { ticket, run, runId } = view;
+    const finish = async (outcome: Outcome, score: { player: number; cpu: number }, _first: unknown, record: DuelRecord) => {
       const stats = duelStats(record.start, record.moves, view.stumbles);
       const starsBefore = worldStars(content, progress, mission.worldId, preview);
       const result = recordResult(progress, mission, stats);
-      save(result.progress);
-      setView({ k: 'result', missionId: mission.id, outcome, score, stats, result, starsBefore });
+      if (!server || !ticket) {
+        save(result.progress);
+        setView({ k: 'result', missionId: mission.id, outcome, score, stats, result, starsBefore, runId });
+        return;
+      }
+      // Signed in: show the result at once (not saved yet), the server replays the duel, stores it and pays out.
+      setView({ k: 'result', missionId: mission.id, outcome, score, stats, result, starsBefore, runId, status: 'checking' });
+      const log: MissionLog = { run: run ?? null, duel: { first: record.start.turn, moves: record.moves } };
+      const r = await finishMissionRemote(ticket.id, log);
+      const update = (patch: Partial<Extract<View, { k: 'result' }>>) => setView((v) => (v.k === 'result' && v.runId === runId ? { ...v, ...patch } : v));
+      if (r.kind === 'paid') {
+        server.adopt(r.cloud);
+        update({
+          outcome: r.outcome, score: { player: r.score.player, cpu: r.score.cpu }, status: 'paid', granted: r.granted,
+          result: { progress: r.cloud.campaign, met: r.met, newStars: r.newStars, firstWin: r.firstWin },
+        });
+      } else if (r.kind === 'offline') {
+        writePending(server.uid, [...readPending(server.uid), { kind: 'mission', ticketId: ticket.id, log, at: new Date().toISOString() }]);
+        update({ status: 'pending' });
+      } else {
+        if (r.cloud) server.adopt(r.cloud);
+        update({ status: 'rejected' });
+      }
     };
     return (
       <MissionBattle key={view.runId} mission={mission} opponent={opponent} picks={view.picks} unlocked={unlocked} reducedMotion={reducedMotion} playerRune={playerRune} runesOn={runesOn}
-        onEnd={finish} onQuit={() => setView({ k: 'brief', missionId: mission.id })} />
+        ticket={ticket} onEnd={finish} onQuit={() => setView({ k: 'brief', missionId: mission.id })} />
     );
   }
   const list = worldMissions(content, mission.worldId, preview);
@@ -143,7 +202,7 @@ export function Campaign({ content, progress: saved, onProgress, deck, unlocked,
   return (
     <MissionResultView
       mission={mission} opponent={opponent} world={content.worlds.find((w) => w.id === mission.worldId) ?? null} content={content}
-      progress={progress} preview={!!preview} runesOn={runesOn} view={view} reducedMotion={reducedMotion}
+      progress={view.status ? view.result.progress : progress} preview={!!preview} runesOn={runesOn} view={view} reducedMotion={reducedMotion}
       onAgain={() => setView({ k: 'brief', missionId: mission.id })}
       onNext={next && missionUnlocked(content, progress, next, preview) && !startMission ? () => setView({ k: 'brief', missionId: next.id }) : undefined}
       onMap={back}
@@ -191,6 +250,18 @@ function RewardLine({ reward, prefix }: { reward: Reward | null; prefix?: string
   return <span className="reward-line">{prefix}{REWARD_ICON[reward.type]} {rewardText(reward)}</span>;
 }
 
+const PAID_TYPES = new Set<Reward['type']>(['coins', 'card', 'pack']);
+
+/** One paid reward: "Waldpfad – erster Sieg: 🪙 100 · 🃏 Mooswolf". */
+function GrantedLine({ g }: { g: GrantedReward }) {
+  const parts = [
+    g.coins ? `🪙 ${g.coins}` : '',
+    ...g.cards.map((id) => `🃏 ${getCard(id).name} (neu)`),
+    g.duplicates.length ? `${g.duplicates.length} doppelte Karte${g.duplicates.length === 1 ? '' : 'n'} → Münzen` : '',
+  ].filter(Boolean);
+  return <span className="reward-line">{g.source}: {parts.join(' · ') || '–'}</span>;
+}
+
 function StarBar({ world, stars, max }: { world: World; stars: number; max: number }) {
   const next = nextMilestone(world, stars);
   return (
@@ -214,7 +285,8 @@ function StarBar({ world, stars, max }: { world: World; stars: number; max: numb
   );
 }
 
-const PREVIEW_NOTE = 'Belohnungen sind eine Vorschau – sie werden mit den Spielerkonten aktiviert.';
+const PREVIEW_NOTE = 'Belohnungen sind eine Vorschau – mit einem Konto werden Münzen, Karten und Booster gutgeschrieben.';
+const PAID_NOTE = 'Münzen, Karten und Booster werden deinem Konto gutgeschrieben. Illustrationen, Rahmen und Titel sind noch eine Vorschau.';
 
 // ---------- World selection ----------
 
@@ -317,9 +389,9 @@ function WorldMap({ world, content, progress, preview, onMission, onBack }: {
 
 // ---------- Briefing ----------
 
-function Briefing({ mission, opponent, content, progress, deck, preview, playerRune, runesOn, onBack, onStart }: {
+function Briefing({ mission, opponent, content, progress, deck, preview, playerRune, runesOn, paid, notice, starting, onBack, onStart }: {
   mission: Mission; opponent: Opponent; content: CampaignContent; progress: CampaignProgress; deck: string[]; preview: boolean; playerRune: string | null; runesOn: boolean;
-  onBack: () => void; onStart: (hand: MissionCard[]) => void;
+  paid: boolean; notice: string; starting: boolean; onBack: () => void; onStart: (hand: MissionCard[]) => void;
 }) {
   const arena = findArena(mission.arenaId) ?? CLASSIC_ARENA;
   const slots = starSlots(progress, mission);
@@ -381,7 +453,7 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
             ))}
           </ul>
           {mission.firstReward && <p className="small"><RewardLine reward={mission.firstReward} prefix="Erster Sieg: " /></p>}
-          {(mission.firstReward || mission.goalRewards.some(Boolean) || (world?.milestones.length ?? 0) > 0) && <p className="muted small">🎁 {PREVIEW_NOTE}</p>}
+          {(mission.firstReward || mission.goalRewards.some(Boolean) || (world?.milestones.length ?? 0) > 0) && <p className="muted small">🎁 {paid ? PAID_NOTE : PREVIEW_NOTE}</p>}
         </section>
 
         {mission.tips.length > 0 && (
@@ -427,8 +499,9 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
         )}
         {runner && <p className="muted small">Hinweis: Fundkarten aus dem Lauf spielst du in diesem Duell mit – in deine Sammlung kommen sie in der Kampagne noch nicht.</p>}
       </div>
-      <button type="button" className="btn btn-primary btn-big brief-start" disabled={!runner && (hand.length !== HAND_SIZE || choosing)} onClick={() => onStart(hand)}>
-        {mission.kind === 'boss' ? '👑 Zum Boss' : runner ? '🏃 Lauf starten' : '⚔️ Duell starten'}
+      {notice && <p className="hint brief-notice" role="alert">{notice}</p>}
+      <button type="button" className="btn btn-primary btn-big brief-start" disabled={starting || (!runner && (hand.length !== HAND_SIZE || choosing))} onClick={() => onStart(hand)}>
+        {starting ? '☁️ Wird gestartet …' : mission.kind === 'boss' ? '👑 Zum Boss' : runner ? '🏃 Lauf starten' : '⚔️ Duell starten'}
       </button>
     </main>
   );
@@ -456,11 +529,14 @@ function BossIntro({ opponent, mission, reducedMotion, onGo, onBack }: { opponen
   );
 }
 
-function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, playerRune, runesOn, onEnd, onQuit }: {
+function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, playerRune, runesOn, ticket, onEnd, onQuit }: {
   mission: Mission; opponent: Opponent; picks: Pick[]; unlocked: string[]; reducedMotion: boolean; playerRune: string | null; runesOn: boolean;
+  ticket?: MissionTicket;
   onEnd: (outcome: Outcome, score: { player: number; cpu: number }, first: unknown, record: DuelRecord) => void; onQuit: () => void;
 }) {
   const [setup] = useState<BattleSetup>(() => {
+    // Checked by the server: coin toss and the opponent's moves follow from the ticket's seed, runes from the ticket.
+    const seeded = ticket ? missionRngs(ticket.seed) : null;
     const rng = createRng();
     return {
       cpuHand: toHand(opponent.deck),
@@ -468,12 +544,13 @@ function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, play
       rocks: [],
       arena: findArena(mission.arenaId) ?? CLASSIC_ARENA,
       label: `${KIND_ICON[mission.kind]} ${mission.name} · ${opponent.emoji} ${opponent.name}`,
-      tossRng: rng,
+      tossRng: seeded?.toss ?? rng,
+      rng: seeded?.ai,
       finishLabel: 'Weiter',
       ai: { level: opponent.level, prefer: opponent.prefer },
       badgeText: '★',
       // The opponent brings its rune whenever runes are released – also against players who have none yet.
-      runes: { player: playerRune, cpu: runesOn ? opponent.rune ?? null : null },
+      runes: ticket ? { player: ticket.playerRune, cpu: ticket.cpuRune } : { player: playerRune, cpu: runesOn ? opponent.rune ?? null : null },
     };
   });
   const boss = opponent.rank === 'boss';
@@ -502,7 +579,7 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
   // Runes this result unlocked: by the first win of this mission, or by crossing a star threshold.
   const totalNow = totalStars(content, progress);
   const totalBefore = totalNow - result.newStars.length;
-  const newRunes = !runesOn || preview ? [] : RUNES.filter((r) => r.status === 'active' && (
+  const newRunes = !runesOn || preview || view.status === 'rejected' ? [] : RUNES.filter((r) => r.status === 'active' && (
     (r.unlock.kind === 'mission' && r.unlock.missionId === mission.id && result.firstWin)
     || (r.unlock.kind === 'stars' && r.unlock.n > totalBefore && r.unlock.n <= totalNow)));
   const newRewards = [
@@ -510,6 +587,8 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
     ...result.newStars.flatMap((i) => (mission.goalRewards[i] ? [mission.goalRewards[i]!] : [])),
     ...reached.map((ms) => ms.reward),
   ];
+  // Paid rewards are listed as credited; the rest stays a preview. A refused result shows nothing.
+  const previewRewards = view.status === 'rejected' ? [] : view.status === 'paid' ? newRewards.filter((r) => !PAID_TYPES.has(r.type)) : newRewards;
   return (
     <main className={`screen result campaign-result result-${outcome} ${boss ? 'boss-result' : ''}`}>
       {outcome === 'win' && !reducedMotion && <Confetti count={boss ? 110 : 60} />}
@@ -535,11 +614,25 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
           ))}
         </ul>
         {world && <StarBar world={world} stars={stars} max={max} />}
-        {newRewards.length > 0 && (
+        {view.status && (
+          <p className={`result-status status-${view.status}`} role="status">
+            {view.status === 'checking' ? '☁️ Ergebnis wird vom Server geprüft …'
+              : view.status === 'paid' ? '✓ Geprüft und in deinem Konto gespeichert'
+                : view.status === 'pending' ? '⏳ Keine Verbindung – Sterne und Belohnungen werden gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).'
+                  : '⚠️ Das Ergebnis konnte nicht bestätigt werden – es zählt nicht.'}
+          </p>
+        )}
+        {view.status === 'paid' && (view.granted?.length ?? 0) > 0 && (
+          <div className="reward-box paid">
+            <p><b>Gutgeschrieben</b></p>
+            {view.granted!.map((g) => <p key={g.key}><GrantedLine g={g} /></p>)}
+          </div>
+        )}
+        {previewRewards.length > 0 && (
           <div className="reward-box">
             <p><b>Freigeschaltet</b></p>
-            {newRewards.map((r, i) => <p key={i}><RewardLine reward={r} /></p>)}
-            <p className="muted small">🎁 {PREVIEW_NOTE}</p>
+            {previewRewards.map((r, i) => <p key={i}><RewardLine reward={r} /></p>)}
+            <p className="muted small">🎁 {view.status ? PAID_NOTE : PREVIEW_NOTE}</p>
           </div>
         )}
         {newRunes.length > 0 && (
