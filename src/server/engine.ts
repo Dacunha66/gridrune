@@ -187,10 +187,17 @@ export {
 } from '../game/pvp';
 export { isGameOver } from '../game/battle';
 
-/** Checks the hand (8 different owned cards) and the rune (league rules: owned basic runes only) for an online duel. */
-export function preparePvp(saveRaw: unknown, campaignRaw: unknown, hand: unknown, rune: unknown, isAdmin: boolean):
-  { ok: true; hand: string[]; rune: string | null } | { ok: false; error: string } {
+/**
+ * Checks the hand (8 different owned cards; not needed for a draft) and the rune (league rules: owned basic runes
+ * only) for an online duel.
+ */
+export function preparePvp(saveRaw: unknown, campaignRaw: unknown, hand: unknown, rune: unknown, isAdmin: boolean, needHand = true):
+  { ok: true; hand: string[] | null; rune: string | null } | { ok: false; error: string } {
   const save = sanitize(saveRaw);
-  if (!validPvpHand(hand, save.unlocked)) return { ok: false, error: 'hand' };
-  return { ok: true, hand, rune: allowedRune(save, sanitizeProgress(campaignRaw), rune, 'league', isAdmin) };
+  if (needHand && !validPvpHand(hand, save.unlocked)) return { ok: false, error: 'hand' };
+  return { ok: true, hand: needHand ? (hand as string[]) : null, rune: allowedRune(save, sanitizeProgress(campaignRaw), rune, 'league', isAdmin) };
 }
+
+export {
+  DRAFT_DECK_SECONDS, DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS, completeDraftDeck, draftLayout, draftPool, picksToHand, replayDraftRun, validDraftDeck,
+} from '../game/draft';

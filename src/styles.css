@@ -1547,3 +1547,20 @@ label.btn.disabled { opacity: .45; }
 @keyframes reveal-drop { from { transform: translateY(10px); opacity: 0; } }
 .reveal-overlay.still *, .reveal-overlay.still { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .reveal-overlay *, .reveal-overlay, .station-loot { animation: none !important; } }
+
+/* ---------- Draft League ---------- */
+.btn-draft { background: linear-gradient(180deg, #7a4a12, #4a2a08); border-color: #f5b041; }
+.draft-steps { text-align: left; margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.draft-bar { display: flex; align-items: center; gap: 10px; padding: 0 2px 6px; }
+.draft-count { font-weight: 900; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.draft-count.full { color: #6ee79a; }
+.draft-classes { flex: 1; display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); }
+.draft-sort { width: auto; padding: 4px 8px; }
+.draft-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.draft-pick { position: relative; display: flex; justify-content: center; transition: transform 0.15s; }
+.draft-pick.picked { transform: translateY(-2px); }
+.draft-pick.picked .card { box-shadow: 0 0 0 3px #6ee79a, 0 0 14px rgba(110, 231, 154, 0.6); }
+.draft-tag { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: #166534; color: #dcfce7; white-space: nowrap; }
+.draft-actions { padding-top: 8px; }
+.draft-status { list-style: none; padding: 0; margin: 0; }
+.urgent-pill { background: #b91c1c; color: #fff; }

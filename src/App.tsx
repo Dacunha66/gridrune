@@ -5,6 +5,7 @@ import { Pick } from './game/runner';
 import { SaveData, loadSave, writeSave } from './game/storage';
 import { Menu } from './screens/Menu';
 import { Online } from './screens/Online';
+import { DraftPractice } from './screens/Draft';
 import { Collection } from './screens/Collection';
 import { DeckEditor } from './screens/DeckEditor';
 import { Rules } from './screens/Rules';
@@ -41,7 +42,7 @@ import { AdventureLog, AdventureTicket } from './game/verify';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
   | { name: 'runner'; runId: number; deck: string[]; ticket?: AdventureTicket }
@@ -101,7 +102,7 @@ export function App() {
   const [features, setFeatures] = useState(SETTINGS.features);
   const applyRecords = useCallback((records: CardRecord[]) => {
     lastRecords.current = records;
-    if (screenRef.current === 'runner' || screenRef.current === 'battle' || screenRef.current === 'league' || screenRef.current === 'campaign' || screenRef.current === 'online') {
+    if (screenRef.current === 'runner' || screenRef.current === 'battle' || screenRef.current === 'league' || screenRef.current === 'campaign' || screenRef.current === 'online' || screenRef.current === 'draft' || screenRef.current === 'draftPractice') {
       pendingRecords.current = records;
       return;
     }
@@ -305,6 +306,7 @@ export function App() {
           isAdmin={admin}
           onPlay={startRun}
           onOnline={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'online' }) : undefined}
+          onDraft={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'draftPractice' })}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}
@@ -332,6 +334,23 @@ export function App() {
           onFinished={cloud.retry}
           onExit={toMenu}
         />
+      )}
+      {screen.name === 'draft' && cloud.uid && (
+        <Online
+          uid={cloud.uid}
+          mode="draft"
+          skin={getSkin(save.skins.runner).colors}
+          onPractice={() => setScreen({ name: 'draftPractice' })}
+          deck={[]}
+          rune={duelRune('league')}
+          reducedMotion={reducedMotion}
+          onFinished={cloud.retry}
+          onExit={toMenu}
+        />
+      )}
+      {screen.name === 'draftPractice' && (
+        <DraftPractice reducedMotion={reducedMotion} skin={getSkin(save.skins.runner).colors} rune={duelRune('league')}
+          onExit={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'menu' })} />
       )}
       {screen.name === 'league' && (
         <League

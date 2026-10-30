@@ -7,6 +7,7 @@ import { ARENAS, Arena, leagueArena } from './arenas';
 import { CARDS, getCard } from './cards';
 import { deriveRng, roundRock } from './league';
 import { Action, applyAction, isRuneUse } from './runes';
+import type { RunnerLayout } from './runner';
 
 /** Seconds a player has for one move; then the server plays a random card for them. */
 export const PVP_TURN_SECONDS = 30;
@@ -57,11 +58,12 @@ export function validPvpHand(hand: unknown, owned: readonly string[]): hand is s
 }
 
 /** Start position: ranked arena and one rock from the seed (fair for both), the seed decides who starts. */
-export function startPvp(seed: string, handA: readonly string[], handB: readonly string[], runeA: string | null, runeB: string | null,
+export function startPvp(seed: string, handA: readonly (string | HandCard)[], handB: readonly (string | HandCard)[], runeA: string | null, runeB: string | null,
   arenas: readonly Arena[] = ARENAS): { state: BattleState; arena: Arena } {
   const arena = leagueArena(seed, 0, arenas);
   const first: Side = deriveRng(seed, 'toss')() < 0.5 ? 'player' : 'cpu';
-  const toHand = (ids: readonly string[]): HandCard[] => ids.map((cardId) => ({ cardId, mod: 0 }));
+  // Draft hands come with stumble penalties from the run; normal online hands are plain card ids.
+  const toHand = (cards: readonly (string | HandCard)[]): HandCard[] => cards.map((c) => (typeof c === 'string' ? { cardId: c, mod: 0 } : { cardId: c.cardId, mod: c.mod }));
   const rock = roundRock(seed, 0, arena.cells);
   return { arena, state: createBattle(toHand(handA), toHand(handB), first, [rock], arena.cells, { player: runeA, cpu: runeB }) };
 }
@@ -115,9 +117,20 @@ export const normalizeCode = (raw: string) => raw.toUpperCase().replace(/[^A-Z0-
 /** Shown to a player (written by the server, read live by the game). */
 export interface PvpView {
   matchId: string;
-  status: 'waiting' | 'playing' | 'finished' | 'cancelled';
+  status: 'waiting' | 'drafting' | 'playing' | 'finished' | 'cancelled';
   seat: Seat;
   kind: 'invite' | 'random';
+  mode: 'duel' | 'draft';
+  /** Draft League: the shared pool, the own deck and track, and how far both players are. */
+  draft: null | {
+    pool: string[];
+    deck: string[] | null;
+    layout: RunnerLayout | null;
+    runDone: boolean;
+    opponentDeckDone: boolean;
+    opponentRunDone: boolean;
+    deadline: string | null;
+  };
   code: string | null;
   opponentName: string | null;
   state: BattleState | null;

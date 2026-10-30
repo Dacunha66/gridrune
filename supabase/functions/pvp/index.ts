@@ -2,12 +2,15 @@
 // random opponent), checks every move with the game's own rules (engine.js) and decides time-outs (a random card
 // after 30 seconds) and absences (whoever is still there after 20 seconds without a sign of life from the other
 // one wins). The full duel stays in pvp_matches; each player gets only their own view in pvp_views (live).
+// Draft League ("draft"): both get the same pool of 30 cards, build a secret deck of 20, run their own fair track
+// (replayed here) and duel with the 8 collected cards.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  PVP_ABSENT_SECONDS, PVP_DAILY_PAID_WINS, PVP_MIN_MOVES_FOR_COINS, PVP_TURN_SECONDS, PVP_WIN_COINS, inviteCode, isGameOver, loadContent,
-  normalizeCode, otherSeat, preparePvp, pvpAction, pvpScore, pvpWinner, seatSide, startPvp, timeoutMove, viewState,
-} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@5d66f64cc3f81a93571417d3d0224ec1529d423b/public/server/engine-1dd0d72e15a3.js';
+  DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS, PVP_ABSENT_SECONDS, PVP_DAILY_PAID_WINS, PVP_MIN_MOVES_FOR_COINS, PVP_TURN_SECONDS, PVP_WIN_COINS,
+  completeDraftDeck, draftLayout, draftPool, inviteCode, isGameOver, loadContent, normalizeCode, otherSeat, picksToHand, preparePvp, pvpAction,
+  pvpScore, pvpWinner, replayDraftRun, seatSide, startPvp, timeoutMove, validDraftDeck, viewState,
+} from 'ENGINE_URL';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -37,16 +40,29 @@ const ago = (iso: string | null, seconds: number) => !iso || Date.now() - new Da
 /** What one player may see of the match. */
 function viewOf(m: Match, seat: Seat) {
   const opp = otherSeat(seat);
-  const result = m.status === 'finished' && m.state
+  const result = m.status === 'finished'
     ? {
       outcome: m.winner === 'draw' ? 'draw' : m.winner === seat ? 'win' : 'loss',
       reason: m.end_reason,
-      score: pvpScore(m.state, seat),
+      score: m.state ? pvpScore(m.state, seat) : { me: 0, opponent: 0 },
       coins: m.winner === seat ? m.coins : 0,
     }
     : null;
+  const myDeck = m[`deck_${seat}`] ?? null;
+  const draft = m.mode === 'draft' && m.pool
+    ? {
+      pool: m.pool,
+      deck: myDeck,
+      // The own track (only while it is still to be run).
+      layout: m.status === 'drafting' && myDeck && !m[`hand_${seat}`] ? draftLayout(m.seed, seat, myDeck) : null,
+      runDone: !!m[`hand_${seat}`],
+      opponentDeckDone: !!m[`deck_${opp}`],
+      opponentRunDone: !!m[`hand_${opp}`],
+      deadline: m.prepare_deadline,
+    }
+    : null;
   return {
-    matchId: m.id, status: m.status, seat, kind: m.kind, code: m.code,
+    matchId: m.id, status: m.status, seat, kind: m.kind, code: m.code, mode: m.mode ?? 'duel', draft,
     opponentName: m[`name_${opp}`] ?? null,
     state: m.state ? viewState(m.state, seat) : null,
     arenaName: m.arena_name ?? null,
@@ -92,10 +108,10 @@ Deno.serve(async (req) => {
       const l = m[`player_${otherSeat(winner)}`];
       const since = new Date(Date.now() - 24 * 3600_000).toISOString();
       const { count } = await db.from('pvp_matches').select('id', { count: 'exact', head: true })
-        .eq('status', 'finished').gt('coins', 0).gte('finished_at', since)
+        .eq('status', 'finished').eq('mode', m.mode).gt('coins', 0).gte('finished_at', since)
         .or(`and(player_a.eq.${w},player_b.eq.${l},winner.eq.a),and(player_b.eq.${w},player_a.eq.${l},winner.eq.b)`);
       if ((count ?? 0) < PVP_DAILY_PAID_WINS) {
-        coins = PVP_WIN_COINS;
+        coins = m.mode === 'draft' ? DRAFT_WIN_COINS : PVP_WIN_COINS;
         pay = w;
       }
     }
@@ -120,24 +136,44 @@ Deno.serve(async (req) => {
     return data?.display_name ?? 'Spieler';
   }
 
-  async function needContent() {
-    const [{ data: rows }, { data: adminRow }, { data: saveRow }] = await Promise.all([
-      db.from('content_docs').select('collection, id, data'),
-      db.from('admins').select('user_id').eq('user_id', uid).maybeSingle(),
-      db.from('player_saves').select('save, campaign').eq('player_id', uid).maybeSingle(),
-    ]);
-    loadContent(rows ?? [], !!adminRow);
-    return { isAdmin: !!adminRow, saveRow };
+  // Card values, arenas and runes as players see them (the same for both players – no admin previews in duels).
+  const { data: contentRows } = await db.from('content_docs').select('collection, id, data');
+  loadContent(contentRows ?? [], false);
+
+  async function needSave() {
+    const { data: saveRow } = await db.from('player_saves').select('save, campaign').eq('player_id', uid).maybeSingle();
+    return { isAdmin: false, saveRow };
   }
 
-  /** Second player takes a waiting match: the duel starts. */
-  async function claim(m: Match, hand: string[], rune: string | null): Promise<Match | null> {
-    const { state, arena } = startPvp(m.seed, m.hand_a, hand, m.rune_a, rune);
+  /** Second player takes a waiting match: the duel starts (a draft starts with the preparation). */
+  async function claim(m: Match, hand: string[] | null, rune: string | null): Promise<Match | null> {
     const now = new Date().toISOString();
-    const { data } = await db.from('pvp_matches').update({
-      player_b: uid, name_b: await myName(), hand_b: hand, rune_b: rune, status: 'playing', state, arena_name: arena.name,
-      turn_started_at: now, seen_b: now, seen_a: now, updated_at: now,
-    }).eq('id', m.id).eq('status', 'waiting').is('player_b', null).select('*').maybeSingle();
+    const common = { player_b: uid, name_b: await myName(), rune_b: rune, seen_b: now, seen_a: now, updated_at: now };
+    const patch = m.mode === 'draft'
+      ? { ...common, status: 'drafting', pool: draftPool(m.seed), prepare_deadline: new Date(Date.now() + DRAFT_PREPARE_SECONDS * 1000).toISOString() }
+      : (() => {
+        const { state, arena } = startPvp(m.seed, m.hand_a, hand!, m.rune_a, rune);
+        return { ...common, hand_b: hand, status: 'playing', state, arena_name: arena.name, turn_started_at: now };
+      })();
+    const { data } = await db.from('pvp_matches').update(patch).eq('id', m.id).eq('status', 'waiting').is('player_b', null).select('*').maybeSingle();
+    if (data) await writeViews(data);
+    return data;
+  }
+
+  /** Draft: both hands are ready (or the time ran out) – the duel starts. */
+  async function startDraftDuel(m: Match): Promise<Match> {
+    const { state, arena } = startPvp(m.seed, m.hand_a, m.hand_b, m.rune_a, m.rune_b);
+    const now = new Date().toISOString();
+    const { data } = await db.from('pvp_matches').update({ status: 'playing', state, arena_name: arena.name, turn_started_at: now, updated_at: now })
+      .eq('id', m.id).eq('status', 'drafting').select('*').maybeSingle();
+    if (data) await writeViews(data);
+    return data ?? (await load(m.id))!;
+  }
+
+  /** Draft: saves a change of the preparation if nobody changed the match in between. */
+  async function saveDraft(m: Match, patch: Match): Promise<Match | null> {
+    const { data } = await db.from('pvp_matches').update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', m.id).eq('status', 'drafting').eq('updated_at', m.updated_at).select('*').maybeSingle();
     if (data) await writeViews(data);
     return data;
   }
@@ -148,11 +184,11 @@ Deno.serve(async (req) => {
     for (const m of old ?? []) await writeViews(m);
   }
 
-  async function create(kind: 'invite' | 'random', hand: string[], rune: string | null): Promise<Match | null> {
+  async function create(kind: 'invite' | 'random', mode: 'duel' | 'draft', hand: string[] | null, rune: string | null): Promise<Match | null> {
     const name = await myName();
     for (let i = 0; i < 5; i++) {
       const { data, error } = await db.from('pvp_matches').insert({
-        kind, code: kind === 'invite' ? inviteCode(cryptoRandom) : null, player_a: uid, name_a: name, seed: seed(), hand_a: hand, rune_a: rune,
+        kind, mode, code: kind === 'invite' ? inviteCode(cryptoRandom) : null, player_a: uid, name_a: name, seed: seed(), hand_a: hand, rune_a: rune,
       }).select('*').single();
       if (!error) {
         await writeViews(data);
@@ -166,39 +202,47 @@ Deno.serve(async (req) => {
   const action = body.action;
 
   if (action === 'invite' || action === 'join' || action === 'queue') {
-    const { isAdmin, saveRow } = await needContent();
+    const { isAdmin, saveRow } = await needSave();
     if (!saveRow) return json({ error: 'no_save' }, 409);
-    const prep = preparePvp(saveRow.save, saveRow.campaign, body.hand, body.rune ?? null, isAdmin);
-    if (!prep.ok) return json({ error: prep.error }, 422);
+    let mode: 'duel' | 'draft' = body.mode === 'draft' ? 'draft' : 'duel';
+    let invited: Match | null = null;
     if (action === 'join') {
-      // Check the code first: entering your own code must not cancel your own invitation.
+      // Check the code first: entering your own code must not cancel your own invitation. The code decides the mode.
       const code = normalizeCode(String(body.code ?? ''));
-      const { data: m } = await db.from('pvp_matches').select('*').eq('code', code).eq('kind', 'invite').maybeSingle();
-      if (!m || m.status !== 'waiting') return json({ error: 'unknown_code' }, 404);
-      if (m.player_a === uid) return json({ error: 'own_code' }, 422);
+      const { data } = await db.from('pvp_matches').select('*').eq('code', code).eq('kind', 'invite').maybeSingle();
+      if (!data || data.status !== 'waiting') return json({ error: 'unknown_code' }, 404);
+      if (data.player_a === uid) return json({ error: 'own_code' }, 422);
+      invited = data;
+      mode = data.mode === 'draft' ? 'draft' : 'duel';
+    }
+    const prep = preparePvp(saveRow.save, saveRow.campaign, body.hand, body.rune ?? null, isAdmin, mode === 'duel');
+    if (!prep.ok) return json({ error: prep.error }, 422);
+    if (invited) {
+      const m = invited;
       await cancelWaiting();
       const started = await claim(m, prep.hand, prep.rune);
       return started ? json({ view: viewOf(started, 'b') }) : json({ error: 'unknown_code' }, 404);
     }
     await cancelWaiting();
     if (action === 'invite') {
-      const m = await create('invite', prep.hand, prep.rune);
+      const m = await create('invite', mode, prep.hand, prep.rune);
       return m ? json({ view: viewOf(m, 'a') }) : json({ error: 'database' }, 500);
     }
     // Random opponent: take the oldest waiting player who is still there, else wait yourself.
     const fresh = new Date(Date.now() - PVP_ABSENT_SECONDS * 1000).toISOString();
-    const { data: waiting } = await db.from('pvp_matches').select('*').eq('kind', 'random').eq('status', 'waiting')
+    const { data: waiting } = await db.from('pvp_matches').select('*').eq('kind', 'random').eq('mode', mode).eq('status', 'waiting')
       .neq('player_a', uid).gte('seen_a', fresh).order('created_at').limit(5);
     for (const m of waiting ?? []) {
       const started = await claim(m, prep.hand, prep.rune);
       if (started) return json({ view: viewOf(started, 'b') });
     }
-    const m = await create('random', prep.hand, prep.rune);
+    const m = await create('random', mode, prep.hand, prep.rune);
     return m ? json({ view: viewOf(m, 'a') }) : json({ error: 'database' }, 500);
   }
 
   if (action === 'stats') {
-    const { data } = await db.from('pvp_matches').select('player_a, winner').eq('status', 'finished').or(`player_a.eq.${uid},player_b.eq.${uid}`).limit(5000);
+    const { data } = await db.from('pvp_matches').select('player_a, winner').eq('status', 'finished').eq('mode', body.mode === 'draft' ? 'draft' : 'duel')
+      .or(`player_a.eq.${uid},player_b.eq.${uid}`).limit(5000);
     const s = { wins: 0, draws: 0, losses: 0 };
     for (const m of data ?? []) {
       const seat = m.player_a === uid ? 'a' : 'b';
@@ -222,8 +266,47 @@ Deno.serve(async (req) => {
       const { data } = await db.from('pvp_matches').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', m.id).eq('status', 'waiting').select('*').maybeSingle();
       if (data) await writeViews(data);
       m = data ?? (await load(m.id))!;
-    } else if (m.status === 'playing') {
+    } else if (m.status === 'playing' || m.status === 'drafting') {
       m = await finish(m, m.state, opp, 'left');
+    }
+    return json({ view: viewOf(m, seat) });
+  }
+
+  if (m.status === 'drafting') {
+    if (action === 'deck') {
+      if (m[`deck_${seat}`]) return json({ view: viewOf(m, seat) });
+      if (!validDraftDeck(body.deck, m.pool)) return json({ error: 'deck', view: viewOf(m, seat) }, 422);
+      const saved = await saveDraft(m, { [`deck_${seat}`]: body.deck });
+      return saved ? json({ view: viewOf(saved, seat) }) : json({ error: 'stale', view: viewOf((await load(m.id))!, seat) }, 409);
+    }
+    if (action === 'run') {
+      const deck = m[`deck_${seat}`];
+      if (!deck || m[`hand_${seat}`]) return json({ view: viewOf(m, seat) });
+      const run = replayDraftRun(draftLayout(m.seed, seat, deck), body.run as never);
+      if (run.error) return json({ error: 'run', detail: run.error, view: viewOf(m, seat) }, 422);
+      let saved = await saveDraft(m, { [`hand_${seat}`]: picksToHand(run.picks) });
+      if (!saved) return json({ error: 'stale', view: viewOf((await load(m.id))!, seat) }, 409);
+      if (saved.hand_a && saved.hand_b) saved = await startDraftDuel(saved);
+      return json({ view: viewOf(saved, seat) });
+    }
+    if (action === 'tick') {
+      if (ago(m[`seen_${opp}`], PVP_ABSENT_SECONDS)) {
+        m = await finish(m, null, seat, 'absent');
+        return json({ view: viewOf(m, seat) });
+      }
+      // Time is up: missing decks are completed with the strongest cards, missing runs taken automatically.
+      if (m.prepare_deadline && Date.now() > new Date(m.prepare_deadline).getTime() + GRACE_SECONDS * 1000) {
+        const patch: Match = {};
+        for (const s of ['a', 'b'] as Seat[]) {
+          const deck = m[`deck_${s}`] ?? completeDraftDeck(m.pool, []);
+          if (!m[`deck_${s}`]) patch[`deck_${s}`] = deck;
+          if (!m[`hand_${s}`]) patch[`hand_${s}`] = picksToHand(replayDraftRun(draftLayout(m.seed, s, deck), { inputs: [], skippedAt: 0 }).picks);
+        }
+        const saved = await saveDraft(m, patch);
+        if (saved) m = await startDraftDuel(saved);
+        else m = (await load(m.id))!;
+      }
+      return json({ view: viewOf(m, seat) });
     }
     return json({ view: viewOf(m, seat) });
   }
