@@ -32,14 +32,17 @@ import { CampaignProgress, loadProgress, writeProgress } from './game/campaignPr
 import { AccountState, isGuest, watchAccount } from './game/account';
 import { AccountPage, CloudGate, NewPassword, Welcome } from './screens/Account';
 import { useCloudSync } from './game/useCloudSync';
+import { finishAdventureRemote, readPending, startAdventure, writePending } from './game/adventureApi';
+import { AdventureLog, AdventureTicket } from './game/verify';
+import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
   | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
-  | { name: 'runner'; runId: number; deck: string[] }
-  | { name: 'battle'; picks: Pick[] }
-  | { name: 'result'; outcome: Outcome; reward: Reward; score: { player: number; cpu: number } };
+  | { name: 'runner'; runId: number; deck: string[]; ticket?: AdventureTicket }
+  | { name: 'battle'; picks: Pick[]; ticket?: AdventureTicket; run?: AdventureLog['run'] }
+  | { name: 'result'; outcome: Outcome; reward: Reward; score: { player: number; cpu: number }; status?: 'checking' | 'paid' | 'pending' | 'rejected' };
 
 function prefersReducedMotion(): boolean {
   try {
@@ -183,18 +186,75 @@ export function App() {
     return r.unlock.kind === 'stars' ? `Kampagne: ${r.unlock.n} ★ sammeln` : '';
   };
 
-  const startRun = () => setScreen({ name: 'runner', runId: Date.now(), deck: repairDeck(save.deck, save.unlocked, CARDS).deck });
+  // Signed in: the server hands out the run (seed) and checks the result; guests play as before.
+  const starting = useRef(false);
+  const startRun = async () => {
+    const deck = repairDeck(save.deck, save.unlocked, CARDS).deck;
+    if (!cloud.accountMode) return setScreen({ name: 'runner', runId: Date.now(), deck });
+    if (cloud.phase !== 'ready' || starting.current) return;
+    starting.current = true;
+    const r = await startAdventure(deck, duelRune('adventure'));
+    starting.current = false;
+    if (r.kind === 'ticket') return setScreen({ name: 'runner', runId: Date.now(), deck: r.ticket.deck, ticket: r.ticket });
+    setScreen({ name: 'menu' });
+    cloud.notify(r.kind === 'offline'
+      ? 'Keine Verbindung – zum Starten eines Spiels mit deinem Konto brauchst du kurz Internet.'
+      : `Das Spiel konnte nicht gestartet werden (${r.error === 'deck' ? 'Deck ungültig – bitte im Deck-Editor prüfen' : r.error}).`);
+  };
   const toMenu = useCallback(() => {
     setScreen({ name: 'menu' });
     const pending = pendingRecords.current;
     if (pending) setTimeout(() => applyRecords(pending), 0);
   }, [applyRecords]);
 
-  const finishBattle = (picks: Pick[], outcome: Outcome, score: { player: number; cpu: number }) => {
+  const finishBattle = async (picks: Pick[], outcome: Outcome, score: { player: number; cpu: number }, ticket?: AdventureTicket, run?: AdventureLog['run'], record?: DuelRecord) => {
     const reward = computeReward(outcome, picks, save.unlocked);
-    setSave((prev) => applyReward(prev, outcome, reward));
-    setScreen({ name: 'result', outcome, reward, score });
+    if (!ticket || !run || !record || !cloud.uid) {
+      setSave((prev) => applyReward(prev, outcome, reward));
+      setScreen({ name: 'result', outcome, reward, score });
+      return;
+    }
+    // Checked adventure: show the result at once, the server confirms and pays out.
+    setScreen({ name: 'result', outcome, reward, score, status: 'checking' });
+    const log: AdventureLog = { run, duel: { first: record.start.turn, moves: record.moves } };
+    const r = await finishAdventureRemote(ticket.id, log);
+    const update = (patch: Partial<Extract<Screen, { name: 'result' }>>) => setScreen((s) => (s.name === 'result' ? { ...s, ...patch } : s));
+    if (r.kind === 'paid') {
+      cloud.adoptServer(r.cloud);
+      update({ outcome: r.outcome, reward: r.reward, score: { player: r.score.player, cpu: r.score.cpu }, status: 'paid' });
+    } else if (r.kind === 'offline') {
+      writePending(cloud.uid, [...readPending(cloud.uid), { ticketId: ticket.id, log, at: new Date().toISOString() }]);
+      update({ status: 'pending' });
+    } else {
+      if (r.cloud) cloud.adoptServer(r.cloud);
+      update({ status: 'rejected' });
+    }
   };
+
+  // Results that could not be sent yet: try again when the account is ready and every minute.
+  useEffect(() => {
+    if (!cloud.uid || cloud.phase !== 'ready') return;
+    const uid = cloud.uid;
+    let busy = false;
+    const flush = async () => {
+      if (busy) return;
+      busy = true;
+      let list = readPending(uid);
+      for (const p of list) {
+        const r = await finishAdventureRemote(p.ticketId, p.log);
+        if (r.kind === 'offline') break;
+        if (r.cloud) cloud.adoptServer(r.cloud);
+        if (r.kind === 'paid') cloud.notify(`Nachträglich gutgeschrieben: 🪙 ${r.reward.coins}${r.reward.newCard ? ' und eine neue Karte' : ''}.`);
+        list = list.filter((x) => x.ticketId !== p.ticketId);
+        writePending(uid, list);
+      }
+      busy = false;
+    };
+    flush();
+    const t = setInterval(flush, 60000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloud.uid, cloud.phase]);
 
   return (
     <>
@@ -290,7 +350,8 @@ export function App() {
           unlocked={save.unlocked}
           reducedMotion={reducedMotion}
           skin={getSkin(save.skins.runner).colors}
-          onFinish={(picks) => setScreen({ name: 'battle', picks })}
+          ticket={screen.ticket}
+          onFinish={(picks, inputs, skippedAt) => setScreen({ name: 'battle', picks, ticket: screen.ticket, run: { inputs, skippedAt } })}
           onQuit={toMenu}
         />
       )}
@@ -299,13 +360,14 @@ export function App() {
           picks={screen.picks}
           unlocked={save.unlocked}
           reducedMotion={reducedMotion}
-          onEnd={(outcome, score) => finishBattle(screen.picks, outcome, score)}
+          ticket={screen.ticket}
+          onEnd={(outcome, score, _first, record) => finishBattle(screen.picks, outcome, score, screen.ticket, screen.run, record)}
           onQuit={toMenu}
           runes={{ player: duelRune('adventure'), cpu: duelRune('adventure') ? 'random' : null }}
         />
       )}
       {screen.name === 'result' && (
-        <Result outcome={screen.outcome} reward={screen.reward} score={screen.score} coins={save.coins} onAgain={startRun} onMenu={toMenu} />
+        <Result outcome={screen.outcome} reward={screen.reward} score={screen.score} coins={screen.status === "checking" ? save.coins + screen.reward.coins : save.coins} status={screen.status} onAgain={startRun} onMenu={toMenu} />
       )}
     </div>
     </>

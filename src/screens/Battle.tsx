@@ -16,6 +16,7 @@ import { ACTIVE, layoutVars } from '../game/designs';
 import { AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
+import { AdventureTicket, adventureDuel, adventureRngs } from '../game/verify';
 import { Action, RuneDef, RuneUse, applyRune, basicRunes, echoCapturable, findRune, placedCount, runeChoices, runeOpen, runeProblem, runeRules } from '../game/runes';
 import { RuneBadge } from '../components/RuneBadge';
 import { CardClass } from '../game/effects';
@@ -32,6 +33,8 @@ interface Props {
   setup?: BattleSetup;
   /** Equipped runes (null = none). 'random' = a random basic rune for the computer. */
   runes?: { player: string | null; cpu: string | null | 'random' };
+  /** Adventure checked by the server: arena, opponent, coin toss and the computer's moves follow from the seed. */
+  ticket?: AdventureTicket;
 }
 
 export interface BattleSetup {
@@ -79,13 +82,20 @@ function cellCenter(cell: number): { x: number; y: number } {
   return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE) };
 }
 
-export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes }: Props) {
-  const rng = useMemo(() => createRng(), []);
+export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket }: Props) {
+  // Checked adventures use the seed's random sources (the server replays them); otherwise a fresh random source.
+  const [seeded] = useState(() => {
+    if (!ticket) return null;
+    const rngs = adventureRngs(ticket.seed);
+    return { rngs, ...adventureDuel(ticket, picks, rngs) };
+  });
+  const rng = useMemo(() => seeded?.rngs.ai ?? createRng(), [seeded]);
   // Adventure duels take a random active arena; league rounds bring their own.
-  const arena = useMemo(() => setup?.arena ?? pickArena(rng), [setup, rng]);
+  const arena = useMemo(() => seeded?.arena ?? setup?.arena ?? pickArena(rng), [seeded, setup, rng]);
   // Board picture and grid layout chosen in the board designer (only looks – the 16 cells stay the same).
   const [boardDesign] = useState(() => ACTIVE.board);
   const [initial] = useState<BattleState>(() => {
+    if (seeded) return seeded.start;
     const r = setup?.runes ?? runes;
     const basic = basicRunes().map((x) => x.id);
     const cpuRune = r?.cpu === 'random' ? basic[Math.floor(rng() * basic.length)] : r?.cpu ?? null;
@@ -473,7 +483,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
             </svg>
           )}
 
-          {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={setup?.tossRng ?? rng} onDecide={start} />}
+          {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={setup?.tossRng ?? seeded?.rngs.toss ?? rng} onDecide={start} />}
           {banner && <div className="board-banner">{banner}</div>}
           {result && (
             <div className={`board-banner end ${result}`}>

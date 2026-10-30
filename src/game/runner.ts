@@ -138,6 +138,8 @@ export class RunnerSim {
   readonly obstacles: Obstacle[];
   /** Every lane change in order – enough to replay the run exactly (see `replayRun`). */
   readonly inputs: RunInput[] = [];
+  /** Track distance where the player skipped to the end (null = ran to the finish). */
+  skippedAt: number | null = null;
   finished = false;
   /** True after hitting a stone until the next card is taken. */
   stumbled = false;
@@ -218,6 +220,7 @@ export class RunnerSim {
   /** Test/impatience shortcut: take the current-lane card of every remaining gate. */
   skipToEnd(): RunnerEvent[] {
     const events: RunnerEvent[] = [];
+    if (!this.finished && this.skippedAt === null) this.skippedAt = this.distance;
     while (this.nextGate < this.gates.length) events.push(this.takeGate(this.gates[this.nextGate++]));
     this.distance = Math.max(this.distance, FINISH_DISTANCE);
     this.nextObstacle = this.obstacles.length;

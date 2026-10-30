@@ -9,7 +9,8 @@
     "build:single": "tsc --noEmit && vite build --mode single",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:engine": "node scripts/build-engine.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",

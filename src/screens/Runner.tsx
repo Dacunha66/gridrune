@@ -4,6 +4,7 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import { RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
+import { AdventureTicket, adventureRunner } from '../game/verify';
 import { FINAL_GATE, GATE_COUNT, LANES, Pick, RunInput, RunnerEvent, RunnerLayout, RunnerSim, STUMBLE_PENALTY } from '../game/runner';
 
 interface Props {
@@ -12,7 +13,9 @@ interface Props {
   reducedMotion: boolean;
   /** Runner skin colours: main, dark, light. */
   skin: [string, string, string];
-  onFinish: (picks: Pick[], inputs: RunInput[]) => void;
+  onFinish: (picks: Pick[], inputs: RunInput[], skippedAt: number | null) => void;
+  /** Adventure checked by the server: the track follows from the ticket's seed. */
+  ticket?: AdventureTicket;
   onQuit: () => void;
   /** League: a fixed, seed-generated track (no fast-forward, no skipping). */
   layout?: RunnerLayout;
@@ -31,9 +34,12 @@ const VIEW_DISTANCE = 80;
 const PERSPECTIVE = 10;
 const FAST = 3.5;
 
-export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, layout }: Props) {
-  const owned = useMemo(() => new Set(unlocked), [unlocked]);
-  const sim = useMemo(() => (layout ? new RunnerSim(layout) : new RunnerSim(deck, createRng(), owned)), [layout, deck, owned]);
+export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, layout, ticket }: Props) {
+  const owned = useMemo(() => new Set(ticket ? ticket.owned : unlocked), [unlocked, ticket]);
+  const sim = useMemo(
+    () => (layout ? new RunnerSim(layout) : ticket ? adventureRunner(ticket) : new RunnerSim(deck, createRng(), owned)),
+    [layout, deck, owned, ticket],
+  );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -105,7 +111,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
   // Hand over to the duel once all cards are in.
   useEffect(() => {
     if (phase !== 'done') return;
-    const t = setTimeout(() => onFinish(sim.picks.slice(), sim.inputs.slice()), reducedMotion ? 600 : 1400);
+    const t = setTimeout(() => onFinish(sim.picks.slice(), sim.inputs.slice(), sim.skippedAt), reducedMotion ? 600 : 1400);
     return () => clearTimeout(t);
   }, [phase, sim, onFinish, reducedMotion]);
 

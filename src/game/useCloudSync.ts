@@ -129,5 +129,15 @@ export function useCloudSync({ account, save, setSave, progress, setProgress }: 
     }, DEBOUNCE_MS);
   }, [phase, uid, save, progress, adopt, kick]);
 
-  return { phase, sync, notice, clearNotice: () => setNotice(''), choose, retry: () => uid && load(uid), accountMode: !!uid };
+  /** A save written by a server function (checked reward): it becomes the current save at once. */
+  const adoptServer = useCallback((c: CloudSave) => {
+    if (!uid) return;
+    adopt(c);
+    writeCache(uid, c, false);
+  }, [uid, adopt]);
+
+  return {
+    phase, sync, notice, clearNotice: () => setNotice(''), notify: setNotice, choose, retry: () => uid && load(uid),
+    accountMode: !!uid, uid, adoptServer,
+  };
 }

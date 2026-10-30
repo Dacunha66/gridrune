@@ -12,6 +12,8 @@ interface Props {
   coins: number;
   onAgain: () => void;
   onMenu: () => void;
+  /** Signed in: the server checks the result before paying out. */
+  status?: 'checking' | 'paid' | 'pending' | 'rejected';
 }
 
 const TITLES: Record<Outcome, string> = { win: 'Sieg!', draw: 'Unentschieden', loss: 'Niederlage' };
@@ -26,7 +28,7 @@ export const RARITY_COLORS: Record<string, string[]> = {
   mythic: ['#ff5f6d', '#ffc371', '#f9f871', '#4ade80', '#60a5fa', '#c084fc'],
 };
 
-export function Result({ outcome, reward, score, coins, onAgain, onMenu }: Props) {
+export function Result({ outcome, reward, score, coins, onAgain, onMenu, status }: Props) {
   const gained = useCountUp(reward.coins, 900, 0);
   const total = useCountUp(coins, 900, coins - reward.coins);
   const newCard = reward.newCard ? getCard(reward.newCard) : null;
@@ -39,6 +41,14 @@ export function Result({ outcome, reward, score, coins, onAgain, onMenu }: Props
 
       <div className="reward-box">
         <p className="reward-coins">+ 🪙 {gained}</p>
+        {status && (
+          <p className={`result-status status-${status}`} role="status">
+            {status === 'checking' ? '☁️ Ergebnis wird vom Server geprüft …'
+              : status === 'paid' ? '✓ Geprüft und in deinem Konto gutgeschrieben'
+                : status === 'pending' ? '⏳ Keine Verbindung – die Belohnung wird gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).'
+                  : '⚠️ Das Ergebnis konnte nicht bestätigt werden – es gibt keine Belohnung.'}
+          </p>
+        )}
         {newCard && (
           <div className="new-card">
             <p>Neue Karte freigeschaltet!</p>
