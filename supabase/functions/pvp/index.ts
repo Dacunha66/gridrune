@@ -7,7 +7,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   PVP_ABSENT_SECONDS, PVP_DAILY_PAID_WINS, PVP_MIN_MOVES_FOR_COINS, PVP_TURN_SECONDS, PVP_WIN_COINS, inviteCode, isGameOver, loadContent,
   normalizeCode, otherSeat, preparePvp, pvpAction, pvpScore, pvpWinner, seatSide, startPvp, timeoutMove, viewState,
-} from 'ENGINE_URL';
+} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@5d66f64cc3f81a93571417d3d0224ec1529d423b/public/server/engine-1dd0d72e15a3.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
