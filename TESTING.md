@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Web-Version – Anmeldung mit Spielername
+
+Neu: Anmelden mit **Spielername oder E-Mail** + Passwort. Spielernamen sind eindeutig (Groß-/Kleinschreibung zählt als gleich; Migration 009: eindeutiger Index, Prüffunktion `name_available`, Schutz beim Registrieren). Beim Registrieren wird vorher geprüft, ob der Name frei ist. Die E-Mail hinter einem Namen sucht nur die Server-Funktion `sign-in` heraus; sie gibt nur die Sitzung zurück, nie die E-Mail. Unbekannter Name und falsches Passwort ergeben dieselbe Antwort. Namensänderung auf einen vergebenen Namen wird abgelehnt.
+
+**Getestet:** Server-Funktion: unbekannter Name → „invalid_credentials“, echter Name + falsches Passwort → gleiche Antwort; `name_available('DACUNHA66')` → false, `('Neuling')` → true. Browser (lokale Kopie gegen die echte Datenbank): Feld „Spielername oder E-Mail“; Name + falsches Passwort → „Name/E-Mail oder Passwort stimmt nicht.“; Registrierung mit „dacunha66“ → „Dieser Spielername ist schon vergeben.“ Erfolgreiche Anmeldung mit Namen: vom Admin mit seinem echten Konto zu testen.
+
 ## Web-Version Phase 2 – Anmeldung (nur gridrune.netlify.app)
 
 Neu: Willkommen-Bildschirm mit „Anmelden“, „Konto erstellen“ (Spielername, E-Mail, Passwort ≥ 8 Zeichen) und „Als Gast spielen“ (Fortschritt nur im Browser; Wahl wird gemerkt). „Passwort vergessen“ mit Link per E-Mail und Bildschirm „Neues Passwort“. Menü-Chip mit Spielername bzw. „Gast · Anmelden / Konto erstellen“; „Mein Konto“: Name ändern, Passwort-Link, Abmelden. Beim Registrieren legt die Datenbank automatisch das Spielerprofil an (Migration 008; ungültige Namen werden „Spieler“; Profile nur für einen selbst lesbar). E-Mail-Links funktionieren auch auf einem anderen Gerät (Implicit-Flow). Die claude.ai-Version hat weiterhin keine Konten. Spielstand im Konto folgt in Phase 3.

@@ -5,7 +5,7 @@ import logoMark from '../assets/gridrune-mark.png';
 import logoWord from '../assets/gridrune-wordmark.png';
 import { Header } from './Header';
 import {
-  Account, NAME_MAX, PASSWORD_MIN, describeAuthError, emailProblem, nameProblem, passwordProblem, sendPasswordMail, setDisplayName,
+  Account, NAME_MAX, PASSWORD_MIN, describeAuthError, emailProblem, loginProblem, nameProblem, passwordProblem, sendPasswordMail, setDisplayName,
   setGuest, setNewPassword, signIn, signOut, signUp,
 } from '../game/account';
 
@@ -46,7 +46,7 @@ export function Welcome({ onGuest }: { onGuest: () => void }) {
     e.preventDefault();
     if (busy) return;
     if (mode === 'login') {
-      run([emailProblem(email), password ? null : 'Bitte das Passwort eingeben.'], () => signIn(email, password));
+      run([loginProblem(email), password ? null : 'Bitte das Passwort eingeben.'], () => signIn(email, password));
     } else if (mode === 'register') {
       run([nameProblem(name), emailProblem(email), passwordProblem(password)], async () => {
         const result = await signUp(email, password, name);
@@ -84,13 +84,19 @@ export function Welcome({ onGuest }: { onGuest: () => void }) {
           ) : (
             <>
               {mode === 'register' && (
-                <Field label="Spielername" hint={`2–${NAME_MAX} Zeichen, später in der Liga für andere sichtbar`}>
+                <Field label="Spielername" hint={`2–${NAME_MAX} Zeichen, einmalig – damit meldest du dich an`}>
                   <input className="admin-input" value={name} maxLength={NAME_MAX} autoComplete="nickname" onChange={(e) => setName(e.target.value)} />
                 </Field>
               )}
-              <Field label="E-Mail">
-                <input className="admin-input" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </Field>
+              {mode === 'login' ? (
+                <Field label="Spielername oder E-Mail">
+                  <input className="admin-input" type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={email} onChange={(e) => setEmail(e.target.value)} />
+                </Field>
+              ) : (
+                <Field label="E-Mail" hint={mode === 'register' ? 'nur für die Bestätigung und „Passwort vergessen“ – nicht sichtbar für andere' : undefined}>
+                  <input className="admin-input" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </Field>
+              )}
               {mode !== 'forgot' && (
                 <Field label="Passwort" hint={mode === 'register' ? `mindestens ${PASSWORD_MIN} Zeichen` : undefined}>
                   <input className="admin-input" type="password" autoComplete={mode === 'register' ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -155,7 +161,8 @@ export function AccountPage({ account, onBack, onRenamed }: { account: Account; 
     try {
       setMessage(await action());
     } catch (e) {
-      setError((e as { code?: string })?.code === '23514' ? 'Dieser Name ist nicht erlaubt.' : describeAuthError(e));
+      const code = (e as { code?: string })?.code;
+      setError(code === '23514' ? 'Dieser Name ist nicht erlaubt.' : describeAuthError(e));
     } finally {
       setBusy(false);
     }

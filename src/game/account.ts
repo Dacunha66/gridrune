@@ -101,7 +101,8 @@ export function describeAuthError(e: unknown): string {
   const err = e as { code?: string; message?: string; status?: number } | null;
   const code = err?.code ?? '';
   const msg = (err?.message ?? '').toLowerCase();
-  if (code === 'invalid_credentials' || msg.includes('invalid login')) return 'E-Mail oder Passwort stimmt nicht.';
+  if (code === 'invalid_credentials' || msg.includes('invalid login')) return 'Name/E-Mail oder Passwort stimmt nicht.';
+  if (code === 'name_taken' || code === '23505' || msg.includes('display_name_taken') || msg.includes('database error saving new user')) return 'Dieser Spielername ist schon vergeben. Bitte wähle einen anderen.';
   if (code === 'email_not_confirmed' || msg.includes('not confirmed')) return 'Bitte bestätige zuerst deine E-Mail-Adresse (Link in der E-Mail).';
   if (code === 'user_already_exists' || msg.includes('already registered')) return 'Zu dieser E-Mail gibt es schon ein Konto. Bitte anmelden.';
   if (code === 'weak_password') return `Das Passwort ist zu schwach. Bitte mindestens ${PASSWORD_MIN} Zeichen, am besten mit Ziffern.`;
@@ -112,8 +113,17 @@ export function describeAuthError(e: unknown): string {
   return 'Das hat nicht geklappt. Bitte prüfe deine Internetverbindung und versuche es erneut.';
 }
 
+/** Is this player name still free? (Upper/lower case counts as the same name.) */
+export async function nameAvailable(name: string): Promise<boolean> {
+  const sb = (await client())!;
+  const { data, error } = await sb.rpc('name_available', { wanted: name.trim() });
+  if (error) throw error;
+  return data === true;
+}
+
 export async function signUp(email: string, password: string, name: string): Promise<'confirm' | 'signedIn'> {
   const sb = (await client())!;
+  if (!(await nameAvailable(name))) throw { code: 'name_taken' };
   const { data, error } = await sb.auth.signUp({
     email: email.trim(),
     password,
@@ -124,11 +134,34 @@ export async function signUp(email: string, password: string, name: string): Pro
   return data.session ? 'signedIn' : 'confirm';
 }
 
-export async function signIn(email: string, password: string): Promise<void> {
+/** Sign in with player name or e-mail. A name is turned into the e-mail on the server (function "sign-in"). */
+export async function signIn(login: string, password: string): Promise<void> {
   const sb = (await client())!;
-  const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
-  if (error) throw error;
+  const value = login.trim();
+  if (value.includes('@')) {
+    const { error } = await sb.auth.signInWithPassword({ email: value, password });
+    if (error) throw error;
+  } else {
+    const { data, error } = await sb.functions.invoke('sign-in', { body: { login: value, password } });
+    // The function answers 400 with { error: code } – read the code from the response.
+    let body = data as { access_token?: string; refresh_token?: string; error?: string } | null;
+    if (error) {
+      const res = (error as { context?: Response }).context;
+      body = res && typeof res.json === 'function' ? await res.json().catch(() => null) : null;
+      throw { code: body?.error ?? 'network' };
+    }
+    if (!body?.access_token || !body.refresh_token) throw { code: body?.error ?? 'invalid_credentials' };
+    const { error: sessionError } = await sb.auth.setSession({ access_token: body.access_token, refresh_token: body.refresh_token });
+    if (sessionError) throw sessionError;
+  }
   setGuest(false);
+}
+
+/** Player name or e-mail for signing in. */
+export function loginProblem(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return 'Bitte Spielername oder E-Mail eingeben.';
+  return value.includes('@') ? emailProblem(value) : null;
 }
 
 export async function signOut(): Promise<void> {
