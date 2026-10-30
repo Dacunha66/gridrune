@@ -400,7 +400,8 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
    */
   async function cleanupImage(imageId: string | null, current: CardRecord | null) {
     if (!assets || !imageId) return;
-    const inUse = records.some((r) => r.imageId === imageId && r.id !== initial.id) || current?.imageId === imageId;
+    const uses = (r: CardRecord | null) => !!r && (r.imageId === imageId || r.thumbId === imageId);
+    const inUse = records.some((r) => uses(r) && r.id !== initial.id) || uses(current);
     if (!inUse) await assets.delete(imageId).catch(() => undefined);
   }
 
@@ -410,10 +411,12 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
     if (!file || !assets) return;
     setBusy('uploading');
     try {
-      const blob = await prepareCardImage(file);
+      // Full picture for the large view, small copy for hand, board and lists (loads much faster).
+      const [blob, small] = await Promise.all([prepareCardImage(file), prepareCardImage(file, 360, 480)]);
       const res = await assets.upload(blob, { type: 'image/jpeg' });
-      uploaded.current.push(res.id);
-      set('imageId', res.id);
+      const thumb = await assets.upload(small, { type: 'image/jpeg' });
+      uploaded.current.push(res.id, thumb.id);
+      setDraft((d) => ({ ...d, imageId: res.id, thumbId: thumb.id }));
       onToast('Bild hochgeladen – Speichern nicht vergessen');
     } catch (err) {
       onToast((err as Error)?.message === 'image_decode' ? 'Dieses Bild konnte nicht gelesen werden.' : describeError(err));
@@ -432,8 +435,9 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
       setSaved(rec);
       setDraft(rec);
       // Remove pictures that were replaced or uploaded and then discarded.
-      const candidates = new Set([...(before?.imageId ? [before.imageId] : []), ...uploaded.current]);
+      const candidates = new Set([...(before?.imageId ? [before.imageId] : []), ...(before?.thumbId ? [before.thumbId] : []), ...uploaded.current]);
       candidates.delete(rec.imageId ?? '');
+      candidates.delete(rec.thumbId ?? '');
       uploaded.current = [];
       for (const id of candidates) await cleanupImage(id, rec);
       onToast(rec.status === 'active' ? 'Gespeichert ✓ – die Karte ist im Spiel' : 'Gespeichert ✓');
@@ -450,6 +454,7 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
     try {
       await deleteCardRecord(db, saved.id);
       await cleanupImage(saved.imageId, null);
+      await cleanupImage(saved.thumbId ?? null, null);
       for (const id of uploaded.current) await cleanupImage(id, null);
       onToast(`„${saved.name}“ gelöscht`);
       onClose();
@@ -461,7 +466,7 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
 
   async function close() {
     // Pictures uploaded in this session but never saved are removed again.
-    for (const id of uploaded.current) if (id !== saved?.imageId) await cleanupImage(id, saved);
+    for (const id of uploaded.current) if (id !== saved?.imageId && id !== saved?.thumbId) await cleanupImage(id, saved);
     onClose();
   }
 
@@ -501,7 +506,7 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
                     <input id="card-image" type="file" accept="image/*" hidden disabled={busy === 'uploading'} onChange={onPickImage} />
                   </label>
                 ) : <small className="muted">Bild-Upload ist in dieser Ansicht nicht verfügbar.</small>}
-                {draft.imageId && <button type="button" className="btn btn-small" onClick={() => set('imageId', null)}>Bild entfernen</button>}
+                {draft.imageId && <button type="button" className="btn btn-small" onClick={() => setDraft((d) => ({ ...d, imageId: null, thumbId: null }))}>Bild entfernen</button>}
               </div>
               <small className="muted">Foto aus der Mediathek oder Kamera. Es wird automatisch auf das Kartenformat 3:4 zugeschnitten.</small>
             </div>

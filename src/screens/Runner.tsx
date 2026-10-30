@@ -564,7 +564,7 @@ function drawCard(
   ctx.fill();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const picture = c.image ? cardImage(c.image) : null;
+  const picture = c.thumb ?? c.image ? cardImage((c.thumb ?? c.image)!) : null;
   if (picture) {
     ctx.save();
     roundRect(ctx, ax, ay, aw, ah, cw * 0.06);

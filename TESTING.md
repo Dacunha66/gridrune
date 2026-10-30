@@ -1,5 +1,9 @@
 # Testprotokoll
 
+## Schnellere Bilder
+
+Neu: Karten haben zusätzlich ein kleines Vorschaubild (360 × 480 JPEG, `thumbId`) für Hand, Spielfeld, Sammlung, Deck und Lauf; die große Kartenansicht lädt weiter das Originalbild. Neue Uploads im Karteneditor erzeugen beide automatisch. Für die vorhandenen 35 Kartenbilder erstellt: 12,5 MB → 1,9 MB. Seitenhintergründe und Spielfeld als WebP (z. B. „Hintergrund Sterne“ 5,95 MB → 0,63 MB), Runenbilder 768 px WebP (je 1,4–2,4 MB → 0,13–0,24 MB); Originale bleiben im Speicher. Programmdateien werden ein Jahr im Browser zwischengespeichert.
+
 ## Web-Version Phase 3 – Spielstand im Konto
 
 Neu: Angemeldete Spieler spielen mit dem Spielstand ihres Kontos (Münzen, Karten, Deck, Skins, Runen, Statistik, Kampagne). Beim ersten Anmelden: „Spielstand übernehmen“ (einmalig aus dem Browser) oder „Neu beginnen“. Jede Änderung wird sofort auf dem Gerät gesichert und kurz danach über die Server-Funktion `save-sync` gespeichert; ohne Verbindung wird automatisch erneut versucht. Menü-Hinweis: „☁️ Dein Spielstand ist in deinem Konto gespeichert“. Zwei Geräte: Der neuere Stand vom Server gewinnt (Hinweis im Menü). Gäste: unverändert im Browser; der Gast-Spielstand bleibt auch nach dem Übernehmen erhalten.

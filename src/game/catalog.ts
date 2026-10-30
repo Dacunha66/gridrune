@@ -29,6 +29,8 @@ export interface CardRecord {
   status: CardStatus;
   /** Asset id of the uploaded picture, or null. */
   imageId: string | null;
+  /** Small copy of the picture (360 × 480) for hand, board and lists; null = use the full picture. */
+  thumbId?: string | null;
   /** May be offered as a new card in the runner's final gate. */
   inRunner: boolean;
   /** Only obtainable as a duel reward (never in booster packs). */
@@ -78,6 +80,7 @@ export function parseCardRecord(id: string, raw: unknown): CardRecord | null {
     description: typeof r.description === 'string' ? r.description.trim().slice(0, DESCRIPTION_MAX) : '',
     status: STATUSES.includes(r.status as CardStatus) ? (r.status as CardStatus) : 'draft',
     imageId: typeof r.imageId === 'string' && ASSET_RE.test(r.imageId) ? r.imageId : null,
+    thumbId: typeof r.thumbId === 'string' && ASSET_RE.test(r.thumbId) && typeof r.imageId === 'string' ? r.thumbId : null,
     // Older documents have no flags: they keep the previous behaviour.
     inRunner: r.inRunner !== false,
     rewardOnly: r.rewardOnly === true,
@@ -117,6 +120,7 @@ export function recordToCard(rec: CardRecord): CardDef {
     art: rec.art,
     hue: rec.hue,
     image: imageUrl(rec.imageId),
+    thumb: imageUrl(rec.thumbId ?? null),
     description: rec.description || undefined,
     inRunner: rec.inRunner,
     rewardOnly: rec.rewardOnly,

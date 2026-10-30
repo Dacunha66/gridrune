@@ -125,7 +125,7 @@ export function Card({
       <span className="cs-frame" aria-hidden="true" />
       {premium && <ClassFrame cls={c.cls} />}
       <span className="art" aria-hidden="true">
-        {locked ? <span className="art-emoji">🔒</span> : <CardArt image={c.image} art={c.art} />}
+        {locked ? <span className="art-emoji">🔒</span> : <CardArt image={size === 'lg' || detail ? c.image : c.thumb ?? c.image} art={c.art} />}
       </span>
       {DIRS.map((d, i) => {
         const delta = values ? effective(i) - (base ? base[i] : c[d]) : mod;
@@ -156,7 +156,7 @@ export function Card({
         <i className="rivet r1" /><i className="rivet r2" /><i className="rivet r3" /><i className="rivet r4" />
       </span>
       <span className="art" aria-hidden="true">
-        {locked ? <span className="art-emoji">🔒</span> : <CardArt image={c.image} art={c.art} />}
+        {locked ? <span className="art-emoji">🔒</span> : <CardArt image={size === 'lg' || detail ? c.image : c.thumb ?? c.image} art={c.art} />}
       </span>
       {detail && !locked && (
         <span className="parchment">

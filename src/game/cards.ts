@@ -26,6 +26,8 @@ export interface CardDef {
   hue: number;
   /** Optional picture (URL or data URI). Shown instead of the emoji; cards are 3:4 portrait. */
   image?: string;
+  /** Small copy of the picture for hand, board and lists (loads much faster); falls back to `image`. */
+  thumb?: string;
   /** Optional flavour text, shown in the card details. */
   description?: string;
   /** false: never offered as a new card in the runner (default true). */
