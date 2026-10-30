@@ -10,6 +10,7 @@ import {
   parseOpponent, parseWorld, worldToDoc,
 } from './campaign';
 import { RUNES_COLLECTION, RuneDef, parseRune, runeToDoc } from './runes';
+import { PackLook, SHOP_DOC, parseShopDoc, shopToDoc } from './shop';
 import { DESIGNS_COLLECTION, DESIGN_STATE_DOC, Design, DesignState, designToDoc, displaySize, parseDesign, parseDesignState } from './designs';
 
 export const CARDS_COLLECTION = 'cards';
@@ -267,6 +268,21 @@ export async function prepareCoverImage(file: Blob, target: { w: number; h: numb
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** Look of the booster packs (`settings/shop`). null = no database or nothing saved (built-in look). */
+export async function loadShopLooks(db: Db | null): Promise<Record<string, PackLook> | null> {
+  if (!db) return null;
+  try {
+    const snap = await db.collection(SETTINGS_COLLECTION).doc(SHOP_DOC).get();
+    return snap.exists ? parseShopDoc(snap.data()) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveShopLooks(db: Db, looks: Record<string, PackLook>): Promise<void> {
+  await db.collection(SETTINGS_COLLECTION).doc(SHOP_DOC).set(shopToDoc(looks));
 }
 
 /** Runes saved by the admin. null = no database (the four basic runes apply). */

@@ -3,6 +3,7 @@ import { CARDS, Rarity, getCard, pickByRarity } from './cards';
 import { Rng } from './rng';
 import { SkinKind, getSkin, isSkinId } from './skins';
 import { SaveData } from './storage';
+import { ImageRef, parseImage } from './campaign';
 
 export interface PackDef {
   id: string;
@@ -88,4 +89,55 @@ export function equipSkin(save: SaveData, skinId: string): SaveData {
   if (!isSkinId(skinId) || !save.skins.owned.includes(skinId)) return save;
   const kind: SkinKind = getSkin(skinId).kind;
   return { ...save, skins: { ...save.skins, [kind]: skinId } };
+}
+
+// ---------- Look of the packs (admin: tab "Shop") ----------
+// Only the presentation can be changed: picture, name and text. Price, size and odds are game rules and stay in code.
+
+export const SHOP_DOC = 'shop';
+export const PACK_NAME_MAX = 30;
+export const PACK_TEXT_MAX = 140;
+
+export interface PackLook {
+  image: ImageRef | null;
+  /** Empty = the built-in name / text. */
+  name: string;
+  description: string;
+}
+
+let LOOKS: Record<string, PackLook> = {};
+
+export function setPackLooks(looks: Record<string, PackLook>): void {
+  LOOKS = looks;
+}
+
+export function packLooks(): Record<string, PackLook> {
+  return LOOKS;
+}
+
+/** How a pack appears in the shop: the admin's picture and texts, otherwise the built-in ones. */
+export function packView(pack: PackDef, look: PackLook | undefined = LOOKS[pack.id]): { name: string; description: string; image: ImageRef | null } {
+  return { name: look?.name || pack.name, description: look?.description || pack.description, image: look?.image ?? null };
+}
+
+/** Turns an untrusted `settings/shop` document into pack looks (unknown packs and bad values are dropped). */
+export function parseShopDoc(raw: unknown): Record<string, PackLook> {
+  const out: Record<string, PackLook> = {};
+  const packs = raw && typeof raw === 'object' ? (raw as { packs?: unknown }).packs : null;
+  if (!packs || typeof packs !== 'object') return out;
+  for (const pack of PACKS) {
+    const r = (packs as Record<string, unknown>)[pack.id];
+    if (!r || typeof r !== 'object') continue;
+    const x = r as Record<string, unknown>;
+    out[pack.id] = {
+      image: parseImage(x.image),
+      name: typeof x.name === 'string' ? x.name.trim().slice(0, PACK_NAME_MAX) : '',
+      description: typeof x.description === 'string' ? x.description.trim().slice(0, PACK_TEXT_MAX) : '',
+    };
+  }
+  return out;
+}
+
+export function shopToDoc(looks: Record<string, PackLook>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify({ packs: looks, updatedAt: new Date().toISOString() })) as Record<string, unknown>;
 }

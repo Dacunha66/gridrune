@@ -1,5 +1,16 @@
 # Testprotokoll
 
+## Version 1.25 – Deck und Shop überarbeitet, Booster-Bilder im Admin
+
+Neu:
+- **Deck bearbeiten:** Oben die Leiste „Dein Deck“ mit allen gewählten Karten (antippen = herausnehmen), freie Plätze gestrichelt, Zähler, Ø Stärke, Verteilung nach Klasse und Seltenheit, Schnellauswahl (Starterdeck, Stärkste 20, Leeren). Darunter Filter nach Klasse und Sortierung (Seltenheit, Stärke, Name). Karten im Deck mit goldenem Rand und „✓ Im Deck“. Regeln unverändert (20 verschiedene Karten).
+- **Shop:** Booster als große Packungen nebeneinander (gezeichnete Folien-Packung oder hochgeladenes Bild, Glanz-Effekt), Kartenzahl, Text, Preis bzw. „Noch 🪙 X“, „Episch+ garantiert“, Chancen pro Karte zum Aufklappen, Tauschwerte für doppelte Karten in Seltenheitsfarben. Beim Öffnen erscheint das Booster-Bild. Preise, Chancen und Inhalt unverändert.
+- **Admin-Reiter „Shop“:** pro Booster Bild hochladen (empfohlen 768 × 1024 px, 3:4, Ausschnitt per Finger), Name und Beschreibung (leer = Standard), Vorschau, Speichern (`settings/shop`). Preis, Kartenzahl und Chancen sind dort bewusst nicht änderbar.
+
+**Automatische Tests:** 221, alle bestanden.
+
+**Browser (iPhone, iPhone SE):** Deck: Leiste, Zähler, Klassen-Verteilung, Filter, Sortierung, „Im Deck“-Markierung ohne Überlagerungen. Shop: beide Booster, Chancen aufklappbar, Kauf 520 → 380 Münzen, Schüttel- und Öffnen-Animation, 3 Karten. Admin: Bild für den Helden-Booster hochgeladen, Name „Drachenhort-Pack“ gespeichert → Shop zeigt Bild und Namen, auch nach Neuladen. Keine Fehler.
+
 ## Web-Version Phase 1 – gridrune.netlify.app mit Supabase
 
 Neu:

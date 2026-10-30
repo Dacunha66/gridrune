@@ -4,7 +4,8 @@ import { RARITY_COLORS } from './Result';
 import { Card } from '../components/Card';
 import { CARDS, ownedActiveIds, RARITIES, RARITY_LABEL, RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
-import { PACKS, PackCard, PackDef, buyPack, buySkin, equipSkin } from '../game/shop';
+import { DUPLICATE_REFUND, PACKS, PackCard, PackDef, PackLook, buyPack, buySkin, equipSkin, packView } from '../game/shop';
+import { CampaignImage } from './Campaign';
 import { SKINS, SkinDef } from '../game/skins';
 import { SaveData } from '../game/storage';
 import { Header } from './Header';
@@ -21,17 +22,36 @@ export function skinStyle(colors: [string, string, string]): CSSProperties {
 
 const PACK_ART: Record<string, string> = { abenteurer: '🎴', helden: '👑' };
 
+/** The booster: the admin's picture, otherwise a foil pack drawn in CSS with the pack's symbol and name. */
+export function PackArt({ pack, big = false, look }: { pack: PackDef; big?: boolean; look?: PackLook }) {
+  const view = look ? packView(pack, look) : packView(pack);
+  return (
+    <span className={`pack-art pack-${pack.id} ${big ? 'big' : ''} ${view.image ? 'has-image' : ''}`} aria-hidden="true">
+      {view.image ? <CampaignImage img={view.image} /> : (
+        <>
+          <span className="pack-crimp top" />
+          <span className="pack-emblem">{PACK_ART[pack.id] ?? '🎴'}</span>
+          <span className="pack-label">{view.name}</span>
+          <span className="pack-crimp bottom" />
+        </>
+      )}
+      <span className="pack-shine" />
+    </span>
+  );
+}
+
 function bestRarity(cards: PackCard[]): Rarity {
   return cards.map((c) => getCard(c.cardId).rarity).sort((a, b) => RARITY_ORDER[b] - RARITY_ORDER[a])[0];
 }
 
-function odds(pack: PackDef): string {
+/** Chance per rarity for one card of the pack, as German percent text. */
+function odds(pack: PackDef): { rarity: Rarity; text: string }[] {
   const total = RARITIES.reduce((sum, r) => sum + pack.weights[r], 0);
   const pct = (n: number) => {
     const v = (n / total) * 100;
     return `${v >= 1 ? Math.round(v) : v.toFixed(1).replace('.', ',')} %`;
   };
-  return RARITIES.map((r) => `${RARITY_LABEL[r]} ${pct(pack.weights[r])}`).join(' · ');
+  return RARITIES.map((r) => ({ rarity: r, text: pct(pack.weights[r]) }));
 }
 
 export function Shop({ save, onChange, onBack }: Props) {
@@ -81,30 +101,51 @@ export function Shop({ save, onChange, onBack }: Props) {
   return (
     <main className="screen shop">
       <Header title="Shop" onBack={onBack} right={<span key={save.coins} className="pill coin-pill">🪙 {coins}</span>} />
-      <div className="chips" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === 'packs'} className={`chip ${tab === 'packs' ? 'active' : ''}`} onClick={() => { setTab('packs'); setMessage(''); }}>Booster-Packs</button>
-        <button type="button" role="tab" aria-selected={tab === 'skins'} className={`chip ${tab === 'skins' ? 'active' : ''}`} onClick={() => { setTab('skins'); setMessage(''); }}>Skins</button>
+      <div className="segmented deck-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'packs'} className={`seg ${tab === 'packs' ? 'active' : ''}`} onClick={() => { setTab('packs'); setMessage(''); }}>🎴 Booster</button>
+        <button type="button" role="tab" aria-selected={tab === 'skins'} className={`seg ${tab === 'skins' ? 'active' : ''}`} onClick={() => { setTab('skins'); setMessage(''); }}>🎨 Skins</button>
       </div>
-      <p className="hint" aria-live="polite">{message || (tab === 'packs' ? 'Münzen bekommst du für jedes Duell – am meisten für Siege.' : 'Skins ändern nur das Aussehen, nicht die Kartenwerte.')}</p>
+      <p className="hint" aria-live="polite">{message || (tab === 'packs' ? 'Münzen verdienst du in jedem Duell – Siege bringen am meisten.' : 'Skins ändern nur das Aussehen, nie die Kartenwerte.')}</p>
 
       <div className="scroll">
         {tab === 'packs' && (
           <div className="shop-list">
-            {complete && <p className="muted center">Du hast alle 40 Karten! Doppelte Karten werden in Münzen umgetauscht.</p>}
-            {PACKS.map((pack) => (
-              <article key={pack.id} className={`shop-item pack-${pack.id}`}>
-                <div className="pack-art" aria-hidden="true">{PACK_ART[pack.id] ?? '🎴'}</div>
-                <div className="shop-info">
-                  <h2>{pack.name}</h2>
-                  <p>{pack.description}</p>
-                  <p className="odds">{odds(pack)}</p>
-                </div>
-                <button type="button" className="btn btn-primary" disabled={save.coins < pack.price} onClick={() => openPack(pack)}>
-                  🪙 {pack.price}
-                </button>
-              </article>
-            ))}
-            <p className="muted small">Doppelte Karten werden in Münzen umgetauscht: gewöhnlich 🪙 10, selten 🪙 25, episch 🪙 60, legendär 🪙 150.</p>
+            {complete && <p className="shop-note">Du hast alle Karten! Doppelte Karten werden in Münzen umgetauscht.</p>}
+            <div className="pack-grid">
+              {PACKS.map((pack) => {
+                const view = packView(pack);
+                const missing = pack.price - save.coins;
+                return (
+                  <article key={pack.id} className={`pack-tile pack-${pack.id}`}>
+                    {pack.guaranteed && <span className="pack-ribbon">Episch+ garantiert</span>}
+                    <button type="button" className="pack-tile-art" disabled={missing > 0} onClick={() => openPack(pack)} aria-label={`${view.name} kaufen und öffnen`}>
+                      <PackArt pack={pack} />
+                    </button>
+                    <h2>{view.name}</h2>
+                    <p className="pack-size">{pack.size} Karten</p>
+                    <p className="pack-desc">{view.description}</p>
+                    <button type="button" className="btn btn-primary pack-buy" disabled={missing > 0} onClick={() => openPack(pack)}>
+                      {missing > 0 ? `Noch 🪙 ${missing}` : `🪙 ${pack.price}`}
+                    </button>
+                    <details className="pack-odds">
+                      <summary>Chancen pro Karte</summary>
+                      <ul>
+                        {odds(pack).map((o) => (
+                          <li key={o.rarity}><span className={`rarity-text rarity-${o.rarity}`}>{RARITY_LABEL[o.rarity]}</span><b>{o.text}</b></li>
+                        ))}
+                      </ul>
+                      {pack.guaranteed && <p className="muted small">Die letzte Karte ist mindestens episch.</p>}
+                    </details>
+                  </article>
+                );
+              })}
+            </div>
+            <div className="shop-note">
+              <b>Doppelte Karten</b> werden in Münzen umgetauscht:{' '}
+              {(['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as Rarity[]).map((r, i) => (
+                <span key={r}>{i > 0 && ' · '}<span className={`rarity-text rarity-${r}`}>{RARITY_LABEL[r]}</span> 🪙 {DUPLICATE_REFUND[r]}</span>
+              ))}
+            </div>
           </div>
         )}
 
@@ -149,9 +190,9 @@ export function Shop({ save, onChange, onBack }: Props) {
       </div>
 
       {opened && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={`${opened.pack.name} geöffnet`}>
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={`${packView(opened.pack).name} geöffnet`}>
           <div className="modal pack-reveal" key={opened.key}>
-            <h2>{opened.pack.name}</h2>
+            <h2>{packView(opened.pack).name}</h2>
             {opened.stage === 'shake' ? (
               <button
                 type="button"
@@ -159,7 +200,7 @@ export function Shop({ save, onChange, onBack }: Props) {
                 onClick={() => setOpened({ ...opened, stage: 'open' })}
                 aria-label="Pack öffnen"
               >
-                <span className="pack-art big">{PACK_ART[opened.pack.id] ?? '🎴'}</span>
+                <PackArt pack={opened.pack} big />
                 <span className="small muted">Tippen zum Öffnen</span>
               </button>
             ) : (

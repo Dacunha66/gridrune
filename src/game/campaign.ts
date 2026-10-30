@@ -35,7 +35,7 @@ export interface ImageRef {
   fit: ImageFit;
 }
 
-export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground' | 'runeArt' | 'runeIcon';
+export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground' | 'runeArt' | 'runeIcon' | 'packArt';
 
 /**
  * Recommended sizes, derived from the layout: the world map and boss background fill a phone screen
@@ -53,6 +53,8 @@ export const IMAGE_SPECS: Record<ImageKind, { label: string; w: number; h: numbe
   runeArt: { label: 'Runen-Illustration', w: 1024, h: 1024, ratio: '1:1 (quadratisch, wird rund gezeigt)', aspect: 1 },
   // Rune symbol: 32–44 points in the duel bar and the collection (256 px is sharp at 3×, transparent PNG).
   runeIcon: { label: 'Runen-Symbol', w: 256, h: 256, ratio: '1:1 (PNG mit Transparenz)', aspect: 1 },
+  // Booster pack: up to ~200 points wide in the shop and the opening animation (768 px is sharp at 3×).
+  packArt: { label: 'Booster-Bild', w: 768, h: 1024, ratio: '3:4 (Hochformat)', aspect: 3 / 4 },
 };
 
 export type RewardType = 'coins' | 'card' | 'pack' | 'alt_art' | 'frame' | 'title' | 'achievement' | 'unlock';
