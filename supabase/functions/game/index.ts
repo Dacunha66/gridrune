@@ -7,7 +7,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
   buyPackServer, buySkinServer, claimCampaign, finishMission, loadContent, prepareMission,
-} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@1ff3a28cffd7919e53caef9caad5d79b0ac2ca01/public/server/engine-5c10cb5d6422.js';
+} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@0397641dd3b116eb484fb6e47c4f66fd996e6d74/public/server/engine-231ee351ee2b.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
