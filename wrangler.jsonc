@@ -1,4 +1,5 @@
 // Cloudflare (Workers mit statischen Dateien): liefert das gebaute Spiel aus dem Ordner dist aus.
+// Gebaut wird der Zweig claude/project-card-rush-dev-84c1jl (npm run build, dann npx wrangler deploy).
 {
   "name": "gridrune",
   "compatibility_date": "2026-10-01",
