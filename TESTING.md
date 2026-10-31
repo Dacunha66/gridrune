@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Zweite Kampagne „Glutgebirge“, neue Runen-Verteilung, Rune des Waldes
+
+Neu: Welt 2 „Glutgebirge“ (m011–m020, Gegner o011–o020, Arenen Aschetal a16 und Herz des Vulkans a17), frei nach dem Wald. Runen nur noch bei Level 5 und 10: Wald 5 Rune des Waldes (neu, rn05: +1 auf bis zu 2 Naturkarten), Wald 10 Nachhall, Feuer 5 Glut, Feuer 10 Fluch; Verdrehung haben alle ab Start. Bereits freigespielte Runen werden neu verteilt (Wunsch). Server-Funktionen adventure und game auf die neue Engine gebracht.
+
+Geprüft: 247 automatische Tests (10 Level ohne Fehler, Freischaltung nach dem Wald, Runen-Verteilung). Wichtig: Die Runen-Einträge in der Datenbank (aus der Kartenverwaltung) überschreiben die eingebaute Verteilung – sie müssen im Admin unter „Runen“ angepasst werden. Draft-Liga online wartet noch auf die Datenbank-Änderung 014.
+
 ## Web-Version – Online-Duelle gegen echte Spieler
 
 Neu (nur mit Konto): Menüpunkt „⚔️ Online-Duell“. 8 Karten aus dem Deck wählen, dann Freund herausfordern (6-stelliger Code, teilbar), Code eingeben oder Zufallsgegner suchen. Der Server (Funktion `pvp`) prüft jeden Zug; jeder Spieler sieht nur die eigene Hand. 30 s pro Zug (sonst zufällige Karte), 20 s ohne Verbindung = Sieg für den anderen, Aufgeben = Niederlage. Sieg: 🪙 100 (höchstens 3 bezahlte Siege pro Tag gegen denselben Gegner; bei Abbruch/Aufgabe erst ab 4 Zügen). Online-Bilanz im Online-Bereich. Liga-Arena mit Felsfeld, Runen nach Liga-Regeln.
