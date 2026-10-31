@@ -1,14 +1,10 @@
 # Testprotokoll
 
-## Offen: wenn Netlify wieder veröffentlicht (Credits aufgebraucht, Stand 31.10.)
+## Umzug zu Cloudflare (31.10.)
 
-Live läuft noch der Stand vom Online-Duell (ohne Belohnungs-Animation, Draft-Liga, Glutgebirge). Die Server-Funktionen `adventure` und `game` sind deshalb wieder auf die dazu passende Engine (Commit 5d66f64, engine-1dd0d72e15a3) gestellt. Sobald die neue Version live ist, sofort:
-1. `adventure` und `game` auf die aktuelle Engine umstellen und neu veröffentlichen (sonst passen Runen-Liste und Kampagne nicht zusammen).
-2. Migration 014 (Draft) einspielen, dann `pvp` mit der aktuellen Engine veröffentlichen.
-3. Runen im Admin: Glut → „Schmiede am Berg“, Fluch → „Herz des Vulkans“.
-4. Feuer-Klasse für Funkenwicht, Glutkäfer, Lavaechse, Funkenfee, Aschenphönix, Meteorreiter, Vulkanherz, Urdrache Ignivor (Wunsch des Spielleiters).
-5. Test-Konten pvptest1/2.e2e3 löschen.
+Die Seite läuft jetzt unter https://gridrune.d-reich91.workers.dev (Cloudflare Workers mit statischen Dateien, `wrangler.jsonc`, baut den Zweig claude/project-card-rush-dev-84c1jl). Netlify hatte keine Credits mehr und bleibt auf dem alten Stand – nicht mehr benutzen. Server-Funktionen `adventure` und `game` laufen wieder auf der aktuellen Engine (0397641, engine-231ee351ee2b). Vom Spielleiter bestätigt: Seite lädt, Glutgebirge und Draft-Liga sind da.
 
+Noch offen (Spielleiter am PC): Migration 014 + `pvp` neu veröffentlichen (Online-Draft), Feuer-Klasse für 8 Karten, Test-Konten löschen; im Admin Glut → „Schmiede am Berg“, Fluch → „Herz des Vulkans“; Supabase Site URL/Redirect auf die neue Adresse.
 
 ## Zweite Kampagne „Glutgebirge“, neue Runen-Verteilung, Rune des Waldes
 
