@@ -49,15 +49,16 @@ describe('Kampagne: Flüsterwald', () => {
     const c = content();
     const errors = worldProblems(BUILTIN_WORLDS[0], c).filter((p) => p.level === 'error');
     expect(errors).toEqual([]);
-    expect(BUILTIN_MISSIONS).toHaveLength(10);
-    expect(BUILTIN_MISSIONS.map((m) => m.kind)).toEqual(['tutorial', 'normal', 'normal', 'normal', 'special', 'normal', 'normal', 'elite', 'elite', 'boss']);
+    const wald = BUILTIN_MISSIONS.filter((m) => m.worldId === 'w01');
+    expect(wald).toHaveLength(10);
+    expect(wald.map((m) => m.kind)).toEqual(['tutorial', 'normal', 'normal', 'normal', 'special', 'normal', 'normal', 'elite', 'elite', 'boss']);
     for (const o of BUILTIN_OPPONENTS) {
       expect(o.deck).toHaveLength(HAND_SIZE);
       expect(new Set(o.deck).size).toBe(HAND_SIZE);
       for (const id of o.deck) expect(getCard(id).id).toBe(id);
     }
     // 30 stars, the last milestone at exactly 30.
-    expect(BUILTIN_MISSIONS.reduce((n, m) => n + m.goals.length, 0)).toBe(30);
+    expect(wald.reduce((n, m) => n + m.goals.length, 0)).toBe(30);
     expect(Math.max(...BUILTIN_WORLDS[0].milestones.map((m) => m.stars))).toBe(30);
   });
 
@@ -67,7 +68,7 @@ describe('Kampagne: Flüsterwald', () => {
       expect(m.goals[0].type).toBe('win');
       for (const g of m.goals) ids.add(g.id);
     }
-    expect(ids.size).toBe(30);
+    expect(ids.size).toBe(60);
   });
 
   it('fehlende Karten und unmögliche Ziele werden gemeldet', () => {
@@ -278,7 +279,7 @@ describe('Kampagne: Daten aus der Datenbank', () => {
 
   it('gespeicherte Inhalte ersetzen die eingebauten (gleiche ID)', () => {
     const c = mergeContent({ worlds: [{ ...BUILTIN_WORLDS[0], name: 'Mein Wald' }] });
-    expect(c.worlds).toHaveLength(1);
+    expect(c.worlds).toHaveLength(BUILTIN_WORLDS.length);
     expect(c.worlds[0].name).toBe('Mein Wald');
   });
 });

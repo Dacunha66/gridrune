@@ -64,12 +64,16 @@ function rune(id: string, name: string, effect: RuneEffect, glyph: string, descr
   };
 }
 
-/** The four basic runes – unlocked in the first campaign world (the strongest, Nachhall, by the boss). */
+/**
+ * The basic runes. Verdrehung everyone has from the start; the others are won in the campaigns – only at level 5
+ * and level 10 of each world: Flüsterwald 5 Wald, 10 Nachhall; Glutgebirge 5 Glut, 10 Fluch.
+ */
 export const BUILTIN_RUNES: readonly RuneDef[] = [
-  rune('rn01', 'Rune der Verdrehung', 'twist', 'ᛃ', 'Drehe die Werte einer eigenen gelegten Karte einmal um 90° nach links oder rechts. Es wird dabei nicht neu gekämpft.', { unlock: { kind: 'mission', missionId: 'm002' } }),
+  rune('rn01', 'Rune der Verdrehung', 'twist', 'ᛃ', 'Drehe die Werte einer eigenen gelegten Karte einmal um 90° nach links oder rechts. Es wird dabei nicht neu gekämpft.', { unlock: { kind: 'start' } }),
   rune('rn02', 'Rune des Nachhalls', 'echo', 'ᛇ', 'Eine eigene gelegte Karte greift ihre angrenzenden Gegnerkarten erneut an – normale Regeln, höchstens eine Übernahme (bei mehreren wählst du), keine Kettenreaktion. Einsetzbar ab der Spielmitte (8 Karten auf dem Feld).', { minPlaced: 8, unlock: { kind: 'mission', missionId: 'm010' } }),
-  rune('rn03', 'Rune der Glut', 'empower', 'ᚲ', 'Bis zu zwei eigene Feuerkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'feuer', maxTargets: 2, unlock: { kind: 'mission', missionId: 'm004' } }),
-  rune('rn04', 'Rune des Fluchs', 'curse', 'ᚦ', 'Wähle eine gegnerische Klasse: Bis zu zwei Gegnerkarten dieser Klasse auf dem Spielfeld erhalten −1 auf alle vier Werte bis Duellende.', { maxTargets: 2, unlock: { kind: 'mission', missionId: 'm008' } }),
+  rune('rn03', 'Rune der Glut', 'empower', 'ᚲ', 'Bis zu zwei eigene Feuerkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'feuer', maxTargets: 2, unlock: { kind: 'mission', missionId: 'm015' } }),
+  rune('rn04', 'Rune des Fluchs', 'curse', 'ᚦ', 'Wähle eine gegnerische Klasse: Bis zu zwei Gegnerkarten dieser Klasse auf dem Spielfeld erhalten −1 auf alle vier Werte bis Duellende.', { maxTargets: 2, unlock: { kind: 'mission', missionId: 'm020' } }),
+  rune('rn05', 'Rune des Waldes', 'empower', 'ᛟ', 'Bis zu zwei eigene Naturkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'natur', maxTargets: 2, unlock: { kind: 'mission', missionId: 'm005' } }),
 ];
 
 export const RUNES: RuneDef[] = [...BUILTIN_RUNES];

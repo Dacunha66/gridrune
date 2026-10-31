@@ -43,6 +43,8 @@ export const BUILTIN_ARENAS: readonly Arena[] = [
   // Campaign arenas (Flüsterwald): only terrain that already exists, no new rules.
   { id: 'a07', name: 'Mooslichtung', cells: layout({ wald: [0, 3, 5, 10, 12, 15] }), status: 'campaign', ranked: false, updatedAt: '' },
   { id: 'a08', name: 'Herz des Waldes', cells: layout({ wald: [1, 2, 5, 6, 9, 10, 13, 14] }), status: 'campaign', ranked: false, updatedAt: '' },
+  { id: 'a16', name: 'Aschetal', cells: layout({ lava: [0, 3, 6, 9, 12, 15] }), status: 'campaign', ranked: false, updatedAt: '' },
+  { id: 'a17', name: 'Herz des Vulkans', cells: layout({ lava: [1, 2, 4, 7, 8, 11, 13, 14] }), status: 'campaign', ranked: false, updatedAt: '' },
 ];
 
 export const CLASSIC_ARENA = BUILTIN_ARENAS[0];

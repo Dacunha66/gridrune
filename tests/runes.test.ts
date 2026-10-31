@@ -255,31 +255,33 @@ describe('Runen: Daten, Varianten, Fairness', () => {
   });
   it('Grundrunen werden in der Kampagne freigespielt; Liga nur mit freigespielten Grundrunen', () => {
     expect(BUILTIN_RUNES.map((r) => [r.id, r.unlock])).toEqual([
-      ['rn01', { kind: 'mission', missionId: 'm002' }], ['rn02', { kind: 'mission', missionId: 'm010' }],
-      ['rn03', { kind: 'mission', missionId: 'm004' }], ['rn04', { kind: 'mission', missionId: 'm008' }],
+      ['rn01', { kind: 'start' }], ['rn02', { kind: 'mission', missionId: 'm010' }],
+      ['rn03', { kind: 'mission', missionId: 'm015' }], ['rn04', { kind: 'mission', missionId: 'm020' }],
+      ['rn05', { kind: 'mission', missionId: 'm005' }],
     ]);
     const camp = parseRune('rn11', { name: 'Waldrune', effect: 'empower', cls: 'natur', status: 'active', unlock: { kind: 'stars', n: 20 } })!;
     setRunes([camp]);
-    // Nothing unlocked: no rune anywhere.
-    for (const m of ['adventure', 'campaign', 'league'] as const) expect(availableRunes(m, [])).toEqual([]);
+    // Nothing unlocked: only the starting rune (Verdrehung).
+    for (const m of ['adventure', 'campaign', 'league'] as const) expect(availableRunes(m, []).map((r) => r.id)).toEqual(['rn01']);
     expect(availableRunes('league', ['rn01', 'rn04', 'rn11']).map((r) => r.id)).toEqual(['rn01', 'rn04']);
     expect(availableRunes('campaign', ['rn01', 'rn11']).map((r) => r.id)).toEqual(['rn01', 'rn11']);
     // The computer still gets any basic rune.
-    expect(basicRunes().map((r) => r.id)).toEqual(['rn01', 'rn02', 'rn03', 'rn04']);
+    expect(basicRunes().map((r) => r.id)).toEqual(['rn01', 'rn02', 'rn03', 'rn04', 'rn05']);
   });
   it('freigespielt durch den ersten Sieg der Mission', () => {
     const p0 = emptyProgress();
-    const rn01 = BUILTIN_RUNES[0];
-    expect(runeUnlocked(rn01, p0, CAMPAIGN)).toBe(false);
-    const p1 = { ...p0, missions: { ...p0.missions, m002: { wins: 1, draws: 0, losses: 0, stars: [false, false, false], goalsMet: [], firstWinAt: '', lastPlayedAt: '' } } } as typeof p0;
-    expect(runeUnlocked(rn01, p1, CAMPAIGN)).toBe(true);
+    const wald = BUILTIN_RUNES.find((r) => r.id === 'rn05')!;
+    expect(runeUnlocked(BUILTIN_RUNES[0], p0, CAMPAIGN)).toBe(true);
+    expect(runeUnlocked(wald, p0, CAMPAIGN)).toBe(false);
+    const p1 = { ...p0, missions: { ...p0.missions, m005: { wins: 1, draws: 0, losses: 0, stars: [false, false, false], goalsMet: [], firstWinAt: '', lastPlayedAt: '' } } } as typeof p0;
+    expect(runeUnlocked(wald, p1, CAMPAIGN)).toBe(true);
     expect(runeUnlocked(BUILTIN_RUNES[1], p1, CAMPAIGN)).toBe(false);
   });
   it('ungültige Dokumente werden abgelehnt oder bereinigt', () => {
     expect(parseRune('x', { name: 'A', effect: 'twist' })).toBeNull();
     expect(parseRune('rn09', { name: 'A', effect: 'nuke' })).toBeNull();
     expect(parseRune('rn09', { name: 'A', effect: 'curse', amount: 9, maxTargets: 0 })).toMatchObject({ amount: 2, maxTargets: 1, status: 'draft' });
-    expect(BUILTIN_RUNES).toHaveLength(4);
+    expect(BUILTIN_RUNES).toHaveLength(5);
   });
   it('Nachspielen mit Runen ergibt denselben Endstand (Kampagnen-Ziele)', () => {
     echoAnytime();

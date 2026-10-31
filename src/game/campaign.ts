@@ -312,6 +312,22 @@ export const BUILTIN_OPPONENTS: readonly Opponent[] = [
     winText: 'Der Waldwächter neigt sein Haupt. Der Flüsterwald gehört dir.',
     loseText: 'Die Wurzeln ziehen sich zurück. „Komm wieder, wenn du stärker bist.“',
   }),
+  // World 2: Glutgebirge
+  opp('o011', 'Funkenwicht-Bande', '🔥', 'easy', 'normal', ['c02', 'c07', 'c26', 'c03', 'c16', 'c12', 'c14', 'c24'], ['feuer'], 'Eine Horde frecher Funkenwichte, die Wanderer am Fuß des Gebirges ärgert.'),
+  opp('o012', 'Glutkäfer-Schwarm', '🪲', 'medium', 'normal', ['c02', 'c07', 'c26', 'u23', 'c16', 'c14', 'c24', 'c30'], ['feuer'], 'Hunderte glühender Käfer – einzeln schwach, zusammen gefährlich.'),
+  opp('o013', 'Kerzenwächterin Ilse', '🕯️', 'medium', 'normal', ['u23', 'c26', 'c07', 'c02', 'u20', 'u22', 'c16', 'u01'], ['feuer', 'krieger'], 'Hütet die ewigen Kerzen im Aschetal und lässt nur Geduldige vorbei.'),
+  opp('o014', 'Lavaechsen-Rudel', '🦎', 'medium', 'normal', ['r07', 'c07', 'c02', 'u23', 'c26', 'u20', 'u02', 'c16'], ['feuer'], 'Sonnt sich auf heißem Gestein und verteidigt die Lavafelder.'),
+  opp('o015', 'Schmiedemeister Brann', '⚒️', 'medium', 'normal', ['r07', 'u23', 'c26', 'u22', 'u20', 'u01', 'r01', 'c16'], ['krieger', 'feuer'], 'Schmiedet in der Glut des Berges – und prüft jeden, der seine Rune tragen will.'),
+  opp('o016', 'Funkenfee Lumi', '✨', 'hard', 'normal', ['r17', 'r07', 'u23', 'c26', 'u03', 'u11', 'c07', 'c02'], ['magier', 'feuer'], 'Tanzt zwischen den Funken und denkt drei Züge voraus.'),
+  opp('o017', 'Aschenwanderer', '🌫️', 'hard', 'normal', ['e01', 'r07', 'r17', 'u23', 'c26', 'r19', 'u20', 'c07'], ['feuer'], 'Ein stiller Wanderer aus Asche. Wo er geht, glimmt der Boden.'),
+  opp('o018', 'Meteorreiter Kael', '☄️', 'hard', 'elite', ['e13', 'r07', 'r17', 'r04', 'u23', 'c26', 'r19', 'u22'], ['feuer', 'krieger'], 'Elite: Reitet auf brennenden Felsbrocken und schlägt blitzschnell zu.', { rune: 'rn01' }),
+  opp('o019', 'Phönixhüterin Seraya', '🐦‍🔥', 'hard', 'elite', ['e01', 'e13', 'r17', 'r07', 'r05', 'u23', 'c26', 'r10'], ['feuer', 'magier'], 'Elite: Hütet den Aschenphönix – und gibt niemals auf.', { rune: 'rn03' }),
+  opp('o020', 'Vulkanherz', '🌋', 'hard', 'boss', ['l05', 'e01', 'e13', 'r07', 'r17', 'u23', 'c26', 'r19'], ['feuer'], 'Das glühende Herz des Glutgebirges. Uralt, zornig und heißer als jede Esse.', {
+    rune: 'rn02',
+    intro: 'Der Boden bebt, Lava steigt aus den Spalten. Aus dem Krater erhebt sich das Vulkanherz: „Wer die Glut beherrschen will, muss sie überstehen.“',
+    winText: 'Das Vulkanherz erlischt zu warmer Glut. Das Glutgebirge gehört dir.',
+    loseText: 'Flammen schlagen dir entgegen. „Kehre zurück, wenn dein Feuer heller brennt.“',
+  }),
 ];
 
 export const BUILTIN_WORLDS: readonly World[] = [
@@ -326,6 +342,19 @@ export const BUILTIN_WORLDS: readonly World[] = [
       { stars: 25, reward: { type: 'coins', amount: 500 } },
       { stars: 25, reward: { type: 'title', label: 'Hüter des Flüsterwalds' } },
       { stars: 30, reward: { type: 'alt_art', cardId: 'l03', label: 'Waldwächter (legendäre Illustration)' } },
+    ],
+  },
+  {
+    id: 'w02', name: 'Glutgebirge', order: 2, status: 'active', tile: null, map: null, unlock: { afterWorld: 'w01' }, updatedAt: '',
+    description: 'Hinter dem Flüsterwald brennt das Glutgebirge: Lavafelder, Aschetäler und ganz oben das Vulkanherz. Schwerer als der Wald – Feuerkarten werden auf Lava stärker.',
+    milestones: [
+      { stars: 5, reward: { type: 'coins', amount: 300 } },
+      { stars: 10, reward: { type: 'pack', amount: 1 } },
+      { stars: 15, reward: { type: 'coins', amount: 500 } },
+      { stars: 20, reward: { type: 'pack', amount: 2 } },
+      { stars: 25, reward: { type: 'frame', label: 'Glutrahmen' } },
+      { stars: 25, reward: { type: 'title', label: 'Bezwinger des Glutgebirges' } },
+      { stars: 30, reward: { type: 'alt_art', cardId: 'l05', label: 'Vulkanherz (legendäre Illustration)' } },
     ],
   },
 ];
@@ -370,6 +399,32 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
     'Elite: Torwächterin Lyra lässt nur Würdige passieren.', { x: 0.42, y: 0.18 }),
   mission('m010', 10, 'Herz des Waldes', 'boss', 'a08', 'o010', goals('m010', { type: 'min_fields', n: 10 }, { type: 'terrain_bonus', n: 3 }),
     'Endboss: Der Waldwächter erwartet dich im Herzen des Waldes.', { x: 0.5, y: 0.06 }),
+  // World 2: Glutgebirge (from the foot of the mountain up to the crater)
+  ...([
+    ['m011', 'Funkenpfad', 'normal', 'a03', 'o011', [{ type: 'min_fields', n: 9 }, { type: 'min_captures', n: 4 }],
+      'Am Fuß des Glutgebirges: Lavafelder 🌋 machen Feuerkarten stärker.', { x: 0.5, y: 0.94 }, {
+        tips: ['Feuerkarten 🔥 bekommen auf Lavafeldern 🌋 +1 auf alle Werte.', 'Die Gegner hier sind stärker als im Wald – lege deine starken Seiten an ihre schwachen.'],
+      }],
+    ['m012', 'Glutwiesen', 'normal', 'a03', 'o012', [{ type: 'min_fields', n: 10 }, { type: 'min_margin', n: 3 }],
+      'Ein Schwarm Glutkäfer summt über die heißen Wiesen.', { x: 0.27, y: 0.85 }, {}],
+    ['m013', 'Aschetal', 'normal', 'a16', 'o013', [{ type: 'min_captures', n: 5 }, { type: 'without_class', n: 0, cls: 'krieger' }],
+      'Im stillen Aschetal brennen die ewigen Kerzen.', { x: 0.65, y: 0.77 }, {}],
+    ['m014', 'Lavafelder', 'normal', 'a03', 'o014', [{ type: 'runner_clean', n: 0 }, { type: 'min_fields', n: 10 }],
+      'Erst über die glühenden Lavafelder laufen, dann gegen das Echsen-Rudel antreten.', { x: 0.82, y: 0.67 }, { mode: 'runner' }],
+    ['m015', 'Schmiede am Berg', 'special', 'a16', 'o015', [{ type: 'min_fields', n: 10 }, { type: 'min_captures', n: 6 }],
+      'Schmiedemeister Brann hütet die Rune der Glut. Besiege ihn, und sie gehört dir.', { x: 0.55, y: 0.57 }, {}],
+    ['m016', 'Funkentanz', 'normal', 'a16', 'o016', [{ type: 'min_margin', n: 4 }, { type: 'min_captures', n: 6 }],
+      'Funkenfee Lumi wirbelt über die Glutschlucht.', { x: 0.25, y: 0.48 }, {}],
+    ['m017', 'Aschenwüste', 'normal', 'a06', 'o017', [{ type: 'min_fields', n: 11 }, { type: 'without_class', n: 0, cls: 'magier' }],
+      'Durch die graue Aschenwüste zieht ein stiller Wanderer.', { x: 0.45, y: 0.38 }, {}],
+    ['m018', 'Meteorfall', 'elite', 'a03', 'o018', [{ type: 'min_fields', n: 11 }, { type: 'min_captures', n: 7 }],
+      'Elite: Meteorreiter Kael stürzt sich vom Himmel auf dich.', { x: 0.75, y: 0.29 }, {}],
+    ['m019', 'Phönixnest', 'elite', 'a03', 'o019', [{ type: 'min_margin', n: 5 }, { type: 'runner_clean', n: 0 }],
+      'Elite: Erst zum Phönixnest hinauflaufen, dann Seraya besiegen.', { x: 0.4, y: 0.18 }, { mode: 'runner' }],
+    ['m020', 'Herz des Vulkans', 'boss', 'a17', 'o020', [{ type: 'min_fields', n: 10 }, { type: 'min_captures', n: 7 }],
+      'Endboss: Im Krater wartet das Vulkanherz.', { x: 0.5, y: 0.06 }, {}],
+  ] as const).map(([id, name, kind, arenaId, opponentId, g, description, pos, extra], i) =>
+    mission(id, i + 1, name, kind, arenaId, opponentId, goals(id, ...(g as unknown as Omit<Goal, 'id'>[])), description, pos, { worldId: 'w02', ...(extra as Partial<Mission>) })),
 ];
 
 // ---------- Content in use (built-ins replaced or extended by the admin's documents) ----------
