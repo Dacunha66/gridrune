@@ -1,4 +1,4 @@
-// Database, picture storage and admin check for the web version (gridrune.netlify.app), backed by Supabase.
+// Database, picture storage and admin check for the web version (gridrune.pages.dev, before gridrune.netlify.app), backed by Supabase.
 // It offers the same small API as the claude.ai platform (see cardStore), so the game and the admin screens
 // work unchanged. Every write is checked by the database itself: only accounts listed in `admins` may write
 // content (row level security), whatever this code does.

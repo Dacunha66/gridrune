@@ -38,7 +38,7 @@ interface Props {
 }
 
 const HAND_KEY = 'gridrune/pvp-hand';
-const SITE = 'https://gridrune.netlify.app';
+const SITE = typeof location !== 'undefined' ? location.origin : 'https://gridrune.pages.dev';
 
 function strongest(deck: readonly string[]): string[] {
   return [...deck].sort((a, b) => cardPower(getCard(b)) - cardPower(getCard(a)) || a.localeCompare(b)).slice(0, HAND_SIZE);

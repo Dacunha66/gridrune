@@ -22,8 +22,8 @@ export const PASSWORD_MIN = 8;
 const GUEST_KEY = 'gridrune/guest-v1';
 /** Accounts are switched on once the database and the e-mail links are set up (until then: no sign-in screen). */
 export const ACCOUNTS_LIVE = true;
-/** Where the confirmation and new-password e-mails lead back to. */
-const SITE_URL = 'https://gridrune.netlify.app/';
+/** Where the confirmation and new-password e-mails lead back to: the address the game is opened from. */
+const SITE_URL = typeof location !== 'undefined' && location.protocol.startsWith('http') ? `${location.origin}/` : 'https://gridrune.pages.dev/';
 
 /** Player names: letters (also umlauts), digits, space, - and _; 2–20 characters. Same rule as the database. */
 export function nameProblem(raw: string): string | null {
