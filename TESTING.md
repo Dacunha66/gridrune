@@ -1,5 +1,15 @@
 # Testprotokoll
 
+## Offen: wenn Netlify wieder veröffentlicht (Credits aufgebraucht, Stand 31.10.)
+
+Live läuft noch der Stand vom Online-Duell (ohne Belohnungs-Animation, Draft-Liga, Glutgebirge). Die Server-Funktionen `adventure` und `game` sind deshalb wieder auf die dazu passende Engine (Commit 5d66f64, engine-1dd0d72e15a3) gestellt. Sobald die neue Version live ist, sofort:
+1. `adventure` und `game` auf die aktuelle Engine umstellen und neu veröffentlichen (sonst passen Runen-Liste und Kampagne nicht zusammen).
+2. Migration 014 (Draft) einspielen, dann `pvp` mit der aktuellen Engine veröffentlichen.
+3. Runen im Admin: Glut → „Schmiede am Berg“, Fluch → „Herz des Vulkans“.
+4. Feuer-Klasse für Funkenwicht, Glutkäfer, Lavaechse, Funkenfee, Aschenphönix, Meteorreiter, Vulkanherz, Urdrache Ignivor (Wunsch des Spielleiters).
+5. Test-Konten pvptest1/2.e2e3 löschen.
+
+
 ## Zweite Kampagne „Glutgebirge“, neue Runen-Verteilung, Rune des Waldes
 
 Neu: Welt 2 „Glutgebirge“ (m011–m020, Gegner o011–o020, Arenen Aschetal a16 und Herz des Vulkans a17), frei nach dem Wald. Runen nur noch bei Level 5 und 10: Wald 5 Rune des Waldes (neu, rn05: +1 auf bis zu 2 Naturkarten), Wald 10 Nachhall, Feuer 5 Glut, Feuer 10 Fluch; Verdrehung haben alle ab Start. Bereits freigespielte Runen werden neu verteilt (Wunsch). Server-Funktionen adventure und game auf die neue Engine gebracht.
