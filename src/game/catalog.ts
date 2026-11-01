@@ -16,6 +16,8 @@ export const DESCRIPTION_MAX = 300;
 export interface CardRecord {
   id: string;
   name: string;
+  /** Optional name on the card itself (short form or with a line break \n); empty = the card name. */
+  plate?: string;
   rarity: Rarity;
   top: number;
   right: number;
@@ -55,6 +57,13 @@ function clampValue(v: unknown): number | null {
   return Math.min(10, Math.max(1, Math.round(n)));
 }
 
+/** Name on the card: at most two lines, each as long as a card name; empty = none. */
+export function plateOf(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const lines = raw.split(/\r?\n/).map((l) => l.trim().slice(0, NAME_MAX)).filter(Boolean).slice(0, 2);
+  return lines.length ? lines.join('\n') : null;
+}
+
 /** Turns an untrusted database document into a valid record, or null if it is unusable. */
 export function parseCardRecord(id: string, raw: unknown): CardRecord | null {
   if (!ID_RE.test(id) || !raw || typeof raw !== 'object') return null;
@@ -73,6 +82,7 @@ export function parseCardRecord(id: string, raw: unknown): CardRecord | null {
   return {
     id,
     name,
+    ...(plateOf(r.plate) ? { plate: plateOf(r.plate)! } : {}),
     rarity,
     top, right, bottom, left,
     art: typeof r.art === 'string' && r.art.trim() ? [...r.art.trim()].slice(0, 4).join('') : '🃏',
@@ -95,7 +105,8 @@ export function parseCardRecord(id: string, raw: unknown): CardRecord | null {
 export function recordToDoc(rec: CardRecord): Record<string, unknown> {
   const { id: _id, ...doc } = rec;
   void _id;
-  return doc;
+  // Always written (also empty), so clearing the name on the card really removes it.
+  return { ...doc, plate: plateOf(rec.plate) ?? '' };
 }
 
 /** Where uploaded pictures are served: the claude.ai page itself, or the Supabase picture storage on the web. */
@@ -112,6 +123,7 @@ export function recordToCard(rec: CardRecord): CardDef {
   return {
     id: rec.id,
     name: rec.name,
+    ...(rec.plate ? { plate: rec.plate } : {}),
     rarity: rec.rarity,
     top: rec.top,
     right: rec.right,

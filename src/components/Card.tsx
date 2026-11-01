@@ -99,6 +99,15 @@ function Gem({ mythic }: { mythic: boolean }) {
   );
 }
 
+/**
+ * Name plate size: the longest word must fit on one line (names are never split with a hyphen), so long words
+ * get a smaller font. --nl: total length (older card style), --lw: longest word.
+ */
+function plateStyle(plate: string): CSSProperties {
+  const longest = Math.max(...plate.split(/\s+/).map((w) => w.length));
+  return { '--nl': Math.max(8, plate.replace('\n', ' ').length), '--lw': Math.max(7, longest) } as CSSProperties;
+}
+
 export function Card({
   id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0, def, values, shield,
   terrainGlow, detail, styleOverride, base, rot = 0,
@@ -107,6 +116,7 @@ export function Card({
   const cardStyle = styleOverride ?? deviceStyle;
   const premium = cardStyle === 'premium';
   const c = def ?? getCard(id);
+  const plate = c.plate ?? c.name;
   const effective = (i: number) => (values ? values[i] : Math.min(10, Math.max(1, c[DIRS[i]] + mod)));
   const cls = c.cls ? CLASS_ICON[c.cls] : null;
   const effect = c.effect ? EFFECTS[c.effect] : null;
@@ -137,7 +147,7 @@ export function Card({
       })}
       {!locked && c.cls && <span className="cs-cls" data-sym={`cls:${c.cls}`}><ClassShield cls={c.cls} /></span>}
       {!locked && c.effect && <span className="cs-fx" data-sym={`fx:${c.effect}`}><AbilityMedallion effect={c.effect} /></span>}
-      {!locked && <span className="cs-name" style={{ '--nl': Math.max(8, c.name.length) } as CSSProperties}>{c.name}</span>}
+      {!locked && <span className="cs-name" style={plateStyle(plate)}>{plate}</span>}
       {rot % 4 !== 0 && !locked && <span className="cs-rot" aria-hidden="true">↻{(rot % 4) * 90}°</span>}
       {shield && !locked && (
         <span className="cs-shield" aria-hidden="true"><Icon path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" /></span>

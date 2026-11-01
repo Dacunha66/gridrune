@@ -497,6 +497,14 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
               {!nameOk && <small className="field-error">Bitte einen Namen eingeben.</small>}
             </label>
 
+            <label className="field" htmlFor="card-plate">
+              <span>Name auf der Karte <small className="muted">(optional)</small></span>
+              <textarea id="card-plate" className="admin-input plate-input" rows={2} value={draft.plate ?? ''} maxLength={NAME_MAX * 2 + 1}
+                placeholder={draft.name || 'z. B. Vyrax'}
+                onChange={(e) => set('plate', e.target.value.split('\n').slice(0, 2).join('\n') || undefined)} />
+              <small className="muted">Leer = Kartenname. Kürzer schreiben (z. B. nur „Vyrax“) oder mit Enter in zwei Zeilen teilen. Sammlung und Details zeigen weiter den vollen Namen.</small>
+            </label>
+
             <div className="field">
               <span>Bild</span>
               <div className="image-row">

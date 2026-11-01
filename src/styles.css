@@ -1242,8 +1242,10 @@ label.btn.disabled { opacity: .45; }
 /* Name plate: narrow, up to two lines, readable sans-serif with a thin gold edge; rarity as a coloured line. */
 .card.cs-prem .cs-name {
   left: 9cqw; right: 9cqw; bottom: 25cqw; height: auto; padding: 0.8cqw 2cqw; line-height: 1.08; white-space: normal;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word;
-  font-size: max(7px, 10.5cqw); color: #fbecc8;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line;
+  hyphens: manual; -webkit-hyphens: manual; overflow-wrap: normal; word-break: keep-all;
+  /* Names break only between words: a long word gets a smaller font so it fits on one line. */
+  font-size: max(6px, min(10.5cqw, calc(130cqw / var(--lw, 8)))); color: #fbecc8;
   background: linear-gradient(#2c2117, #120d08); border-radius: 2cqw;
   box-shadow: 0 0 0 max(0.8px, 0.8cqw) #c9a85c, inset 0 -0.8cqw 0 var(--rc), 0 1px 3px rgba(0, 0, 0, 0.8);
 }
@@ -1577,3 +1579,4 @@ label.btn.disabled { opacity: .45; }
 .coin-face span { padding: 2px 8px; border-radius: 999px; font-size: 15px; }
 .coin-face.front span { background: var(--player); }
 .coin-face.back span { background: #ef4444; }
+.plate-input { resize: none; font: inherit; line-height: 1.3; }

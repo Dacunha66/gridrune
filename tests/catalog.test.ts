@@ -228,3 +228,17 @@ describe('Spielstand und Datenbank-Karten', () => {
     expect(loadSave(store).unlocked).toContain('k001');
   });
 });
+
+import { plateOf, recordToDoc } from '../src/game/catalog';
+describe('Name auf der Karte', () => {
+  it('höchstens zwei Zeilen, leer = Kartenname, Leeren wird gespeichert', () => {
+    expect(plateOf('Vyrax')).toBe('Vyrax');
+    expect(plateOf(' Nachtwolf \n Vyrax \n zu viel')).toBe('Nachtwolf\nVyrax');
+    expect(plateOf('  \n ')).toBeNull();
+    const rec = { ...parseCardRecord('l04', { name: 'Nachtwolf Vyrax', rarity: 'legendary', top: 10, right: 6, bottom: 4, left: 7, plate: 'Vyrax' })! };
+    expect(recordToCard(rec).plate).toBe('Vyrax');
+    expect(recordToCard(rec).name).toBe('Nachtwolf Vyrax');
+    expect(recordToDoc({ ...rec, plate: undefined }).plate).toBe('');
+    expect(parseCardRecord('l04', recordToDoc({ ...rec, plate: undefined }))!.plate).toBeUndefined();
+  });
+});

@@ -15,6 +15,8 @@ export const RARITY_POWER: Record<Rarity, [min: number, max: number]> = {
 export interface CardDef {
   id: string;
   name: string;
+  /** Name on the card itself (short form or two lines separated by \n); default = name. */
+  plate?: string;
   rarity: Rarity;
   /** Directional values 1–10. */
   top: number;
