@@ -1,4 +1,5 @@
 import { RuneBadge } from '../components/RuneBadge';
+import { Coin, CoinText } from '../components/Coin';
 import { findRune } from '../game/runes';
 import logoMark from '../assets/gridrune-mark.png';
 import logoWord from '../assets/gridrune-wordmark.png';
@@ -50,11 +51,11 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
       )}
 
       {notice && (
-        <button type="button" className="menu-notice" onClick={onNotice}>{notice} <b>OK</b></button>
+        <button type="button" className="menu-notice" onClick={onNotice}><CoinText text={notice} /> <b>OK</b></button>
       )}
 
       <div className="wallet" aria-label="Spielstand">
-        <span>🪙 {save.coins}</span>
+        <span><Coin /> {save.coins}</span>
         <span>🃏 {ownedActiveIds(save.unlocked).length}/{CARDS.length}</span>
         <span>🏆 {wins} · 🤝 {draws} · 💀 {losses}</span>
       </div>
@@ -65,7 +66,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         {onOnline && <button type="button" className="btn btn-online" onClick={onOnline}>⚔️ Online-Duell <span className="btn-sub">gegen echte Spieler</span></button>}
         {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}>🃏 Draft-Liga <span className="btn-sub">gleicher Pool für beide</span></button>}
         <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Collection League <span className="btn-sub">Test</span></button>
-        <button type="button" className="btn" onClick={() => onNavigate('shop')}>🛒 Shop <span className="btn-sub">🪙 {save.coins}</span></button>
+        <button type="button" className="btn" onClick={() => onNavigate('shop')}>🛒 Shop <span className="btn-sub"><Coin /> {save.coins}</span></button>
         <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>
         <button type="button" className="btn btn-deck" onClick={() => onNavigate('deck')}>
           🗂️ Deck bearbeiten

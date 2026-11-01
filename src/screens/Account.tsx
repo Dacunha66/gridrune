@@ -1,5 +1,6 @@
 // Account screens of the web version: welcome (sign in / create account / play as guest), forgotten password,
 // the new password after the e-mail link, and the player's own account page.
+import { Coin } from '../components/Coin';
 import { FormEvent, ReactNode, useState } from 'react';
 import logoMark from '../assets/gridrune-mark.png';
 import logoWord from '../assets/gridrune-wordmark.png';
@@ -246,7 +247,7 @@ export function CloudGate({ phase, notice, browserSave, onChoose, onRetry }: {
             {notice && <p className="admin-warning">{notice}</p>}
             <p>Möchtest du deinen bisherigen Spielstand aus diesem Browser in dein Konto übernehmen? Das geht nur jetzt, einmal.</p>
             <ul className="plain-list">
-              <li>🃏 {cards} Karten · 🪙 {browserSave.coins} Münzen</li>
+              <li>🃏 {cards} Karten · <Coin /> {browserSave.coins} Münzen</li>
               <li>⭐ {stars} Kampagnen-Sterne · 🏆 {browserSave.stats.wins} Siege</li>
             </ul>
             <button type="button" className="btn btn-primary btn-big" onClick={() => onChoose(true)}>Spielstand übernehmen</button>

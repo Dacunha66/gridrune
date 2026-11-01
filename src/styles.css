@@ -1564,3 +1564,16 @@ label.btn.disabled { opacity: .45; }
 .draft-actions { padding-top: 8px; }
 .draft-status { list-style: none; padding: 0; margin: 0; }
 .urgent-pill { background: #b91c1c; color: #fff; }
+
+/* ---------- Coin artwork (instead of the 🪙 emoji) ---------- */
+.coin-icon { display: inline-block; width: 1.2em; height: 1.2em; vertical-align: -0.25em; object-fit: contain; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)); }
+.coin-icon.big { width: 1.5em; height: 1.5em; vertical-align: -0.35em; }
+.reveal-coins .coin-icon.big { width: 1.3em; height: 1.3em; }
+.tile-icon .coin-icon, .station-loot .coin-icon { width: 1em; height: 1em; vertical-align: middle; }
+.station-loot:has(.coin-icon) { background: none; box-shadow: none; }
+.station-loot .coin-icon { width: 28px; height: 28px; }
+/* The toss coin shows the coin artwork; the side is marked in the player's / opponent's colour. */
+.coin-face.front, .coin-face.back { border: 0; background-size: cover; background-position: center; background-color: transparent; }
+.coin-face span { padding: 2px 8px; border-radius: 999px; font-size: 15px; }
+.coin-face.front span { background: var(--player); }
+.coin-face.back span { background: #ef4444; }

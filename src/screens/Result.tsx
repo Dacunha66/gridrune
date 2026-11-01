@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { Coin } from '../components/Coin';
 import { Card } from '../components/Card';
 import { Burst, Confetti, useCountUp } from '../components/Effects';
 import { Outcome } from '../game/battle';
@@ -40,7 +41,7 @@ export function Result({ outcome, reward, score, coins, onAgain, onMenu, status 
       <p className="result-score"><span className="blue">{score.player}</span> : <span className="red">{score.cpu}</span></p>
 
       <div className="reward-box">
-        <p className="reward-coins">+ 🪙 {gained}</p>
+        <p className="reward-coins">+ <Coin className="big" /> {gained}</p>
         {status && (
           <p className={`result-status status-${status}`} role="status">
             {status === 'checking' ? '☁️ Ergebnis wird vom Server geprüft …'
@@ -62,13 +63,13 @@ export function Result({ outcome, reward, score, coins, onAgain, onMenu, status 
           </div>
         )}
         {reward.duplicateCard && (
-          <p className="muted">{getCard(reward.duplicateCard).name} hattest du schon – dafür gibt es 🪙 50 extra.</p>
+          <p className="muted">{getCard(reward.duplicateCard).name} hattest du schon – dafür gibt es <Coin /> 50 extra.</p>
         )}
         {outcome === 'win' && !reward.newCard && !reward.duplicateCard && (
           <p className="muted">Tipp: Nimm im Lauf goldene „NEU“-Karten, um nach einem Sieg neue Karten zu bekommen.</p>
         )}
         {outcome !== 'win' && <p className="muted">Nur ein Sieg schaltet neue Karten frei.</p>}
-        <p className="muted">Münzen gesamt: 🪙 {total} – ausgeben im 🛒 Shop</p>
+        <p className="muted">Münzen gesamt: <Coin /> {total} – ausgeben im 🛒 Shop</p>
       </div>
 
       <div className="menu-buttons">

@@ -1,4 +1,5 @@
 import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Coin, coinLargeImg } from '../components/Coin';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
@@ -637,14 +638,14 @@ function CoinToss({ reducedMotion, rng, onDecide }: { reducedMotion: boolean; rn
     <div className="toss" role="dialog" aria-label="Münzwurf">
       <div className={`coin-wrap ${stage === 'spinning' ? 'tossing' : ''}`}>
         <div className={`coin ${stage === 'ready' ? 'idle' : `flip-${winner}`}`}>
-          <div className="coin-face front"><span>DU</span></div>
-          <div className="coin-face back"><span>GEGNER</span></div>
+          <div className="coin-face front" style={{ backgroundImage: `url(${coinLargeImg})` }}><span>DU</span></div>
+          <div className="coin-face back" style={{ backgroundImage: `url(${coinLargeImg})` }}><span>GEGNER</span></div>
         </div>
       </div>
       {stage === 'ready' && (
         <>
           <p className="toss-title">Wer beginnt?</p>
-          <button type="button" className="btn btn-primary" onClick={toss}>🪙 Münze werfen</button>
+          <button type="button" className="btn btn-primary" onClick={toss}><Coin /> Münze werfen</button>
         </>
       )}
       {stage === 'spinning' && <p className="toss-title">…</p>}

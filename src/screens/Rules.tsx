@@ -1,4 +1,5 @@
 import { AbilityMedallion, ClassShield } from '../components/cardIcons';
+import { Coin } from '../components/Coin';
 import { Header } from './Header';
 import { SETTINGS } from '../game/settings';
 import { RuneBadge } from '../components/RuneBadge';
@@ -70,8 +71,8 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
         )}
 
         <h2>3 · Belohnung</h2>
-        <p>Sieg: 🪙 100 und die seltenste neue <b>Entdeckung</b> aus deinem Lauf wird dauerhaft freigeschaltet. Hattest du sie schon, gibt es 🪙 50 extra.</p>
-        <p>Unentschieden: 🪙 40 · Niederlage: 🪙 15</p>
+        <p>Sieg: <Coin /> 100 und die seltenste neue <b>Entdeckung</b> aus deinem Lauf wird dauerhaft freigeschaltet. Hattest du sie schon, gibt es <Coin /> 50 extra.</p>
+        <p>Unentschieden: <Coin /> 40 · Niederlage: <Coin /> 15</p>
 
         <h2>Shop</h2>
         <p>Im Shop kaufst du mit Münzen <b>Booster-Packs</b> (3 Karten, neue Karten werden sofort freigeschaltet, doppelte in Münzen umgetauscht) und <b>Skins</b>, die nur das Aussehen ändern.</p>

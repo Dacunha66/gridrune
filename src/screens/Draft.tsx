@@ -1,5 +1,6 @@
 // Draft League screens: building a deck of 20 from the shared pool of 30, and the practice mode against the
 // computer (same pool rules, same fair track, no rewards). The online draft uses the deck builder from here.
+import { Coin } from '../components/Coin';
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
@@ -137,7 +138,7 @@ export function DraftPractice({ reducedMotion, skin, rune, onExit }: {
         <h1>{title}</h1>
         <p className="muted">Draft-Übung gegen die KI</p>
         <p className="result-score"><span className="blue">{stage.score.player}</span> : <span className="red">{stage.score.cpu}</span></p>
-        <p className="muted small">Übung – keine Belohnung. Online gegen echte Spieler gibt es 🪙 für einen Sieg.</p>
+        <p className="muted small">Übung – keine Belohnung. Online gegen echte Spieler gibt es <Coin /> für einen Sieg.</p>
       </div>
       <div className="menu-buttons">
         <button type="button" className="btn btn-primary btn-big" onClick={restart}>🃏 Neuer Pool</button>

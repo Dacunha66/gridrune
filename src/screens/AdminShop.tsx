@@ -1,5 +1,6 @@
 // Admin: look of the booster packs in the shop – picture, name and text. Price, size and odds are game rules
 // and are not changed here.
+import { Coin } from '../components/Coin';
 import { useEffect, useState } from 'react';
 import { Assets, Db, describeError, loadShopLooks, saveShopLooks } from '../game/cardStore';
 import { PACKS, PACK_NAME_MAX, PACK_TEXT_MAX, PackLook, packLooks, packView, setPackLooks } from '../game/shop';
@@ -62,7 +63,7 @@ export function ShopAdminView({ db, assets, onToast }: { db: Db; assets: Assets 
               <div>
                 <h3>{view.name}</h3>
                 <p className="small">{view.description}</p>
-                <p className="muted small">🪙 {pack.price} · {pack.size} Karten{pack.guaranteed ? ` · letzte Karte mind. ${RARITY_LABEL.epic}` : ''}</p>
+                <p className="muted small"><Coin /> {pack.price} · {pack.size} Karten{pack.guaranteed ? ` · letzte Karte mind. ${RARITY_LABEL.epic}` : ''}</p>
               </div>
             </div>
             <ImageField kind="packArt" value={look.image} onChange={(image) => set(pack.id, { image })} assets={assets} onToast={onToast} />

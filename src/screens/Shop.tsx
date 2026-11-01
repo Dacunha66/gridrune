@@ -1,4 +1,5 @@
 import { CSSProperties, useEffect, useMemo, useState } from 'react';
+import { Coin, CoinText } from '../components/Coin';
 import { Burst, useCountUp } from '../components/Effects';
 import { RARITY_COLORS } from './Result';
 import { Card } from '../components/Card';
@@ -130,12 +131,12 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
 
   return (
     <main className="screen shop">
-      <Header title="Shop" onBack={onBack} right={<span key={save.coins} className="pill coin-pill">🪙 {coins}</span>} />
+      <Header title="Shop" onBack={onBack} right={<span key={save.coins} className="pill coin-pill"><Coin /> {coins}</span>} />
       <div className="segmented deck-tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'packs'} className={`seg ${tab === 'packs' ? 'active' : ''}`} onClick={() => { setTab('packs'); setMessage(''); }}>🎴 Booster</button>
         <button type="button" role="tab" aria-selected={tab === 'skins'} className={`seg ${tab === 'skins' ? 'active' : ''}`} onClick={() => { setTab('skins'); setMessage(''); }}>🎨 Skins</button>
       </div>
-      <p className="hint" aria-live="polite">{message || (tab === 'packs' ? 'Münzen verdienst du in jedem Duell – Siege bringen am meisten.' : 'Skins ändern nur das Aussehen, nie die Kartenwerte.')}</p>
+      <p className="hint" aria-live="polite">{message ? <CoinText text={message} /> : (tab === 'packs' ? 'Münzen verdienst du in jedem Duell – Siege bringen am meisten.' : 'Skins ändern nur das Aussehen, nie die Kartenwerte.')}</p>
 
       <div className="scroll">
         {tab === 'packs' && (
@@ -155,7 +156,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
                     <p className="pack-size">{pack.size} Karten</p>
                     <p className="pack-desc">{view.description}</p>
                     <button type="button" className="btn btn-primary pack-buy" disabled={missing > 0 || busy} onClick={() => openPack(pack)}>
-                      {missing > 0 ? `Noch 🪙 ${missing}` : `🪙 ${pack.price}`}
+                      {missing > 0 ? <>Noch <Coin /> {missing}</> : <><Coin /> {pack.price}</>}
                     </button>
                     <details className="pack-odds">
                       <summary>Chancen pro Karte</summary>
@@ -173,7 +174,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
             <div className="shop-note">
               <b>Doppelte Karten</b> werden in Münzen umgetauscht:{' '}
               {(['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as Rarity[]).map((r, i) => (
-                <span key={r}>{i > 0 && ' · '}<span className={`rarity-text rarity-${r}`}>{RARITY_LABEL[r]}</span> 🪙 {DUPLICATE_REFUND[r]}</span>
+                <span key={r}>{i > 0 && ' · '}<span className={`rarity-text rarity-${r}`}>{RARITY_LABEL[r]}</span> <Coin /> {DUPLICATE_REFUND[r]}</span>
               ))}
             </div>
           </div>
@@ -207,7 +208,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
                           disabled={equipped || (!owned && save.coins < skin.price)}
                           onClick={() => skinAction(skin)}
                         >
-                          {equipped ? 'Ausgerüstet ✓' : owned ? 'Ausrüsten' : `🪙 ${skin.price}`}
+                          {equipped ? 'Ausgerüstet ✓' : owned ? 'Ausrüsten' : <><Coin /> {skin.price}</>}
                         </button>
                       </article>
                     );
@@ -243,7 +244,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
                     <div key={c.cardId} className={`reveal-slot rarity-bg-${rarity}`} style={{ animationDelay: `${0.25 + i * 0.35}s` } as CSSProperties}>
                       {RARITY_ORDER[rarity] >= RARITY_ORDER.epic && <span className="slot-rays" aria-hidden="true" style={{ animationDelay: `${0.25 + i * 0.35}s` }} />}
                       <Card id={c.cardId} size="md" showName />
-                      <span className={`reveal-tag ${c.isNew ? 'new' : ''}`}>{c.isNew ? 'NEU!' : `Doppelt +🪙 ${c.refund}`}</span>
+                      <span className={`reveal-tag ${c.isNew ? 'new' : ''}`}>{c.isNew ? 'NEU!' : <>Doppelt +<Coin /> {c.refund}</>}</span>
                     </div>
                   );
                 })}
@@ -252,7 +253,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
             <p className="muted small" style={{ visibility: opened.stage === 'open' ? 'visible' : 'hidden' }}>{opened.cards.filter((c) => c.isNew).map((c) => getCard(c.cardId).name).join(', ') || 'Keine neuen Karten – dafür Münzen.'}</p>
             <div className="modal-actions" style={{ visibility: opened.stage === 'open' ? 'visible' : 'hidden' }}>
               {save.coins >= opened.pack.price && (
-                <button type="button" className="btn" onClick={() => openPack(opened.pack)}>Noch eins (🪙 {opened.pack.price})</button>
+                <button type="button" className="btn" onClick={() => openPack(opened.pack)}>Noch eins (<Coin /> {opened.pack.price})</button>
               )}
               <button type="button" className="btn btn-primary" onClick={() => setOpened(null)}>Super!</button>
             </div>

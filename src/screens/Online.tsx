@@ -1,5 +1,6 @@
 // Online duel against a real player: choose 8 cards, then challenge a friend (invite code), enter a friend's
 // code, or look for a random opponent. The server is the referee; this screen shows its view live.
+import { Coin } from '../components/Coin';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
@@ -171,7 +172,7 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
           <p className="result-score"><span className="blue">{r.score.me}</span> : <span className="red">{r.score.opponent}</span></p>
           {why && <p className="small">{why}</p>}
           {r.outcome === 'win' && (
-            <p className="reward-line">{r.coins > 0 ? `🪙 +${r.coins} gutgeschrieben` : r.score.me + r.score.opponent === 0 ? 'Keine Münzen – das Duell hatte noch nicht begonnen.' : 'Heute keine Münzen mehr gegen diesen Gegner (zählt aber in der Statistik).'}</p>
+            <p className="reward-line">{r.coins > 0 ? <><Coin /> +{r.coins} gutgeschrieben</> : r.score.me + r.score.opponent === 0 ? 'Keine Münzen – das Duell hatte noch nicht begonnen.' : 'Heute keine Münzen mehr gegen diesen Gegner (zählt aber in der Statistik).'}</p>
           )}
           {stats && <p className="muted small">{draftMode ? 'Draft' : 'Online'}-Bilanz: 🏆 {stats.wins} · 🤝 {stats.draws} · 💀 {stats.losses}</p>}
         </div>
@@ -243,13 +244,13 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
               <li>Beide bekommen denselben Pool aus 30 Karten ({poolPlanText()}). Deine Sammlung spielt keine Rolle.</li>
               <li>Du wählst in {Math.round(DRAFT_DECK_SECONDS / 60)} Minuten verdeckt 20 Karten für dein Draft-Deck.</li>
               <li>Im Lauf sammelst du daraus 8 Karten ein – gleiche Steine und Funde für beide.</li>
-              <li>Duell mit {PVP_TURN_SECONDS} s pro Zug. Ein Sieg bringt 🪙 {DRAFT_WIN_COINS}. Danach verfällt das Draft-Deck.</li>
+              <li>Duell mit {PVP_TURN_SECONDS} s pro Zug. Ein Sieg bringt <Coin /> {DRAFT_WIN_COINS}. Danach verfällt das Draft-Deck.</li>
             </ol>
           </section>
         ) : (
           <p className="muted small">
             Ein Duell gegen einen echten Spieler. {PVP_TURN_SECONDS} Sekunden pro Zug – danach wird eine zufällige Karte gelegt.
-            Ist ein Spieler {PVP_ABSENT_SECONDS} Sekunden nicht verbunden, gewinnt der andere. Ein Sieg bringt 🪙 {PVP_WIN_COINS}.
+            Ist ein Spieler {PVP_ABSENT_SECONDS} Sekunden nicht verbunden, gewinnt der andere. Ein Sieg bringt <Coin /> {PVP_WIN_COINS}.
           </p>
         )}
         {stats && <p className="small">Deine {draftMode ? 'Draft' : 'Online'}-Bilanz: 🏆 {stats.wins} · 🤝 {stats.draws} · 💀 {stats.losses}</p>}

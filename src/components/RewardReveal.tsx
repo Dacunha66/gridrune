@@ -1,5 +1,6 @@
 // Big reveal of what a campaign result brought: one reward after the other, with a light burst behind it.
 // Runes show their artwork, rarity and what the effect does; cards are shown large; coins count up.
+import { Coin, CoinText, RewardIcon } from './Coin';
 import { useEffect, useState } from 'react';
 import { Card } from './Card';
 import { RuneBadge } from './RuneBadge';
@@ -8,7 +9,7 @@ import { DesignImage } from './DesignArt';
 import { RARITY_LABEL, getCard } from '../game/cards';
 import { imageUrl } from '../game/catalog';
 import { GAME_MODES, MODE_NAME, RuneDef } from '../game/runes';
-import { REWARD_ICON, Reward, rewardText } from '../game/campaign';
+import { Reward, rewardText } from '../game/campaign';
 
 export type RevealItem =
   | { kind: 'rune'; rune: RuneDef }
@@ -28,7 +29,7 @@ export function runeFacts(r: RuneDef): string[] {
 
 function CoinCount({ amount }: { amount: number }) {
   const n = useCountUp(amount, 900, 0);
-  return <span className="reveal-coins">🪙 +{n}</span>;
+  return <span className="reveal-coins"><Coin className="big" /> +{n}</span>;
 }
 
 export function RewardReveal({ items, reducedMotion, guest = false, onClose }: {
@@ -81,13 +82,13 @@ export function RewardReveal({ items, reducedMotion, guest = false, onClose }: {
         {item.kind === 'coins' && (
           <>
             <div className="reveal-item"><CoinCount amount={item.amount} /></div>
-            <ul className="reveal-facts">{item.sources.map((s, k) => <li key={k}>{s}</li>)}</ul>
+            <ul className="reveal-facts">{item.sources.map((s, k) => <li key={k}><CoinText text={s} /></li>)}</ul>
           </>
         )}
 
         {item.kind === 'preview' && (
           <>
-            <div className="reveal-item"><span className="reveal-icon">{REWARD_ICON[item.reward.type]}</span></div>
+            <div className="reveal-item"><span className="reveal-icon"><RewardIcon type={item.reward.type} /></span></div>
             <h2 className="reveal-name">{rewardText(item.reward)}</h2>
             <p className="reveal-hint">{item.source}</p>
             <p className="reveal-text muted">

@@ -1,6 +1,7 @@
 // Campaign for players: world selection → world map with stations → mission briefing → (run) → duel → stars.
 // Guests keep their progress on this device and see rewards as a preview. Signed-in players get a ticket from the
 // server before each mission; the server replays the duel, stores the stars and pays coins, cards and packs.
+import { CoinText, RewardIcon } from '../components/Coin';
 import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
@@ -23,7 +24,7 @@ import type { CloudSave } from '../game/cloudSave';
 import { RuneBadge, RuneMatchup } from '../components/RuneBadge';
 import { Pick } from '../game/runner';
 import {
-  CampaignContent, ImageRef, KIND_LABEL, LEVEL_LABEL, Mission, MissionCard, Opponent, REWARD_ICON, RANK_LABEL, Reward, World, findArena,
+  CampaignContent, ImageRef, KIND_LABEL, LEVEL_LABEL, Mission, MissionCard, Opponent, RANK_LABEL, Reward, World, findArena,
   missionPool, rewardText, suggestHand, visibleWorlds, worldMissions,
 } from '../game/campaign';
 import { DuelStats, duelStats, goalProgress, goalText } from '../game/campaignGoals';
@@ -248,7 +249,7 @@ function OpponentFace({ o, className = '' }: { o: Opponent; className?: string }
 
 function RewardLine({ reward, prefix }: { reward: Reward | null; prefix?: string }) {
   if (!reward) return null;
-  return <span className="reward-line">{prefix}{REWARD_ICON[reward.type]} {rewardText(reward)}</span>;
+  return <span className="reward-line">{prefix}<RewardIcon type={reward.type} /> {rewardText(reward)}</span>;
 }
 
 const PAID_TYPES = new Set<Reward['type']>(['coins', 'card', 'pack']);
@@ -260,7 +261,7 @@ function GrantedLine({ g }: { g: GrantedReward }) {
     ...g.cards.map((id) => `🃏 ${getCard(id).name} (neu)`),
     g.duplicates.length ? `${g.duplicates.length} doppelte Karte${g.duplicates.length === 1 ? '' : 'n'} → Münzen` : '',
   ].filter(Boolean);
-  return <span className="reward-line">{g.source}: {parts.join(' · ') || '–'}</span>;
+  return <span className="reward-line">{g.source}: <CoinText text={parts.join(' · ') || '–'} /></span>;
 }
 
 function StarBar({ world, stars, max }: { world: World; stars: number; max: number }) {
@@ -273,14 +274,14 @@ function StarBar({ world, stars, max }: { world: World; stars: number; max: numb
           const here = world.milestones.filter((ms) => ms.stars === n);
           return (
             <span key={n} className={`ms-tick ${stars >= n ? 'reached' : ''}`} style={{ left: `${Math.min(100, (n / Math.max(1, max)) * 100)}%` }} title={`${n} ★: ${here.map((ms) => rewardText(ms.reward)).join(' + ')}`}>
-              {REWARD_ICON[here[0].reward.type]}
+              <RewardIcon type={here[0].reward.type} />
             </span>
           );
         })}
       </div>
       <p className="star-bar-text">
         <b>★ {stars}/{max}</b>
-        {next ? <> · Nächster Meilenstein: {next.stars} ★ – {world.milestones.filter((ms) => ms.stars === next.stars).map((ms) => `${REWARD_ICON[ms.reward.type]} ${rewardText(ms.reward)}`).join(' + ')}</> : world.milestones.length > 0 ? ' · Alle Meilensteine erreicht!' : ''}
+        {next ? <> · Nächster Meilenstein: {next.stars} ★ – {world.milestones.filter((ms) => ms.stars === next.stars).map((ms, i) => <span key={i}>{i > 0 && ' + '}<RewardIcon type={ms.reward.type} /> {rewardText(ms.reward)}</span>)}</> : world.milestones.length > 0 ? ' · Alle Meilensteine erreicht!' : ''}
       </p>
     </div>
   );
@@ -360,7 +361,7 @@ function WorldMap({ world, content, progress, preview, runesOn, onMission, onBac
         if (!l.runes.length && !l.reward) return null;
         return (
           <button type="button" className="next-loot" onClick={() => onMission(current.id)}>
-            {l.runes[0] ? <RuneBadge rune={l.runes[0]} className="small" /> : <span className="tile-icon">{REWARD_ICON[l.reward!.type]}</span>}
+            {l.runes[0] ? <RuneBadge rune={l.runes[0]} className="small" /> : <span className="tile-icon"><RewardIcon type={l.reward!.type} /></span>}
             <span>
               <small>Nächste Mission: {current.name}</small>
               <b>Erster Sieg: {[...l.runes.map((r) => r.name), ...(l.reward ? [rewardText(l.reward)] : [])].join(' + ')}</b>
@@ -399,7 +400,7 @@ function WorldMap({ world, content, progress, preview, runesOn, onMission, onBac
                 {!done && (() => {
                   const l = loot(m);
                   if (l.runes[0]) return <span className="station-loot rune" title={`Erster Sieg: ${l.runes[0].name}`}><RuneBadge rune={l.runes[0]} className="tiny" /></span>;
-                  if (l.reward) return <span className="station-loot" title={`Erster Sieg: ${rewardText(l.reward)}`} aria-hidden="true">{REWARD_ICON[l.reward.type]}</span>;
+                  if (l.reward) return <span className="station-loot" title={`Erster Sieg: ${rewardText(l.reward)}`} aria-hidden="true"><RewardIcon type={l.reward.type} /></span>;
                   return null;
                 })()}
                 <Stars earned={starSlots(progress, m)} className="station-stars" />
@@ -557,19 +558,19 @@ function BriefRewards({ mission, world, content, progress, runesOn, preview }: {
       ))}
       {mission.firstReward && (
         <div className={`reward-tile ${done ? 'won' : ''}`}>
-          <span className="tile-icon">{REWARD_ICON[mission.firstReward.type]}</span>
+          <span className="tile-icon"><RewardIcon type={mission.firstReward.type} /></span>
           <div><p className="tile-label">{done ? '✓ Erhalten' : 'Erster Sieg'}</p><p className="tile-name">{rewardText(mission.firstReward)}</p></div>
         </div>
       )}
       {starRewards.map(({ r, i }) => (
         <div key={i} className="reward-tile">
-          <span className="tile-icon">{REWARD_ICON[r!.type]}</span>
+          <span className="tile-icon"><RewardIcon type={r!.type} /></span>
           <div><p className="tile-label">★ Stern {i + 1}: {mission.goals[i] ? goalText(mission.goals[i]) : ''}</p><p className="tile-name">{rewardText(r!)}</p></div>
         </div>
       ))}
       {next && world && (
         <div className="reward-tile milestone">
-          <span className="tile-icon">{REWARD_ICON[next.reward.type]}</span>
+          <span className="tile-icon"><RewardIcon type={next.reward.type} /></span>
           <div>
             <p className="tile-label">Welt-Meilenstein: {next.stars} ★ (du hast {stars})</p>
             <p className="tile-name">{world.milestones.filter((ms) => ms.stars === next.stars).map((ms) => rewardText(ms.reward)).join(' + ')}</p>
