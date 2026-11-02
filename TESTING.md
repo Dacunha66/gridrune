@@ -8,7 +8,7 @@ Live geprüft mit zwei neuen Testkonten (danach gelöscht): Draft-Einladung per 
 
 `adventure` und `game` bleiben auf engine-231ee351ee2b (die neue Engine unterscheidet sich nur durch „Name auf der Karte“).
 
-Noch offen (Handy reicht): im Admin Glut → „Schmiede am Berg“, Fluch → „Herz des Vulkans“.
+Runen in der Datenbank umgestellt: Glut → m015 „Schmiede am Berg“, Fluch → m020 „Herz des Vulkans“ (Rune des Waldes m005, Nachhall m010, Verdrehung ab Start).
 
 ## Umzug zu Cloudflare (31.10.)
 
