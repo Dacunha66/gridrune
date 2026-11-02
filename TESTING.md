@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Belohnungen neu: Schwierigkeit im einfachen Spiel, Karten nur in der Rangliste (02.11.)
+
+Einfaches Spiel: vor dem Start Leicht / Normal / Schwer wählen. Nur noch Münzen (Sieg 30/50/100, Unentschieden 10/20/40, Niederlage 5/10/15), keine Karte mehr. Die Stufe steht im Ticket; der Server spielt den Computer mit genau dieser Stufe nach. Rangliste (Collection League): mit Konto gibt der Server das Match aus (Seed, Computer-Rune) und prüft Lauf und alle Runden; ein gewonnenes Match schaltet die seltenste neue Entdeckung frei (im Lauf als „NEU“ markiert), sonst 50 Münzen. Gäste spielen ohne Belohnung. Hauptmenü: „Spielen“ mit Untermenü. Datenbank-Änderung 015 (Ticket-Art „league“) eingespielt, `adventure` und `game` auf Engine 46b9d84 / engine-50e69ea97fe0.
+
+Geprüft: 252 automatische Tests (Münzen je Stufe; Duelle gegen Leicht/Schwer werden nachgespielt, ein Leicht-Protokoll gilt nicht als Schwer; ehrliche Ranglisten-Matches bestätigt, fehlende/zusätzliche Runden, falscher Start, falscher Zug und anderes Deck abgelehnt). Live mit Testkonto (danach gelöscht): unbekannte Stufe abgelehnt, Spiel auf Schwer → richtige Münzen, keine Karte; ungültiges Liga-Deck und unvollständiges Match abgelehnt; verlorene Matches ohne Belohnung; gewonnenes Match → neue Karte (Schattenluchs), zweites Einreichen zahlt nicht doppelt. Browser (lokal, Gast): Stufenwahl im Spiel-Menü startet den Lauf, Ranglisten-Einführung zeigt Belohnung bzw. Gast-Hinweis. Nicht geprüft: ein Ranglisten-Match in der Oberfläche mit Konto auf der Live-Seite.
+
 ## Online-Draft live, Feuer-Klasse (02.11.)
 
 Datenbank-Änderung 014 eingespielt, Funktion `pvp` neu veröffentlicht (Version 3, Engine a3c4abd / engine-76028489b7dc). Karten c02, c07, r07, r17, e01, e13, l05, m04 haben in der Datenbank die Klasse Feuer. Alte Testkonten gelöscht.
