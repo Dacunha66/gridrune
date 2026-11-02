@@ -2,7 +2,7 @@
 // the recorded run and duel afterwards; the server replays both and pays out. Results that could not be sent
 // (no connection) wait on the device and are sent later – a ticket stays valid for 24 hours.
 import { webBackend } from './cardStore';
-import { AdventureLog, AdventureTicket, MissionLog, MissionTicket } from './verify';
+import { AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, MissionLog, MissionTicket } from './verify';
 import type { GrantedReward } from './campaignRewards';
 import type { PackCard } from './shop';
 import { CloudSave } from './cloudSave';
@@ -10,6 +10,7 @@ import { CampaignProgress, sanitizeProgress } from './campaignProgress';
 import { Reward } from './rewards';
 import { Outcome, Side } from './battle';
 import { sanitize } from './storage';
+import type { AiLevel } from './ai';
 
 export type StartResult = { kind: 'ticket'; ticket: AdventureTicket } | { kind: 'offline' } | { kind: 'error'; error: string };
 export type FinishResult =
@@ -33,8 +34,8 @@ function cloudOf(d: Record<string, unknown>): CloudSave | null {
     : null;
 }
 
-export async function startAdventure(deck: string[], rune: string | null): Promise<StartResult> {
-  const r = await call({ action: 'start', deck, rune });
+export async function startAdventure(deck: string[], rune: string | null, level: AiLevel): Promise<StartResult> {
+  const r = await call({ action: 'start', deck, rune, level });
   if (!r || !r.data) return { kind: 'offline' };
   if (r.data.ticket) return { kind: 'ticket', ticket: r.data.ticket as AdventureTicket };
   return { kind: 'error', error: String(r.data.error ?? 'unknown') };
@@ -106,11 +107,35 @@ export async function buySkinRemote(skinId: string): Promise<ShopReply> {
   return { ok: false, reason: shopError(r?.data), cloud };
 }
 
+// ---------- Collection League against the computer (server function "game") ----------
+
+export type LeagueFinish =
+  | { kind: 'paid'; won: boolean; reward: Reward; cloud: CloudSave }
+  | { kind: 'rejected'; error: string; cloud: CloudSave | null }
+  | { kind: 'offline' };
+
+export async function startLeague(deck: string[], rune: string | null): Promise<{ kind: 'ticket'; ticket: LeagueTicket } | { kind: 'offline' } | { kind: 'error'; error: string }> {
+  const r = await call({ action: 'league-start', deck, rune }, 'game');
+  if (!r || !r.data || r.status >= 500) return { kind: 'offline' };
+  if (r.data.ticket) return { kind: 'ticket', ticket: r.data.ticket as LeagueTicket };
+  return { kind: 'error', error: String(r.data.error ?? 'unknown') };
+}
+
+export async function finishLeagueRemote(ticketId: string, log: LeagueLog): Promise<LeagueFinish> {
+  const r = await call({ action: 'league-finish', ticketId, log }, 'game');
+  if (!r || !r.data || r.status >= 500) return { kind: 'offline' };
+  const d = r.data;
+  const cloud = cloudOf(d);
+  if (d.ok === true && cloud) return { kind: 'paid', won: !!d.won, reward: d.reward as Reward, cloud };
+  return { kind: 'rejected', error: String(d.error ?? 'unknown'), cloud };
+}
+
 // ---------- Results waiting for a connection (per account, on this device) ----------
 
 export type PendingResult =
   | { kind?: 'adventure'; ticketId: string; log: AdventureLog; at: string }
-  | { kind: 'mission'; ticketId: string; log: MissionLog; at: string };
+  | { kind: 'mission'; ticketId: string; log: MissionLog; at: string }
+  | { kind: 'league'; ticketId: string; log: LeagueLog; at: string };
 
 const pendingKey = (uid: string) => `gridrune/pending-results/${uid}`;
 

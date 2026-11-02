@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outcome } from './game/battle';
 import { Reward, applyReward, computeReward } from './game/rewards';
+import type { AiLevel } from './game/ai';
 import { Pick } from './game/runner';
 import { SaveData, loadSave, writeSave } from './game/storage';
 import { Menu } from './screens/Menu';
@@ -14,7 +15,7 @@ import { Battle } from './screens/Battle';
 import { Result } from './screens/Result';
 import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
-import { CARDS, setCardCatalog } from './game/cards';
+import { CARDS, getCard, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
 import { getDb, isAdmin, loadArenas, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks } from './game/cardStore';
 import { setPackLooks } from './game/shop';
@@ -35,7 +36,7 @@ import { AccountState, isGuest, watchAccount } from './game/account';
 import { AccountPage, CloudGate, NewPassword, Welcome } from './screens/Account';
 import { useCloudSync } from './game/useCloudSync';
 import {
-  claimCampaignRewards, finishAdventureRemote, finishMissionRemote, readPending, startAdventure, writePending,
+  claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, readPending, startAdventure, writePending,
 } from './game/adventureApi';
 import { grantedText } from './game/campaignRewards';
 import { AdventureLog, AdventureTicket } from './game/verify';
@@ -45,9 +46,9 @@ export type Screen =
   | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
-  | { name: 'runner'; runId: number; deck: string[]; ticket?: AdventureTicket }
-  | { name: 'battle'; picks: Pick[]; ticket?: AdventureTicket; run?: AdventureLog['run'] }
-  | { name: 'result'; outcome: Outcome; reward: Reward; score: { player: number; cpu: number }; status?: 'checking' | 'paid' | 'pending' | 'rejected' };
+  | { name: 'runner'; runId: number; deck: string[]; level: AiLevel; ticket?: AdventureTicket }
+  | { name: 'battle'; picks: Pick[]; level: AiLevel; ticket?: AdventureTicket; run?: AdventureLog['run'] }
+  | { name: 'result'; outcome: Outcome; reward: Reward; level: AiLevel; score: { player: number; cpu: number }; status?: 'checking' | 'paid' | 'pending' | 'rejected' };
 
 function prefersReducedMotion(): boolean {
   try {
@@ -193,14 +194,14 @@ export function App() {
 
   // Signed in: the server hands out the run (seed) and checks the result; guests play as before.
   const starting = useRef(false);
-  const startRun = async () => {
+  const startRun = async (level: AiLevel) => {
     const deck = repairDeck(save.deck, save.unlocked, CARDS).deck;
-    if (!cloud.accountMode) return setScreen({ name: 'runner', runId: Date.now(), deck });
+    if (!cloud.accountMode) return setScreen({ name: 'runner', runId: Date.now(), deck, level });
     if (cloud.phase !== 'ready' || starting.current) return;
     starting.current = true;
-    const r = await startAdventure(deck, duelRune('adventure'));
+    const r = await startAdventure(deck, duelRune('adventure'), level);
     starting.current = false;
-    if (r.kind === 'ticket') return setScreen({ name: 'runner', runId: Date.now(), deck: r.ticket.deck, ticket: r.ticket });
+    if (r.kind === 'ticket') return setScreen({ name: 'runner', runId: Date.now(), deck: r.ticket.deck, level: r.ticket.level ?? level, ticket: r.ticket });
     setScreen({ name: 'menu' });
     cloud.notify(r.kind === 'offline'
       ? 'Keine Verbindung – zum Starten eines Spiels mit deinem Konto brauchst du kurz Internet.'
@@ -214,15 +215,15 @@ export function App() {
     if (pending) setTimeout(() => applyRecords(pending), 0);
   }, [applyRecords]);
 
-  const finishBattle = async (picks: Pick[], outcome: Outcome, score: { player: number; cpu: number }, ticket?: AdventureTicket, run?: AdventureLog['run'], record?: DuelRecord) => {
-    const reward = computeReward(outcome, picks, save.unlocked);
+  const finishBattle = async (level: AiLevel, outcome: Outcome, score: { player: number; cpu: number }, ticket?: AdventureTicket, run?: AdventureLog['run'], record?: DuelRecord) => {
+    const reward = computeReward(outcome, level);
     if (!ticket || !run || !record || !cloud.uid) {
       setSave((prev) => applyReward(prev, outcome, reward));
-      setScreen({ name: 'result', outcome, reward, score });
+      setScreen({ name: 'result', outcome, reward, level, score });
       return;
     }
     // Checked adventure: show the result at once, the server confirms and pays out.
-    setScreen({ name: 'result', outcome, reward, score, status: 'checking' });
+    setScreen({ name: 'result', outcome, reward, level, score, status: 'checking' });
     const log: AdventureLog = { run, duel: { first: record.start.turn, moves: record.moves } };
     const r = await finishAdventureRemote(ticket.id, log);
     const update = (patch: Partial<Extract<Screen, { name: 'result' }>>) => setScreen((s) => (s.name === 'result' ? { ...s, ...patch } : s));
@@ -249,7 +250,12 @@ export function App() {
       busy = true;
       let list = readPending(uid);
       for (const p of list) {
-        if (p.kind === 'mission') {
+        if (p.kind === 'league') {
+          const r = await finishLeagueRemote(p.ticketId, p.log);
+          if (r.kind === 'offline') break;
+          if (r.cloud) cloud.adoptServer(r.cloud);
+          if (r.kind === 'paid' && r.won) cloud.notify(`Rangliste nachträglich gewertet: ${r.reward.newCard ? `neue Karte „${getCard(r.reward.newCard).name}“` : `🪙 ${r.reward.coins}`}.`);
+        } else if (p.kind === 'mission') {
           const r = await finishMissionRemote(p.ticketId, p.log);
           if (r.kind === 'offline') break;
           if (r.cloud) cloud.adoptServer(r.cloud);
@@ -363,6 +369,7 @@ export function App() {
           skin={getSkin(save.skins.runner).colors}
           runes={runesOn ? { player: duelRune('league'), equipped: equippedRune } : null}
           onSaveDeck={(leagueDeck) => setSave((s) => ({ ...s, leagueDeck }))}
+          account={cloud.uid && cloud.phase === 'ready' ? { uid: cloud.uid, adopt: cloud.adoptServer } : null}
           onExit={toMenu}
         />
       )}
@@ -407,7 +414,7 @@ export function App() {
           reducedMotion={reducedMotion}
           skin={getSkin(save.skins.runner).colors}
           ticket={screen.ticket}
-          onFinish={(picks, inputs, skippedAt) => setScreen({ name: 'battle', picks, ticket: screen.ticket, run: { inputs, skippedAt } })}
+          onFinish={(picks, inputs, skippedAt) => setScreen({ name: 'battle', picks, level: screen.level, ticket: screen.ticket, run: { inputs, skippedAt } })}
           onQuit={toMenu}
         />
       )}
@@ -417,13 +424,14 @@ export function App() {
           unlocked={save.unlocked}
           reducedMotion={reducedMotion}
           ticket={screen.ticket}
-          onEnd={(outcome, score, _first, record) => finishBattle(screen.picks, outcome, score, screen.ticket, screen.run, record)}
+          ai={{ level: screen.level }}
+          onEnd={(outcome, score, _first, record) => finishBattle(screen.level, outcome, score, screen.ticket, screen.run, record)}
           onQuit={toMenu}
           runes={{ player: duelRune('adventure'), cpu: duelRune('adventure') ? 'random' : null }}
         />
       )}
       {screen.name === 'result' && (
-        <Result outcome={screen.outcome} reward={screen.reward} score={screen.score} coins={screen.status === "checking" ? save.coins + screen.reward.coins : save.coins} status={screen.status} onAgain={startRun} onMenu={toMenu} />
+        <Result outcome={screen.outcome} reward={screen.reward} score={screen.score} coins={screen.status === "checking" ? save.coins + screen.reward.coins : save.coins} status={screen.status} level={screen.level} onAgain={() => startRun(screen.level)} onMenu={toMenu} />
       )}
     </div>
     </>

@@ -135,7 +135,7 @@ export interface Mission {
 
 export type OpponentRank = 'normal' | 'elite' | 'boss';
 export const RANK_LABEL: Record<OpponentRank, string> = { normal: 'Normal', elite: 'Elite', boss: 'Boss' };
-export const LEVEL_LABEL: Record<AiLevel, string> = { easy: 'Leicht', medium: 'Mittel', hard: 'Schwer' };
+export const LEVEL_LABEL: Record<AiLevel, string> = { easy: 'Leicht', medium: 'Normal', hard: 'Schwer' };
 
 export interface Opponent {
   id: string;

@@ -1,6 +1,7 @@
 import { AbilityMedallion, ClassShield } from '../components/cardIcons';
 import { Coin } from '../components/Coin';
 import { Header } from './Header';
+import { AI_COINS, LEAGUE_NO_CARD_COINS } from '../game/rewards';
 import { SETTINGS } from '../game/settings';
 import { RuneBadge } from '../components/RuneBadge';
 import { BUILTIN_RUNES, findRune } from '../game/runes';
@@ -16,7 +17,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
         <p>Du kommst durch <b>8 Tore</b> mit je 3 Karten und nimmst die Karte auf deiner Spur:</p>
         <ul>
           <li><b>Tor 1–7</b> – Karten aus <b>deinem Deck</b>. Stell dir dein Deck vorher gut zusammen!</li>
-          <li><b>Tor 8 (Finale)</b> – <b>3 neue Karten</b> mit „NEU“. Die gewählte spielst du im Duell; <b>gewinnst du, gehört sie dir</b>.</li>
+          <li><b>Tor 8 (Finale)</b> – <b>3 Entdeckungen</b>: Karten, die du noch nicht hast. Die gewählte spielst du im Duell mit.</li>
         </ul>
         <p><b>Stolpersteine</b> halten dich nicht auf, aber die <b>nächste Karte</b>, die du danach nimmst, ist im Duell um <b>1 schwächer</b> (alle vier Werte, mindestens 1). Weiche ihnen aus! Mit ⏩ läufst du schneller.</p>
 
@@ -66,13 +67,19 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
                 </li>
               ))}
             </ul>
-            <p>Die vier Grundrunen spielst du in der <b>Kampagne</b> frei: Waldpfad → Verdrehung, Waldhüter → Glut, Alte Ruinen → Fluch, Herz des Waldes (Boss) → Nachhall. Ohne Rune spielst du ohne. In der Liga sind nur Grundrunen erlaubt, die du freigespielt hast. Runen gibt es nie für Echtgeld, Varianten sind nie stärker.</p>
+            <p>Die Rune der Verdrehung hast du von Anfang an. Weitere Runen spielst du in der <b>Kampagne</b> frei – jeweils in Level 5 und Level 10 einer Welt. Ohne Rune spielst du ohne. In der Liga sind nur Grundrunen erlaubt, die du freigespielt hast. Runen gibt es nie für Echtgeld, Varianten sind nie stärker.</p>
           </>
         )}
 
         <h2>3 · Belohnung</h2>
-        <p>Sieg: <Coin /> 100 und die seltenste neue <b>Entdeckung</b> aus deinem Lauf wird dauerhaft freigeschaltet. Hattest du sie schon, gibt es <Coin /> 50 extra.</p>
-        <p>Unentschieden: <Coin /> 40 · Niederlage: <Coin /> 15</p>
+        <p><b>Einfaches Spiel</b> – du wählst die Schwierigkeit des Computers und bekommst Münzen:</p>
+        <ul>
+          {(['easy', 'medium', 'hard'] as const).map((l) => (
+            <li key={l}><b>{{ easy: 'Leicht', medium: 'Normal', hard: 'Schwer' }[l]}</b>: Sieg <Coin /> {AI_COINS[l].win} · Unentschieden <Coin /> {AI_COINS[l].draw} · Niederlage <Coin /> {AI_COINS[l].loss}</li>
+          ))}
+        </ul>
+        <p><b>Rangliste</b> (Collection League, mit Konto) – gewinnst du das Match, gehört dir die seltenste <b>neue Entdeckung</b> aus deinem Lauf (im Lauf mit „NEU“ markiert). Ist keine neu, gibt es <Coin /> {LEAGUE_NO_CARD_COINS}. Der Server prüft Lauf und Duelle vorher.</p>
+        <p>Neue Karten gibt es außerdem im <b>Shop</b> und als Belohnung in der <b>Kampagne</b>.</p>
 
         <h2>Shop</h2>
         <p>Im Shop kaufst du mit Münzen <b>Booster-Packs</b> (3 Karten, neue Karten werden sofort freigeschaltet, doppelte in Münzen umgetauscht) und <b>Skins</b>, die nur das Aussehen ändern.</p>

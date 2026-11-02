@@ -3,14 +3,16 @@
 // records the player's lane changes and actions; the server replays everything with exactly this code and only
 // then pays the reward. The same functions run in the game (to play) and on the server (to check).
 import { ARENAS, Arena, pickArena } from './arenas';
-import { AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from './ai';
+import { AiLevel, AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from './ai';
 import { BattleState, HAND_SIZE, HandCard, Outcome, Side, coinToss, cpuChoosesFirst, createBattle, isGameOver, outcome, score, toHand } from './battle';
 import { CLASSIC_ARENA } from './arenas';
 import { Mission, Opponent, findArena, missionPool } from './campaign';
 import { DuelStats, duelStats } from './campaignGoals';
-import { deriveRng } from './league';
+import { deriveRng, leagueLayout, roundRock } from './league';
+import { leagueArena } from './arenas';
+import { emptyMatch, nextStep, recordRound } from './match';
 import { Rng } from './rng';
-import { Pick, RunInput, RunnerSim, FINISH_DISTANCE, validateRunInputs } from './runner';
+import { Pick, RunInput, RunnerSim, FINISH_DISTANCE, replayRun, validateRunInputs } from './runner';
 import { Action, basicRunes, isRuneUse, applyAction } from './runes';
 
 /** What the server hands out when a run starts (and keeps to check the result). */
@@ -24,6 +26,8 @@ export interface AdventureTicket {
   playerRune: string | null;
   /** The computer gets a random basic rune only when the player has one. */
   cpuRune: 'random' | null;
+  /** Difficulty chosen by the player (decides the computer's moves and the coins); older tickets: medium. */
+  level?: AiLevel;
 }
 
 /** What a runner track is built from (adventure and campaign runs). */
@@ -100,14 +104,22 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
  * Replays a duel from its start position: the coin toss and the computer's moves follow from the random sources,
  * every player action must be legal. `begin` is the position after the toss (start of the recorded moves).
  */
-export function replayDuel(start: BattleState, log: DuelLog, rngs: { toss: Rng; ai: Rng }, ai?: AiOptions):
+export function replayDuel(start: BattleState, log: DuelLog, rngs: { toss: Rng; ai: Rng }, ai?: AiOptions, fixedFirst: Side | null = null):
   { ok: true; begin: BattleState; end: BattleState } | { ok: false; error: string } {
   if (!log || !Array.isArray(log.moves)) return { ok: false, error: 'Duell fehlt' };
-  // Coin toss: if the player wins, they choose; if the computer wins, it decides.
-  const winner = coinToss(rngs.toss);
-  const first = winner === 'cpu' ? cpuChoosesFirst() : log.first;
-  if (first !== 'player' && first !== 'cpu') return { ok: false, error: 'Ungültiger Start' };
-  if (winner === 'cpu' && log.first !== first) return { ok: false, error: 'Falscher Start nach dem Münzwurf' };
+  let first: Side;
+  if (fixedFirst) {
+    // No coin toss (e.g. round 2 of a league match): the start is fixed.
+    if (log.first !== fixedFirst) return { ok: false, error: 'Falscher Start' };
+    first = fixedFirst;
+  } else {
+    // Coin toss: if the player wins, they choose; if the computer wins, it decides.
+    const winner = coinToss(rngs.toss);
+    const chosen = winner === 'cpu' ? cpuChoosesFirst() : log.first;
+    if (chosen !== 'player' && chosen !== 'cpu') return { ok: false, error: 'Ungültiger Start' };
+    if (winner === 'cpu' && log.first !== chosen) return { ok: false, error: 'Falscher Start nach dem Münzwurf' };
+    first = chosen;
+  }
   const begin: BattleState = { ...start, turn: first };
   let state = begin;
   const moves = log.moves;
@@ -152,9 +164,86 @@ export function checkAdventure(ticket: AdventureTicket, log: AdventureLog, arena
   } catch {
     return { ok: false, error: 'Duell konnte nicht aufgebaut werden' };
   }
-  const duel = replayDuel(start, log.duel, rngs);
+  const duel = replayDuel(start, log.duel, rngs, { level: ticket.level ?? 'medium' });
   if (!duel.ok) return duel;
   return { ok: true, picks: run.picks, outcome: outcome(duel.end), score: score(duel.end) };
+}
+
+// ---------- Collection League against the computer (checked, card reward) ----------
+
+/** What the server hands out when a league match starts. */
+export interface LeagueTicket {
+  id: string;
+  seed: string;
+  /** The league deck (20 cards, league limits, checked against the collection). */
+  deck: string[];
+  playerRune: string | null;
+  /** The computer's basic rune for the whole match (null = none). */
+  cpuRune: string | null;
+}
+
+export interface LeagueLog {
+  /** Lane changes of the run (league runs cannot be skipped). */
+  run: RunInput[];
+  /** Every round in order: who started and all moves. */
+  rounds: DuelLog[];
+}
+
+/** The computer's 8 cards (the same in every round of the match). */
+export const leagueCpuHand = (seed: string): HandCard[] => drawCpuHand(deriveRng(seed, 'cpu-hand'));
+
+/** The computer's basic rune for a match (only when runes are in play for the player). */
+export function leagueCpuRune(seed: string, runesOn: boolean): string | null {
+  if (!runesOn) return null;
+  const basic = basicRunes();
+  return basic.length ? basic[Math.floor(deriveRng(seed, 'cpu-rune')() * basic.length)].id : null;
+}
+
+/** Arena, rock and random sources of one round – the game plays with them, the server replays with them. */
+export function leagueRound(seed: string, round: number, arenas: readonly Arena[] = ARENAS) {
+  const arena = leagueArena(seed, round, arenas);
+  return { arena, rocks: [roundRock(seed, round, arena.cells)], toss: deriveRng(seed, `toss:${round}`), ai: deriveRng(seed, `ai:${round}`) };
+}
+
+const MAX_LEAGUE_ROUNDS = 7;
+
+export type LeagueCheck =
+  | { ok: true; picks: Pick[]; winner: Side; rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[] }
+  | { ok: false; error: string };
+
+/** Checks a whole league match: the run gives the hand, then every round is replayed until the match is decided. */
+export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readonly Arena[] = ARENAS): LeagueCheck {
+  if (!log || !Array.isArray(log.run) || !Array.isArray(log.rounds)) return { ok: false, error: 'Match fehlt' };
+  const run = replayRun(leagueLayout(ticket.seed, 'du', ticket.deck), log.run);
+  if (run.error) return { ok: false, error: run.error };
+  if (run.picks.length !== HAND_SIZE) return { ok: false, error: 'Lauf unvollständig' };
+  const hand: HandCard[] = run.picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
+  const cpuHand = leagueCpuHand(ticket.seed);
+  let match = emptyMatch();
+  const rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[] = [];
+  for (let i = 0; ; i++) {
+    const step = nextStep(match);
+    if (step.kind === 'done') {
+      if (i !== log.rounds.length) return { ok: false, error: 'Zusätzliche Runden nach Matchende' };
+      return { ok: true, picks: run.picks, winner: step.winner, rounds };
+    }
+    if (i >= MAX_LEAGUE_ROUNDS) return { ok: false, error: 'Match zu lang' };
+    const duelLog = log.rounds[i];
+    if (!duelLog) return { ok: false, error: 'Match nicht zu Ende gespielt' };
+    const r = leagueRound(ticket.seed, step.round, arenas);
+    let start: BattleState;
+    try {
+      start = createBattle(hand, cpuHand, 'player', r.rocks, r.arena.cells, { player: ticket.playerRune, cpu: ticket.cpuRune });
+    } catch {
+      return { ok: false, error: 'Duell konnte nicht aufgebaut werden' };
+    }
+    const duel = replayDuel(start, duelLog, { toss: r.toss, ai: r.ai }, undefined, step.first);
+    if (!duel.ok) return { ok: false, error: `Runde ${step.round}: ${duel.error}` };
+    const res = outcome(duel.end);
+    const winner: Side | 'draw' = res === 'win' ? 'player' : res === 'loss' ? 'cpu' : 'draw';
+    rounds.push({ first: duel.begin.turn, winner, score: score(duel.end) });
+    match = recordRound(match, duel.begin.turn, winner);
+  }
 }
 
 // ---------- Campaign missions (phase 4c) ----------

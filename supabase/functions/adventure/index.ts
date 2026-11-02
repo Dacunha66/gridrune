@@ -1,6 +1,6 @@
 // Phase 4: adventure runs of signed-in players, checked on the server.
-// "start": checks deck and rune against the stored save and hands out a ticket (seed). "finish": replays run and
-// duel with the game's own rules (engine.js, bundled from src/server/engine.ts), pays the reward into the save.
+// "start": checks deck, rune and difficulty against the stored save and hands out a ticket (seed). "finish": replays
+// run and duel with the game's own rules (engine.js, bundled from src/server/engine.ts), pays the coins into the save.
 // A finished ticket gives the same answer again (safe to retry after a lost connection), never a second reward.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
   loadContent(rows ?? [], isAdmin);
 
   if (body.action === 'start') {
-    const prep = prepareAdventure(saveRow.save, saveRow.campaign, body.deck, body.rune ?? null, isAdmin);
+    const prep = prepareAdventure(saveRow.save, saveRow.campaign, body.deck, body.rune ?? null, isAdmin, body.level ?? 'medium');
     if (!prep.ok) return json({ error: prep.error }, 422);
     const ticket = { ...prep.ticket, seed: seed() };
     const { data, error } = await db.from('game_tickets').insert({ player_id: uid, kind: 'adventure', ticket }).select('id').single();

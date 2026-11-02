@@ -4,7 +4,10 @@ import { Card } from '../components/Card';
 import { Burst, Confetti, useCountUp } from '../components/Effects';
 import { Outcome } from '../game/battle';
 import { RARITY_LABEL, getCard } from '../game/cards';
-import { Reward } from '../game/rewards';
+import { AI_COINS, Reward } from '../game/rewards';
+import type { AiLevel } from '../game/ai';
+
+const LEVEL_NAME: Record<AiLevel, string> = { easy: 'Leicht', medium: 'Normal', hard: 'Schwer' };
 
 interface Props {
   outcome: Outcome;
@@ -13,6 +16,8 @@ interface Props {
   coins: number;
   onAgain: () => void;
   onMenu: () => void;
+  /** Difficulty of the computer in this game. */
+  level?: AiLevel;
   /** Signed in: the server checks the result before paying out. */
   status?: 'checking' | 'paid' | 'pending' | 'rejected';
 }
@@ -29,7 +34,7 @@ export const RARITY_COLORS: Record<string, string[]> = {
   mythic: ['#ff5f6d', '#ffc371', '#f9f871', '#4ade80', '#60a5fa', '#c084fc'],
 };
 
-export function Result({ outcome, reward, score, coins, onAgain, onMenu, status }: Props) {
+export function Result({ outcome, reward, score, coins, onAgain, onMenu, status, level = 'medium' }: Props) {
   const gained = useCountUp(reward.coins, 900, 0);
   const total = useCountUp(coins, 900, coins - reward.coins);
   const newCard = reward.newCard ? getCard(reward.newCard) : null;
@@ -65,16 +70,14 @@ export function Result({ outcome, reward, score, coins, onAgain, onMenu, status 
         {reward.duplicateCard && (
           <p className="muted">{getCard(reward.duplicateCard).name} hattest du schon – dafür gibt es <Coin /> 50 extra.</p>
         )}
-        {outcome === 'win' && !reward.newCard && !reward.duplicateCard && (
-          <p className="muted">Tipp: Nimm im Lauf goldene „NEU“-Karten, um nach einem Sieg neue Karten zu bekommen.</p>
-        )}
-        {outcome !== 'win' && <p className="muted">Nur ein Sieg schaltet neue Karten frei.</p>}
+        <p className="muted">Schwierigkeit: {LEVEL_NAME[level]} · Sieg <Coin /> {AI_COINS[level].win}{level !== 'hard' && <> – auf Schwer gibt es <Coin /> {AI_COINS.hard.win}</>}</p>
+        <p className="muted">Neue Karten gibt es für einen Sieg in der 🏆 Rangliste und im 🛒 Shop.</p>
         <p className="muted">Münzen gesamt: <Coin /> {total} – ausgeben im 🛒 Shop</p>
       </div>
 
       <div className="menu-buttons">
-        <button type="button" className="btn btn-primary btn-big" onClick={onAgain}>▶ Neuer Lauf</button>
-        <button type="button" className="btn" onClick={onMenu}>Hauptmenü</button>
+        <button type="button" className="btn btn-primary btn-big" onClick={onAgain}>▶ Nochmal ({LEVEL_NAME[level]})</button>
+        <button type="button" className="btn" onClick={onMenu}>Menü</button>
       </div>
     </main>
   );

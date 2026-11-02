@@ -1,12 +1,14 @@
 // Phase 4b/4c: campaign missions, campaign rewards and shop purchases of signed-in players, done on the server.
 // "mission-start": checks mission, deck, hand and rune against the stored save and hands out a ticket (seed).
 // "mission-finish": replays the duel (and run) with the game's own rules, stores the stars and pays every reward
-// owed. "claim": pays rewards earned earlier (once). "buy-pack" / "buy-skin": coins are taken and the cards drawn
+// owed. "league-start" / "league-finish": Collection League match against the computer (ranked), replayed here; a won
+// match unlocks the rarest new discovery of the run. "claim": pays rewards earned earlier (once).
+// "buy-pack" / "buy-skin": coins are taken and the cards drawn
 // here. Every payout goes through pay_ticket: ticket finished and save written together, never twice.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyPackServer, buySkinServer, claimCampaign, finishMission, loadContent, prepareMission,
+  buyPackServer, buySkinServer, claimCampaign, finishLeague, finishMission, loadContent, prepareLeague, prepareMission,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@0397641dd3b116eb484fb6e47c4f66fd996e6d74/public/server/engine-231ee351ee2b.js';
 
 const CORS = {
@@ -106,6 +108,39 @@ Deno.serve(async (req) => {
       }
       if (!res.ok) return json({ ...result, ...cur }, 422);
       return json({ ...result, save: res.save, campaign: res.campaign, version: cur.version + 1 });
+    }
+    return json({ error: 'busy' }, 503);
+  }
+
+  if (body.action === 'league-start') {
+    const prep = prepareLeague(saveRow.save, saveRow.campaign, body.deck, body.rune ?? null, isAdmin, seed());
+    if (!prep.ok) return json({ error: prep.error }, 422);
+    const { data, error } = await db.from('game_tickets').insert({ player_id: uid, kind: 'league', ticket: prep.ticket }).select('id').single();
+    if (error) return json({ error: 'database' }, 500);
+    return json({ ticket: { ...prep.ticket, id: data.id } });
+  }
+
+  if (body.action === 'league-finish') {
+    const id = typeof body.ticketId === 'string' ? body.ticketId : '';
+    const { data: t } = await db.from('game_tickets').select('id, ticket, created_at, finished_at, result').eq('id', id).eq('player_id', uid).eq('kind', 'league').maybeSingle();
+    if (!t) return json({ error: 'unknown_ticket' }, 404);
+    if (t.finished_at) return json({ ...(t.result ?? {}), repeated: true, ...saveRow });
+    if (Date.now() - new Date(t.created_at).getTime() > TICKET_HOURS * 3600_000) return json({ error: 'expired' }, 410);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const cur = await readSave();
+      const res = finishLeague({ ...t.ticket, id: t.id }, body.log as never, cur.save);
+      const result = res.ok ? { ok: true, won: res.won, rounds: res.rounds, reward: res.reward } : { ok: false, error: res.error };
+      const { data: paid, error } = await db.rpc('pay_ticket', {
+        p_ticket: t.id, p_player: uid, p_result: result, p_save: res.ok ? res.save : null, p_campaign: null, p_version: cur.version,
+      });
+      if (error) return json({ error: 'database' }, 500);
+      if (paid === 'conflict') continue;
+      if (paid === 'already') {
+        const { data: done } = await db.from('game_tickets').select('result').eq('id', t.id).single();
+        return json({ ...(done?.result ?? {}), repeated: true, ...(await readSave()) });
+      }
+      if (!res.ok) return json({ ...result, ...cur }, 422);
+      return json({ ...result, save: res.save, campaign: cur.campaign, version: cur.version + 1 });
     }
     return json({ error: 'busy' }, 503);
   }

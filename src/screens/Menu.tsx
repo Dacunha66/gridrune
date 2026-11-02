@@ -5,13 +5,23 @@ import logoMark from '../assets/gridrune-mark.png';
 import logoWord from '../assets/gridrune-wordmark.png';
 import { CARDS, ownedActiveIds } from '../game/cards';
 import { SaveData } from '../game/storage';
+import { useState } from 'react';
+import type { AiLevel } from '../game/ai';
+import { AI_COINS } from '../game/rewards';
+
+const LEVELS: { level: AiLevel; label: string; icon: string; text: string }[] = [
+  { level: 'easy', label: 'Leicht', icon: '🌱', text: 'spielt oft zufällig' },
+  { level: 'medium', label: 'Normal', icon: '⚔️', text: 'der klassische Gegner' },
+  { level: 'hard', label: 'Schwer', icon: '🔥', text: 'denkt deine Antwort voraus' },
+];
 
 interface Props {
   save: SaveData;
   saveOk: boolean;
   /** Owner/Editor of the game page: may open the card administration. */
   isAdmin: boolean;
-  onPlay: () => void;
+  /** Simple game against the computer with the chosen difficulty. */
+  onPlay: (level: AiLevel) => void;
   onNavigate: (screen: 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'campaign') => void;
   /** Runes released for this viewer: shows the rune collection. */
   runes?: boolean;
@@ -36,6 +46,7 @@ interface Props {
 
 export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, playOpen = false, onPlayOpen }: Props) {
   const equipped = findRune(equippedRune);
+  const [chooseLevel, setChooseLevel] = useState(false);
   const { wins, draws, losses } = save.stats;
   return (
     <main className="screen menu">
@@ -66,12 +77,25 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
       {playOpen ? (
         <nav className="menu-buttons menu-sub" aria-label="Spielen">
           <h2 className="menu-sub-title">▶ Spielen</h2>
-          <button type="button" className="btn btn-primary btn-big" onClick={onPlay}>🏃 Einfaches Spiel <span className="btn-sub">gegen die KI</span></button>
+          <button type="button" className={`btn btn-primary ${chooseLevel ? '' : 'btn-big'}`} aria-expanded={chooseLevel} onClick={() => setChooseLevel(!chooseLevel)}>
+            🏃 Einfaches Spiel <span className="btn-sub">gegen die KI</span>
+          </button>
+          {chooseLevel && (
+            <div className="level-pick" role="group" aria-label="Schwierigkeit wählen">
+              {LEVELS.map((l) => (
+                <button key={l.level} type="button" className={`btn level-btn level-${l.level}`} onClick={() => onPlay(l.level)}>
+                  <span className="level-name">{l.icon} {l.label}</span>
+                  <span className="level-coins">Sieg <Coin /> {AI_COINS[l.level].win}</span>
+                  <span className="level-text">{l.text}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}>🗺️ Kampagne</button>
           {onOnline && <button type="button" className="btn btn-online" onClick={onOnline}>⚔️ Online-Duell <span className="btn-sub">gegen echte Spieler</span></button>}
           {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}>🃏 Draft-Liga <span className="btn-sub">gleicher Pool für beide</span></button>}
-          <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Rangliste <span className="btn-sub">Collection League · Test</span></button>
-          <button type="button" className="btn menu-back" onClick={() => onPlayOpen?.(false)}>← Zurück</button>
+          <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Rangliste <span className="btn-sub">Sieg = neue Karte</span></button>
+          <button type="button" className="btn menu-back" onClick={() => { setChooseLevel(false); onPlayOpen?.(false); }}>← Zurück</button>
         </nav>
       ) : (
         <nav className="menu-buttons">

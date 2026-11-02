@@ -744,7 +744,7 @@ function OpponentEditor({ db, assets, initial, content, onToast, onDone, onClose
         <div className="segmented">{AI_LEVELS.map((l: AiLevel) => (
           <button key={l} type="button" className={`seg ${draft.level === l ? 'active' : ''}`} aria-pressed={draft.level === l} onClick={() => set({ level: l })}>{LEVEL_LABEL[l]}</button>
         ))}</div>
-        <small className="muted">Leicht: oft zufällig, nimmt manchmal einfache Eroberungen. Mittel: Werte, Nachbarn, Effekte, Gelände. Schwer: denkt zusätzlich deine Antwort voraus und rechnet die letzten Züge durch. Keine Stufe verändert Werte oder Regeln.</small>
+        <small className="muted">Leicht: oft zufällig, nimmt manchmal einfache Eroberungen. Normal: Werte, Nachbarn, Effekte, Gelände. Schwer: denkt zusätzlich deine Antwort voraus und rechnet die letzten Züge durch. Keine Stufe verändert Werte oder Regeln.</small>
       </div>
       <div className="field"><span>Rune des Gegners</span>
         <select className="admin-input" value={draft.rune ?? ''} onChange={(e) => set({ rune: e.target.value || undefined })}>

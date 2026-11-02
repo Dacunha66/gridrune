@@ -1,13 +1,11 @@
-// Collection League – test mode against the computer. Same rules the online league will use:
-// deck limits, seeded fair runner, rock cells, two rounds with swapped start and a decider.
-import { useMemo, useState } from 'react';
+// Collection League ("Rangliste") against the computer. Same rules the online league will use:
+// deck limits, seeded fair runner, rock cells, two rounds with swapped start and a decider. Signed in, the server hands out the match and checks it; a won match unlocks the rarest new discovery.
+import { useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { CARDS, RARITY_LABEL, RARITY_ORDER, Rarity, cardPower, getCard, ownedActiveIds } from '../game/cards';
 import { Outcome, Side } from '../game/battle';
-import { drawCpuHand } from '../game/ai';
 import { COLLECTION_LEAGUE_RULES, OwnedCounts, autoDeck, countCards, rarityCounts, validateDeck } from '../game/rules';
-import { deriveRng, leagueLayout, matchCode, newMatchSeed, roundRock, seedFingerprint } from '../game/league';
-import { leagueArena } from '../game/arenas';
+import { leagueLayout, matchCode, newMatchSeed, seedFingerprint } from '../game/league';
 import { MatchProgress, emptyMatch, nextStep, recordRound, wins } from '../game/match';
 import { Pick, RunInput, replayRun } from '../game/runner';
 import { SaveData } from '../game/storage';
@@ -15,7 +13,13 @@ import { Header } from './Header';
 import { Runner } from './Runner';
 import { Battle } from './Battle';
 import { RuneMatchup } from '../components/RuneBadge';
-import { basicRunes, findRune } from '../game/runes';
+import { findRune } from '../game/runes';
+import { DuelLog, LeagueTicket, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
+import { Reward } from '../game/rewards';
+import { CloudSave } from '../game/cloudSave';
+import { finishLeagueRemote, readPending, startLeague, writePending } from '../game/adventureApi';
+import { RevealItem, RewardReveal } from '../components/RewardReveal';
+import { Coin } from '../components/Coin';
 
 const RULES = COLLECTION_LEAGUE_RULES;
 
@@ -27,14 +31,18 @@ interface Props {
   runes?: { player: string | null; equipped: string | null } | null;
   onSaveDeck: (deck: string[]) => void;
   onExit: () => void;
+  /** Signed in: the server hands out the match and checks it; a won match unlocks a card. null = guest (no reward). */
+  account?: { uid: string; adopt: (c: CloudSave) => void } | null;
 }
+
+type Payout = { status: 'checking' | 'paid' | 'pending' | 'rejected' | 'guest' | 'lost'; reward?: Reward };
 
 /** Offline test: every owned card counts as two copies (online, real copies will count). */
 function ownedCounts(save: SaveData): OwnedCounts {
   return Object.fromEntries(ownedActiveIds(save.unlocked).map((id) => [id, RULES.deck.maxCopies]));
 }
 
-export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, onExit }: Props) {
+export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, onExit, account = null }: Props) {
   const owned = useMemo(() => ownedCounts(save), [save]);
   const savedDeck = save.leagueDeck.length ? save.leagueDeck : autoDeck(RULES.deck, owned);
   const [stage, setStage] = useState<'deck' | 'intro' | 'run' | 'match' | 'done'>('deck');
@@ -46,23 +54,47 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
   const [match, setMatch] = useState<MatchProgress>(emptyMatch());
   const [roundScores, setRoundScores] = useState<string[]>([]);
   const [between, setBetween] = useState<string | null>(null);
+  const [ticket, setTicket] = useState<LeagueTicket | null>(null);
+  const [starting, setStarting] = useState<string | null>(null);
+  const runInputs = useRef<RunInput[]>([]);
+  const roundLogs = useRef<DuelLog[]>([]);
+  const [payout, setPayout] = useState<Payout | null>(null);
+  const [revealOpen, setRevealOpen] = useState(false);
 
   const layout = useMemo(() => (seed ? leagueLayout(seed, 'du', deck) : null), [seed, deck]);
-  const cpuHand = useMemo(() => (seed ? drawCpuHand(deriveRng(seed, 'cpu-hand')) : []), [seed]);
-  // The computer's rune: one basic rune per match, fixed by the match seed (same in every round).
-  const cpuRune = useMemo(() => {
-    if (!seed || !runes) return null;
-    const basic = basicRunes();
-    return basic.length ? basic[Math.floor(deriveRng(seed, 'cpu-rune')() * basic.length)].id : null;
-  }, [seed, runes]);
+  const cpuHand = useMemo(() => (seed ? leagueCpuHand(seed) : []), [seed]);
+  // The computer's rune: one basic rune per match, fixed by the match seed (same in every round); signed in: from the server.
+  const cpuRune = ticket ? ticket.cpuRune : seed ? leagueCpuRune(seed, !!runes) : null;
+  const playerRune = ticket ? ticket.playerRune : runes?.player ?? null;
   const runeNote = runes && !runes.equipped
     ? 'Du hast noch keine Rune – Grundrunen spielst du in der Kampagne frei.'
     : runes && !runes.player
       ? `In der Liga sind nur die Grundrunen erlaubt – „${findRune(runes.equipped)?.name ?? 'deine Rune'}“ bleibt hier draußen. Ändern unter „Deck bearbeiten“ → „Rune“.`
       : 'Jede Rune einmal pro Duell (in jeder Runde neu). In der Liga nur Grundrunen, die du in der Kampagne freigespielt hast. Ändern unter „Deck bearbeiten“ → „Rune“.';
 
-  function startMatch() {
-    const s = newMatchSeed();
+  async function startMatch() {
+    let s = newMatchSeed();
+    let t: LeagueTicket | null = null;
+    if (account) {
+      if (starting === '…') return;
+      setStarting('…');
+      const r = await startLeague(deck, runes?.player ?? null);
+      if (r.kind !== 'ticket') {
+        setStarting(r.kind === 'offline'
+          ? 'Keine Verbindung – für ein Ranglisten-Match brauchst du kurz Internet.'
+          : r.error === 'deck' ? 'Das Deck passt nicht zu den Liga-Regeln oder deiner Sammlung.' : `Das Match konnte nicht gestartet werden (${r.error}).`);
+        setStage('deck');
+        return;
+      }
+      t = r.ticket;
+      s = t.seed;
+    }
+    setStarting(null);
+    setTicket(t);
+    runInputs.current = [];
+    roundLogs.current = [];
+    setPayout(null);
+    setRevealOpen(false);
     setSeed(s);
     setFingerprint('');
     seedFingerprint(s).then(setFingerprint).catch(() => setFingerprint('–'));
@@ -76,31 +108,64 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
     // The same check the server will run: replay the inputs and compare.
     const replay = replayRun(layout!, inputs);
     setReplayOk(replay.error === null && JSON.stringify(replay.picks) === JSON.stringify(p));
+    runInputs.current = inputs;
     setPicks(p);
     setStage('match');
   }
 
   const step = nextStep(match);
+  const stepRound = step.kind === 'round' ? step.round : 0;
+  // Arena, rock, coin toss and the computer's random source of the current round – created once per round, so the
+  // game uses exactly the sources the server replays with.
+  const round = useMemo(() => (seed && stepRound ? leagueRound(seed, stepRound) : null), [seed, stepRound]);
 
-  function onRoundEnd(first: Side, result: Outcome, sc: { player: number; cpu: number }) {
+  async function finishMatch(won: boolean) {
+    if (!account || !ticket) {
+      setPayout({ status: won ? 'guest' : 'lost' });
+      return;
+    }
+    setPayout({ status: 'checking' });
+    const log = { run: runInputs.current, rounds: roundLogs.current };
+    const r = await finishLeagueRemote(ticket.id, log);
+    if (r.kind === 'paid') {
+      account.adopt(r.cloud);
+      setPayout({ status: r.won ? 'paid' : 'lost', reward: r.reward });
+      if (r.won) setRevealOpen(true);
+    } else if (r.kind === 'offline') {
+      writePending(account.uid, [...readPending(account.uid), { kind: 'league', ticketId: ticket.id, log, at: new Date().toISOString() }]);
+      setPayout({ status: 'pending' });
+    } else {
+      if (r.cloud) account.adopt(r.cloud);
+      setPayout({ status: 'rejected' });
+    }
+  }
+
+  function onRoundEnd(first: Side, result: Outcome, sc: { player: number; cpu: number }, duel?: DuelLog) {
+    if (duel) roundLogs.current = [...roundLogs.current, duel];
     const winner: Side | 'draw' = result === 'win' ? 'player' : result === 'loss' ? 'cpu' : 'draw';
     const next = recordRound(match, first, winner);
     setMatch(next);
     const n = next.winners.length;
     setRoundScores([...roundScores, `${n > 2 ? 'Entscheidung' : `Runde ${n}`}: ${sc.player}:${sc.cpu} ${winner === 'player' ? '✓' : '✗'}`]);
     const after = nextStep(next);
-    if (after.kind === 'done') setStage('done');
+    if (after.kind === 'done') {
+      setStage('done');
+      void finishMatch(after.winner === 'player');
+    }
     else setBetween(after.decider ? `Stand ${wins(next, 'player')}:${wins(next, 'cpu')} – Entscheidungsduell! Ein neuer Münzwurf entscheidet, wer beginnt.` : `Stand ${wins(next, 'player')}:${wins(next, 'cpu')} – in Runde 2 beginnt ${after.first === 'player' ? 'du' : 'der Gegner'}.`);
   }
 
   if (stage === 'deck') {
-    return <LeagueDeckEditor deck={deck} owned={owned} onChange={setDeck} onBack={onExit} onPlay={() => { onSaveDeck(deck); startMatch(); }} />;
+    return (
+      <LeagueDeckEditor deck={deck} owned={owned} onChange={setDeck} onBack={onExit} busy={starting === '…'} notice={starting && starting !== '…' ? starting : null}
+        onPlay={() => { onSaveDeck(deck); void startMatch(); }} />
+    );
   }
 
   if (stage === 'intro') {
     return (
       <main className="screen league">
-        <Header title="Collection League" onBack={() => setStage('deck')} right={<span className="pill">Test</span>} />
+        <Header title="Rangliste" onBack={() => setStage('deck')} right={<span className="pill">Collection League</span>} />
         <div className="scroll league-intro">
           <section className="runner-info">
             <h2>Match {matchCode(seed)}</h2>
@@ -111,8 +176,9 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
               <li>⚔️ <b>2 Runden</b> mit derselben Hand, der Start wird getauscht. 2:0 gewinnt, bei 1:1 folgt ein <b>Entscheidungsduell</b>.</li>
               <li>🪨 In jedem Duell blockiert ein <b>Fels</b> ein Feld: 15 Felder, kein Unentschieden, kein Startvorteil.</li>
             </ul>
-            {runes && <RuneMatchup player={runes.player} cpu={cpuRune} note={runeNote} />}
-            <p className="muted small">Testmodus gegen den Computer – ohne Belohnung und ohne Wertung.</p>
+            {runes && <RuneMatchup player={playerRune} cpu={cpuRune} note={runeNote} />}
+            <p className="league-prize">🎁 <b>Gewinnst du das Match</b>, gehört dir die seltenste <b>neue Entdeckung</b> aus deinem Lauf. Ist keine neu, gibt es <Coin /> 50.</p>
+            <p className="muted small">{account ? 'Match gegen den Computer – der Server prüft Lauf und Duelle, bevor die Belohnung gutgeschrieben wird.' : 'Als Gast spielst du ohne Belohnung – melde dich an, um Karten zu gewinnen.'}</p>
           </section>
         </div>
         <footer className="bottombar"><button type="button" className="btn btn-primary btn-wide" onClick={() => setStage('run')}>▶ Lauf starten</button></footer>
@@ -121,7 +187,7 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
   }
 
   if (stage === 'run' && layout) {
-    return <Runner key={seed} layout={layout} deck={deck} unlocked={save.unlocked} reducedMotion={reducedMotion} skin={skin} onFinish={onRunFinished} onQuit={onExit} />;
+    return <Runner key={seed} layout={layout} markNew={!!account} deck={deck} unlocked={save.unlocked} reducedMotion={reducedMotion} skin={skin} onFinish={onRunFinished} onQuit={onExit} />;
   }
 
   if (stage === 'match' && step.kind === 'round') {
@@ -137,6 +203,7 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
         </main>
       );
     }
+    if (!round) return null;
     return (
       <Battle
         key={`${seed}-${step.round}`}
@@ -146,34 +213,50 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
         setup={{
           cpuHand: cpuHand.map((c) => ({ ...c })),
           first: step.first,
-          arena: leagueArena(seed, step.round),
-          rocks: [roundRock(seed, step.round, leagueArena(seed, step.round).cells)],
+          arena: round.arena,
+          rocks: round.rocks,
           label: `${step.decider ? 'Entscheidungsduell' : `Runde ${step.round} von 2`} · Stand ${wins(match, 'player')}:${wins(match, 'cpu')}`,
-          tossRng: deriveRng(seed, `toss:${step.round}`),
+          tossRng: round.toss,
+          rng: round.ai,
           finishLabel: 'Weiter',
-          runes: { player: runes?.player ?? null, cpu: runes ? cpuRune : null },
+          runes: { player: playerRune, cpu: cpuRune },
         }}
-        onEnd={(result, sc, started) => onRoundEnd(started, result, sc)}
+        onEnd={(result, sc, started, record) => onRoundEnd(started, result, sc, record ? { first: record.start.turn, moves: record.moves } : undefined)}
         onQuit={onExit}
       />
     );
   }
 
   const won = step.kind === 'done' && step.winner === 'player';
+  const reward = payout?.reward;
+  const reveal: RevealItem[] = reward?.newCard
+    ? [{ kind: 'card', cardId: reward.newCard, source: 'Sieg in der Rangliste' }]
+    : reward && reward.coins > 0 ? [{ kind: 'coins', amount: reward.coins, sources: ['Sieg in der Rangliste (keine neue Entdeckung)'] }] : [];
+  const statusText = !payout ? '' : {
+    checking: '☁️ Match wird vom Server geprüft …',
+    paid: reward?.newCard ? `✓ Geprüft – neue Karte: ${getCard(reward.newCard).name}` : `✓ Geprüft – keine neue Entdeckung, dafür 🪙 ${reward?.coins ?? 0}`,
+    pending: '⏳ Keine Verbindung – die Belohnung wird gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).',
+    rejected: '⚠️ Das Match konnte nicht bestätigt werden – es gibt keine Belohnung.',
+    guest: 'Als Gast gibt es keine Belohnung – mit einem Konto gewinnst du hier Karten.',
+    lost: 'Nur ein gewonnenes Match bringt eine neue Karte.',
+  }[payout.status];
   return (
     <main className={`screen result ${won ? 'result-win' : 'result-loss'}`}>
+      {revealOpen && reveal.length > 0 && <RewardReveal items={reveal} reducedMotion={reducedMotion} onClose={() => setRevealOpen(false)} />}
       <div className="result-icon" aria-hidden="true">{won ? '🏆' : '💀'}</div>
       <h1>{won ? 'Match gewonnen!' : 'Match verloren'}</h1>
       <p className="result-score"><span className="blue">{wins(match, 'player')}</span> : <span className="red">{wins(match, 'cpu')}</span></p>
       <div className="reward-box">
         <ul className="plain-list">{roundScores.map((r) => <li key={r}>{r}</li>)}</ul>
+        {statusText && <p className={`result-status status-${payout?.status}`} role="status">{statusText.replace('🪙', '')}{payout?.status === 'paid' && !reward?.newCard && <> <Coin /></>}</p>}
+        {reveal.length > 0 && payout?.status === 'paid' && !revealOpen && <button type="button" className="btn" onClick={() => setRevealOpen(true)}>🎁 Belohnung ansehen</button>}
         <p className="muted small">Match {matchCode(seed)} · Lauf-Prüfung: {replayOk ? '✓ nachgespielt und bestätigt' : '⚠️ Abweichung'}</p>
         <p className="muted small">Seed zum Nachprüfen: <span className="mono break">{seed}</span></p>
       </div>
       <div className="menu-buttons">
-        <button type="button" className="btn btn-primary btn-big" onClick={startMatch}>▶ Neues Match</button>
+        <button type="button" className="btn btn-primary btn-big" disabled={payout?.status === 'checking' || starting === '…'} onClick={() => void startMatch()}>▶ Neues Match</button>
         <button type="button" className="btn" onClick={() => setStage('deck')}>Deck ändern</button>
-        <button type="button" className="btn" onClick={onExit}>Hauptmenü</button>
+        <button type="button" className="btn" onClick={onExit}>Menü</button>
       </div>
     </main>
   );
@@ -181,12 +264,14 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
 
 // ---------------------------------------------------------------- deck editor
 
-function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay }: {
+function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay, busy = false, notice = null }: {
   deck: string[];
   owned: OwnedCounts;
   onChange: (d: string[]) => void;
   onBack: () => void;
   onPlay: () => void;
+  busy?: boolean;
+  notice?: string | null;
 }) {
   const errors = validateDeck(deck, RULES.deck, owned);
   const counts = countCards(deck);
@@ -245,11 +330,12 @@ function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay }: {
             );
           })}
         </ul>
-        <p className="muted small center">Im Test zählt jede Karte, die du besitzt, als 2 Exemplare. Online zählen später deine echten Exemplare.</p>
+        <p className="muted small center">Jede Karte, die du besitzt, zählt als 2 Exemplare.</p>
       </div>
       <footer className="bottombar">
-        <button type="button" className="btn btn-primary btn-wide" disabled={errors.length > 0} onClick={onPlay}>
-          {errors.length ? 'Deck ist noch nicht gültig' : '▶ Match starten'}
+        {notice && <p className="league-notice" role="alert">{notice}</p>}
+        <button type="button" className="btn btn-primary btn-wide" disabled={errors.length > 0 || busy} onClick={onPlay}>
+          {errors.length ? 'Deck ist noch nicht gültig' : busy ? '☁️ Match wird vorbereitet …' : '▶ Match starten'}
         </button>
       </footer>
     </main>

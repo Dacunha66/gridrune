@@ -38,6 +38,8 @@ interface Props {
   ticket?: AdventureTicket;
   /** Online duel: the server's duel state (from this player's side), own actions go to the server. */
   online?: OnlineLink;
+  /** Computer strength in the simple game (without setup). */
+  ai?: AiOptions;
 }
 
 export interface OnlineLink {
@@ -96,7 +98,9 @@ function cellCenter(cell: number): { x: number; y: number } {
   return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE) };
 }
 
-export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket, online }: Props) {
+export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket, online, ai }: Props) {
+  // Computer strength: league/campaign setups bring their own; a checked adventure uses the ticket's level.
+  const aiOptions: AiOptions | undefined = setup?.ai ?? (ticket ? { level: ticket.level ?? 'medium' } : ai);
   // Checked adventures use the seed's random sources (the server replays them); otherwise a fresh random source.
   const [seeded] = useState(() => {
     if (!ticket) return null;
@@ -233,13 +237,13 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     const delay = reducedMotion ? 450 : state.lastClashes.length > 0 || state.lastEvents.length > 0 ? 1250 : 800;
     const t = setTimeout(() => {
       // The computer may use its rune first (still its turn afterwards), then it places a card.
-      const use = chooseCpuRune(state, rng, setup?.ai);
+      const use = chooseCpuRune(state, rng, aiOptions);
       if (use) {
         record.current.moves.push(use);
         setState(applyRune(state, use));
         return;
       }
-      const move = chooseCpuMove(state, rng, setup?.ai);
+      const move = chooseCpuMove(state, rng, aiOptions);
       record.current.moves.push(move);
       setState(applyMove(state, move));
     }, delay);

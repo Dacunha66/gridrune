@@ -19,6 +19,8 @@ interface Props {
   onQuit: () => void;
   /** League: a fixed, seed-generated track (no fast-forward, no skipping). */
   layout?: RunnerLayout;
+  /** Ranked league: neutral discoveries the player does not own yet are marked "NEU" (a won match unlocks one). */
+  markNew?: boolean;
 }
 
 interface Flying {
@@ -34,7 +36,7 @@ const VIEW_DISTANCE = 80;
 const PERSPECTIVE = 10;
 const FAST = 3.5;
 
-export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, layout, ticket }: Props) {
+export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, layout, ticket, markNew = false }: Props) {
   const owned = useMemo(() => new Set(ticket ? ticket.owned : unlocked), [unlocked, ticket]);
   const sim = useMemo(
     () => (layout ? new RunnerSim(layout) : ticket ? adventureRunner(ticket) : new RunnerSim(deck, createRng(), owned)),
@@ -143,7 +145,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
       v.laneX += (sim.lane - v.laneX) * k;
       v.shake = Math.max(0, v.shake - dt);
       if (phaseRef.current === 'run' && !reducedMotion) v.bob += dt * (fastRef.current ? 22 : 12);
-      draw(ctx, sim, v, project, owned, reducedMotion, skin, pickedLanes.current, !!layout);
+      draw(ctx, sim, v, project, owned, reducedMotion, skin, pickedLanes.current, !!layout, markNew);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -222,9 +224,9 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
         {phase !== 'done' && sim.gates[picks.length] && (
           <div className="gate-preview" aria-live="polite">
             {layout
-              ? <span className="gate-preview-label">Tor {picks.length + 1} · 2 aus deinem Deck + 1 neutral</span>
+              ? <span className="gate-preview-label">Tor {picks.length + 1} · 2 aus deinem Deck + 1 neutral{markNew ? ' · „NEU“ gewinnst du mit dem Match' : ''}</span>
               : picks.length === FINAL_GATE
-              ? <span className="gate-preview-label final">★ Finaltor: neue Karten – bei Sieg gehört sie dir</span>
+              ? <span className="gate-preview-label final">★ Finaltor: Entdeckungen – starke Karten fürs Duell</span>
               : <span className="gate-preview-label">Nächstes Tor {picks.length + 1} · aus deinem Deck</span>}
             <div className="gate-preview-cards">
               {sim.gates[picks.length].offers.map((o, i) => (
@@ -233,7 +235,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
                   id={o.cardId}
                   size="sm"
                   badge={o.kind === 'discovery' ? 'discovery' : null}
-                  badgeText={layout ? 'Neutral' : owned.has(o.cardId) ? '★' : 'NEU'}
+                  badgeText={layout ? (markNew && !owned.has(o.cardId) ? 'NEU' : 'Neutral') : owned.has(o.cardId) ? '★' : 'NEU'}
                   mod={i === lane && stumbled ? STUMBLE_PENALTY : 0}
                   className={i === lane ? 'lane-active' : ''}
                 />
@@ -335,6 +337,7 @@ function draw(
   skin: [string, string, string],
   pickedLanes: Map<number, number>,
   neutral: boolean,
+  markNew = false,
 ) {
   const { w, h } = v;
   ctx.save();
@@ -446,7 +449,7 @@ function draw(
           ctx.textAlign = 'center';
           ctx.fillText(g.index === FINAL_GATE ? '★ FINALE ★' : `TOR ${g.index + 1}`, w / 2, mid.y - archH - 6 * mid.p);
         }
-        g.offers.forEach((offer, lane) => drawCard(ctx, project(z, lane), offer.cardId, offer.kind === 'discovery', neutral ? 'NEUTRAL' : owned.has(offer.cardId) ? '★ ENTDECKT' : '★ NEU'));
+        g.offers.forEach((offer, lane) => drawCard(ctx, project(z, lane), offer.cardId, offer.kind === 'discovery', neutral ? (markNew && !owned.has(offer.cardId) ? '★ NEU' : 'NEUTRAL') : owned.has(offer.cardId) ? '★ ENTDECKT' : '★ NEU'));
       },
     });
   }

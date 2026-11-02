@@ -14,8 +14,12 @@ import { deriveRng } from '../game/league';
 import { PackCard, buyPack, buySkin } from '../game/shop';
 import { SaveData, sanitize } from '../game/storage';
 import { validPvpHand } from '../game/pvp';
-import { AdventureLog, AdventureTicket, MissionLog, MissionTicket, checkAdventure, checkMission, validMissionHand } from '../game/verify';
-import { Reward, applyReward, computeReward } from '../game/rewards';
+import {
+  AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, MissionLog, MissionTicket, checkAdventure, checkLeague, checkMission, leagueCpuRune, validMissionHand,
+} from '../game/verify';
+import { Reward, applyReward, computeReward, grant, isAiLevel, leagueReward } from '../game/rewards';
+import { COLLECTION_LEAGUE_RULES, validateDeck } from '../game/rules';
+import { ownedActiveIds } from '../game/cards';
 import { Outcome, Side } from '../game/battle';
 
 export interface ContentRow {
@@ -68,12 +72,13 @@ function allowedRune(save: SaveData, progress: CampaignProgress, rune: unknown, 
 }
 
 /** Checks the deck and the rune a player wants to start a run with; returns the ticket (without id/seed) or why not. */
-export function prepareAdventure(saveRaw: unknown, campaignRaw: unknown, deck: unknown, rune: unknown, isAdmin: boolean):
+export function prepareAdventure(saveRaw: unknown, campaignRaw: unknown, deck: unknown, rune: unknown, isAdmin: boolean, level: unknown = 'medium'):
   { ok: true; ticket: Omit<AdventureTicket, 'id' | 'seed'> } | { ok: false; error: string } {
   const save = sanitize(saveRaw);
   if (!validDeck(save, deck)) return { ok: false, error: 'deck' };
+  if (!isAiLevel(level)) return { ok: false, error: 'level' };
   const playerRune = allowedRune(save, sanitizeProgress(campaignRaw), rune, 'adventure', isAdmin);
-  return { ok: true, ticket: { deck, owned: [...save.unlocked], playerRune, cpuRune: playerRune ? 'random' : null } };
+  return { ok: true, ticket: { deck, owned: [...save.unlocked], playerRune, cpuRune: playerRune ? 'random' : null, level } };
 }
 
 /** Replays the run and the duel; on success returns the reward and the new save. */
@@ -82,8 +87,38 @@ export function finishAdventure(ticket: AdventureTicket, log: AdventureLog, save
   const check = checkAdventure(ticket, log);
   if (!check.ok) return check;
   const save = sanitize(saveRaw);
-  const reward = computeReward(check.outcome, check.picks, save.unlocked);
+  const reward = computeReward(check.outcome, ticket.level ?? 'medium');
   return { ok: true, outcome: check.outcome, score: check.score, reward, save: applyReward(save, check.outcome, reward) };
+}
+
+// ---------- Collection League against the computer ----------
+
+/** League deck limits; offline every owned card counts as two copies (the same rule as the game). */
+function leagueDeckOk(save: SaveData, deck: unknown): deck is string[] {
+  if (!Array.isArray(deck) || !deck.every((id) => typeof id === 'string')) return false;
+  const owned = Object.fromEntries(ownedActiveIds(save.unlocked).map((id) => [id, COLLECTION_LEAGUE_RULES.deck.maxCopies]));
+  return validateDeck(deck, COLLECTION_LEAGUE_RULES.deck, owned).length === 0 && deck.every((id) => CARDS.some((c) => c.id === id));
+}
+
+/** Checks the league deck and the rune; the computer's rune follows from the seed. */
+export function prepareLeague(saveRaw: unknown, campaignRaw: unknown, deck: unknown, rune: unknown, isAdmin: boolean, seed: string):
+  { ok: true; ticket: Omit<LeagueTicket, 'id'> } | { ok: false; error: string } {
+  const save = sanitize(saveRaw);
+  if (!leagueDeckOk(save, deck)) return { ok: false, error: 'deck' };
+  const runesOn = released(SETTINGS.features.runes, isAdmin);
+  const playerRune = allowedRune(save, sanitizeProgress(campaignRaw), rune, 'league', isAdmin);
+  return { ok: true, ticket: { seed, deck: [...deck], playerRune, cpuRune: leagueCpuRune(seed, runesOn) } };
+}
+
+/** Replays the match; a won match unlocks the rarest new discovery of the run (else coins). */
+export function finishLeague(ticket: LeagueTicket, log: LeagueLog, saveRaw: unknown):
+  { ok: true; won: boolean; rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[]; reward: Reward; save: SaveData } | { ok: false; error: string } {
+  const check = checkLeague(ticket, log);
+  if (!check.ok) return check;
+  const save = sanitize(saveRaw);
+  const won = check.winner === 'player';
+  const reward = leagueReward(won, check.picks, save.unlocked);
+  return { ok: true, won, rounds: check.rounds, reward, save: grant(save, reward) };
 }
 
 // ---------- Campaign (phase 4c) ----------

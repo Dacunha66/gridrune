@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DECK_SIZE, STARTER_DECK, STARTING_UNLOCKED } from '../src/game/cards';
-import { applyReward, computeReward } from '../src/game/rewards';
+import { applyReward, computeReward, grant, leagueReward } from '../src/game/rewards';
 import { KeyValueStore, SAVE_KEY, defaultSave, isValidDeck, loadSave, writeSave } from '../src/game/storage';
 
 function memoryStore(): KeyValueStore & { data: Map<string, string> } {
@@ -57,30 +57,30 @@ describe('Belohnungen', () => {
   const unlocked = defaultSave().unlocked;
   const pick = (cardId: string, kind: 'deck' | 'discovery', gate = 0) => ({ cardId, kind, gate, mod: 0 });
 
-  it('Sieg schaltet höchstens eine neue entdeckte Karte frei (die seltenste)', () => {
-    const r = computeReward('win', [pick('e01', 'discovery'), pick('l03', 'discovery', 1), pick('c01', 'deck', 2)], unlocked);
-    expect(r.newCard).toBe('l03');
-    const after = applyReward(defaultSave(), 'win', r);
-    expect(after.unlocked).toContain('l03');
-    expect(after.unlocked).not.toContain('e01');
+  it('Einfaches Spiel: nur Münzen nach Schwierigkeit, nie eine Karte', () => {
+    expect(computeReward('win', 'easy')).toEqual({ coins: 30, newCard: null, duplicateCard: null });
+    expect(computeReward('win', 'medium').coins).toBe(50);
+    expect(computeReward('win', 'hard').coins).toBe(100);
+    expect([computeReward('draw', 'easy').coins, computeReward('draw', 'medium').coins, computeReward('draw', 'hard').coins]).toEqual([10, 20, 40]);
+    expect([computeReward('loss', 'easy').coins, computeReward('loss', 'medium').coins, computeReward('loss', 'hard').coins]).toEqual([5, 10, 15]);
+    const after = applyReward(defaultSave(), 'win', computeReward('win', 'hard'));
+    expect(after.unlocked).toEqual(defaultSave().unlocked);
+    expect(after.coins).toBe(defaultSave().coins + 100);
     expect(after.stats.wins).toBe(1);
   });
 
-  it('bereits vorhandene Entdeckung wird zu Münzen', () => {
-    const r = computeReward('win', [pick('c12', 'discovery')], unlocked);
-    expect(r.newCard).toBeNull();
-    expect(r.duplicateCard).toBe('c12');
-    expect(r.coins).toBeGreaterThan(computeReward('win', [], unlocked).coins);
+  it('Rangliste: gewonnenes Match schaltet die seltenste neue Entdeckung frei', () => {
+    const r = leagueReward(true, [pick('e01', 'discovery'), pick('l03', 'discovery', 1), pick('c01', 'deck', 2)], unlocked);
+    expect(r).toEqual({ coins: 0, newCard: 'l03', duplicateCard: null });
+    const after = grant(defaultSave(), r);
+    expect(after.unlocked).toContain('l03');
+    expect(after.unlocked).not.toContain('e01');
+    expect(after.stats).toEqual(defaultSave().stats);
   });
 
-  it('Unentschieden: weniger Münzen, keine Karte; Niederlage: Trostpreis', () => {
-    const win = computeReward('win', [], unlocked);
-    const draw = computeReward('draw', [pick('l01', 'discovery')], unlocked);
-    const loss = computeReward('loss', [pick('l01', 'discovery')], unlocked);
-    expect(draw.newCard).toBeNull();
-    expect(loss.newCard).toBeNull();
-    expect(draw.coins).toBeLessThan(win.coins);
-    expect(loss.coins).toBeGreaterThan(0);
-    expect(loss.coins).toBeLessThan(draw.coins);
+  it('Rangliste: keine neue Entdeckung → 50 Münzen; verloren → nichts', () => {
+    expect(leagueReward(true, [pick('c12', 'discovery')], unlocked)).toEqual({ coins: 50, newCard: null, duplicateCard: 'c12' });
+    expect(leagueReward(true, [], unlocked).coins).toBe(50);
+    expect(leagueReward(false, [pick('l03', 'discovery')], unlocked)).toEqual({ coins: 0, newCard: null, duplicateCard: null });
   });
 });
