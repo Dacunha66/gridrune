@@ -29,9 +29,12 @@ interface Props {
   onOnline?: () => void;
   /** Draft League (online when signed in, practice against the computer for everyone). */
   onDraft?: () => void;
+  /** The "Spielen" submenu is open (kept by the app, so finishing a game returns there). */
+  playOpen?: boolean;
+  onPlayOpen?: (open: boolean) => void;
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, playOpen = false, onPlayOpen }: Props) {
   const equipped = findRune(equippedRune);
   const { wins, draws, losses } = save.stats;
   return (
@@ -60,21 +63,29 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         <span>🏆 {wins} · 🤝 {draws} · 💀 {losses}</span>
       </div>
 
-      <nav className="menu-buttons">
-        <button type="button" className="btn btn-primary btn-big" onClick={onPlay}>▶ Spielen</button>
-        <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}>🗺️ Kampagne</button>
-        {onOnline && <button type="button" className="btn btn-online" onClick={onOnline}>⚔️ Online-Duell <span className="btn-sub">gegen echte Spieler</span></button>}
-        {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}>🃏 Draft-Liga <span className="btn-sub">gleicher Pool für beide</span></button>}
-        <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Collection League <span className="btn-sub">Test</span></button>
-        <button type="button" className="btn" onClick={() => onNavigate('shop')}>🛒 Shop <span className="btn-sub"><Coin /> {save.coins}</span></button>
-        <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>
-        <button type="button" className="btn btn-deck" onClick={() => onNavigate('deck')}>
-          🗂️ Deck bearbeiten
-          {runes && (equipped ? <span className="btn-sub"><RuneBadge rune={equipped} className="small" /></span> : <span className="btn-sub">ohne Rune</span>)}
-        </button>
-        <button type="button" className="btn" onClick={() => onNavigate('rules')}>📜 Regeln</button>
-        {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}>🛠️ Kartenverwaltung</button>}
-      </nav>
+      {playOpen ? (
+        <nav className="menu-buttons menu-sub" aria-label="Spielen">
+          <h2 className="menu-sub-title">▶ Spielen</h2>
+          <button type="button" className="btn btn-primary btn-big" onClick={onPlay}>🏃 Einfaches Spiel <span className="btn-sub">gegen die KI</span></button>
+          <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}>🗺️ Kampagne</button>
+          {onOnline && <button type="button" className="btn btn-online" onClick={onOnline}>⚔️ Online-Duell <span className="btn-sub">gegen echte Spieler</span></button>}
+          {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}>🃏 Draft-Liga <span className="btn-sub">gleicher Pool für beide</span></button>}
+          <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Rangliste <span className="btn-sub">Collection League · Test</span></button>
+          <button type="button" className="btn menu-back" onClick={() => onPlayOpen?.(false)}>← Zurück</button>
+        </nav>
+      ) : (
+        <nav className="menu-buttons">
+          <button type="button" className="btn btn-primary btn-big" onClick={() => onPlayOpen?.(true)}>▶ Spielen</button>
+          <button type="button" className="btn" onClick={() => onNavigate('shop')}>🛒 Shop <span className="btn-sub"><Coin /> {save.coins}</span></button>
+          <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>
+          <button type="button" className="btn btn-deck" onClick={() => onNavigate('deck')}>
+            🗂️ Deck bearbeiten
+            {runes && (equipped ? <span className="btn-sub"><RuneBadge rune={equipped} className="small" /></span> : <span className="btn-sub">ohne Rune</span>)}
+          </button>
+          <button type="button" className="btn" onClick={() => onNavigate('rules')}>📜 Regeln</button>
+          {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}>🛠️ Kartenverwaltung</button>}
+        </nav>
+      )}
 
       <label className="toggle">
         <input type="checkbox" checked={save.settings.reducedMotion} onChange={onToggleReducedMotion} />

@@ -206,6 +206,8 @@ export function App() {
       ? 'Keine Verbindung – zum Starten eines Spiels mit deinem Konto brauchst du kurz Internet.'
       : `Das Spiel konnte nicht gestartet werden (${r.error === 'deck' ? 'Deck ungültig – bitte im Deck-Editor prüfen' : r.error}).`);
   };
+  /** "Spielen" submenu open: stays open while playing, so the game returns there. */
+  const [playMenu, setPlayMenu] = useState(false);
   const toMenu = useCallback(() => {
     setScreen({ name: 'menu' });
     const pending = pendingRecords.current;
@@ -305,6 +307,8 @@ export function App() {
           saveOk={saveOk}
           isAdmin={admin}
           onPlay={startRun}
+          playOpen={playMenu}
+          onPlayOpen={setPlayMenu}
           onOnline={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'online' }) : undefined}
           onDraft={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'draftPractice' })}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
