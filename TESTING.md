@@ -1,10 +1,20 @@
 # Testprotokoll
 
+## Online-Draft live, Feuer-Klasse (02.11.)
+
+Datenbank-Änderung 014 eingespielt, Funktion `pvp` neu veröffentlicht (Version 3, Engine a3c4abd / engine-76028489b7dc). Karten c02, c07, r07, r17, e01, e13, l05, m04 haben in der Datenbank die Klasse Feuer. Alte Testkonten gelöscht.
+
+Live geprüft mit zwei neuen Testkonten (danach gelöscht): Draft-Einladung per Code, Beitritt → Vorbereitung, Pool 30 Karten, Deck mit fremder Karte abgelehnt, Deck des Gegners bleibt verborgen, ungültiger Lauf abgelehnt, nach beiden Läufen startet das Duell mit 8 Karten, Gegnerhand verborgen, komplettes Duell bis zum Ende, Sieger +150 Münzen, Draft-Statistik getrennt vom Duell. Aufgeben in der Vorbereitung: Gegner gewinnt, keine Münzen. Normales Online-Duell weiter in Ordnung (Start, eigener Code abgelehnt, Aufgeben). Nicht geprüft: Draft in der Oberfläche auf zwei echten Geräten.
+
+`adventure` und `game` bleiben auf engine-231ee351ee2b (die neue Engine unterscheidet sich nur durch „Name auf der Karte“).
+
+Noch offen (Handy reicht): im Admin Glut → „Schmiede am Berg“, Fluch → „Herz des Vulkans“.
+
 ## Umzug zu Cloudflare (31.10.)
 
 Die Seite läuft jetzt unter https://gridrune.d-reich91.workers.dev (Cloudflare Workers mit statischen Dateien, `wrangler.jsonc`, baut den Zweig claude/project-card-rush-dev-84c1jl). Netlify hatte keine Credits mehr und bleibt auf dem alten Stand – nicht mehr benutzen. Server-Funktionen `adventure` und `game` laufen wieder auf der aktuellen Engine (0397641, engine-231ee351ee2b). Vom Spielleiter bestätigt: Seite lädt, Glutgebirge und Draft-Liga sind da.
 
-Noch offen (Spielleiter am PC): Migration 014 + `pvp` neu veröffentlichen (Online-Draft), Feuer-Klasse für 8 Karten, Test-Konten löschen; im Admin Glut → „Schmiede am Berg“, Fluch → „Herz des Vulkans“; Supabase Site URL/Redirect auf die neue Adresse.
+Supabase Site URL/Redirect auf die neue Adresse umgestellt (erledigt).
 
 ## Zweite Kampagne „Glutgebirge“, neue Runen-Verteilung, Rune des Waldes
 
