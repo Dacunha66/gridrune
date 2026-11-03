@@ -129,6 +129,11 @@ export interface RunInput {
 
 /** Minimum track distance between two lane changes in ranked replays (≈ 55 ms at normal speed). */
 export const MIN_INPUT_GAP = 0.5;
+/** The run stops this far before a gate so the player can choose a card by tapping (no stones are that close). */
+export const CHOICE_AHEAD = 2;
+/** Seconds to choose at a gate; the final gate (new cards to read) gets more time. */
+export const CHOICE_SECONDS = 5;
+export const FINAL_CHOICE_SECONDS = 10;
 
 export class RunnerSim {
   distance = 0;
@@ -180,6 +185,31 @@ export class RunnerSim {
     if (last && this.distance - last.d < MIN_INPUT_GAP) return;
     this.lane = next;
     this.inputs.push({ d: this.distance, lane: next });
+  }
+
+  /** The gate that comes next (undefined after the last one). */
+  get upcomingGate(): Gate | undefined {
+    return this.gates[this.nextGate];
+  }
+
+  /**
+   * Card choice at a gate: moves to `lane` before the next gate with ordinary lane changes (one lane at a time,
+   * at least MIN_INPUT_GAP apart), so the recorded run stays a plain list of lane changes the server can replay.
+   * Returns the events on the way (none in practice: no stones right before a gate).
+   */
+  chooseLane(lane: number): RunnerEvent[] {
+    const events: RunnerEvent[] = [];
+    const gate = this.gates[this.nextGate];
+    const target = Math.max(0, Math.min(LANES - 1, Math.round(lane)));
+    if (!gate || this.finished) return events;
+    while (this.lane !== target) {
+      const last = this.inputs[this.inputs.length - 1];
+      const at = Math.max(this.distance, last ? last.d + MIN_INPUT_GAP + 1e-6 : 0);
+      if (at >= gate.distance) break;
+      events.push(...this.advanceTo(at));
+      this.setLane(this.lane + (target > this.lane ? 1 : -1));
+    }
+    return events;
   }
 
   /** Advance by dt seconds. Returns the events that happened. */

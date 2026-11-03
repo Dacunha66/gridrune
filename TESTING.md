@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Kartenwahl am Tor per Antippen (03.11.)
+
+Der Lauf hält kurz vor jedem Tor an: die drei Karten erscheinen groß nebeneinander (mit Effekt), der Spieler tippt eine an. 5 Sekunden Zeit, am Finaltor 10 Sekunden (voller Effekttext). Ohne Wahl gilt die Karte auf der eigenen Spur (hervorgehoben). Gilt für alle Läufe (einfaches Spiel, Kampagne, Rangliste, Draft). Die Wahl wird intern als normale Spurwechsel kurz vor dem Tor gespeichert – die Server-Prüfung bleibt unverändert, keine neue Server-Version nötig.
+
+Geprüft: 253 automatische Tests (neu: 30 Strecken, an jedem Tor eine zufällige Karte angetippt, auch direkt nach einem Wischen → genau diese Karte genommen, Lauf exakt nachspielbar). Browser lokal (Gast, Handy-Größe): 8 Tore, Wahl landet im richtigen Slot, Zeitablauf nach 5 s nimmt die Karte der Spur, Finaltor mit 10 s, danach startet das Duell; keine Fehler. Nicht geprüft: auf echtem iPhone/iPad und mit Konto auf der Live-Seite.
+
 ## Belohnungen neu: Schwierigkeit im einfachen Spiel, Karten nur in der Rangliste (02.11.)
 
 Einfaches Spiel: vor dem Start Leicht / Normal / Schwer wählen. Nur noch Münzen (Sieg 30/50/100, Unentschieden 10/20/40, Niederlage 5/10/15), keine Karte mehr. Die Stufe steht im Ticket; der Server spielt den Computer mit genau dieser Stufe nach. Rangliste (Collection League): mit Konto gibt der Server das Match aus (Seed, Computer-Rune) und prüft Lauf und alle Runden; ein gewonnenes Match schaltet die seltenste neue Entdeckung frei (im Lauf als „NEU“ markiert), sonst 50 Münzen. Gäste spielen ohne Belohnung. Hauptmenü: „Spielen“ mit Untermenü. Datenbank-Änderung 015 (Ticket-Art „league“) eingespielt, `adventure` und `game` auf Engine 46b9d84 / engine-50e69ea97fe0.

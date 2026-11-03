@@ -4,8 +4,11 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import { RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
+import { CLASS_INFO, EFFECTS } from '../game/effects';
 import { RunTicket, adventureRunner } from '../game/verify';
-import { FINAL_GATE, GATE_COUNT, LANES, Pick, RunInput, RunnerEvent, RunnerLayout, RunnerSim, STUMBLE_PENALTY } from '../game/runner';
+import {
+  BASE_SPEED, CHOICE_AHEAD, CHOICE_SECONDS, FINAL_CHOICE_SECONDS, FINAL_GATE, GATE_COUNT, LANES, Pick, RunInput, RunnerEvent, RunnerLayout, RunnerSim, STUMBLE_PENALTY,
+} from '../game/runner';
 
 interface Props {
   deck: string[];
@@ -61,6 +64,15 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
   const view = useRef({ laneX: 1, shake: 0, bob: 0, w: 0, h: 0 });
   fastRef.current = fast;
   phaseRef.current = phase;
+  /** Card choice at the next gate: the run stands still until a card is tapped or the time is up. */
+  const [choice, setChoice] = useState<{ gate: number; deadline: number; seconds: number } | null>(null);
+  const choiceRef = useRef(choice);
+  choiceRef.current = choice;
+  /** Gates whose choice is done (the run passes them without stopping again). */
+  const chosenGates = useRef(new Set<number>());
+  /** After a choice the lane stays fixed until that gate's card is taken. */
+  const lockedGate = useRef<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   // Geometry shared by the canvas renderer and the flying-card animation.
   const project = useCallback((z: number, lane: number) => {
@@ -77,6 +89,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
   const handleEvents = useCallback((events: RunnerEvent[]) => {
     for (const e of events) {
       if (e.type === 'pick') {
+        if (lockedGate.current !== null && e.gate >= lockedGate.current) lockedGate.current = null;
         const at = project(1.2, e.lane);
         pickedLanes.current.set(e.gate, e.lane);
         setPicks((prev) => [...prev, { ...e.offer, gate: e.gate, mod: e.mod }]);
@@ -139,12 +152,25 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
     const frame = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      if (phaseRef.current === 'run') handleEvents(sim.update(dt, fastRef.current ? FAST : 1));
+      if (phaseRef.current === 'run' && !choiceRef.current) {
+        const mult = fastRef.current ? FAST : 1;
+        const gate = sim.upcomingGate;
+        const stopAt = gate ? gate.distance - CHOICE_AHEAD : Infinity;
+        if (gate && !chosenGates.current.has(gate.index) && sim.distance + dt * BASE_SPEED * mult >= stopAt) {
+          // Stop in front of the gate and let the player choose by tapping.
+          handleEvents(sim.advanceTo(stopAt));
+          const seconds = gate.index === FINAL_GATE ? FINAL_CHOICE_SECONDS : CHOICE_SECONDS;
+          const c = { gate: gate.index, deadline: Date.now() + seconds * 1000, seconds };
+          choiceRef.current = c;
+          setChoice(c);
+          setNow(Date.now());
+        } else handleEvents(sim.update(dt, mult));
+      }
       const v = view.current;
       const k = reducedMotion ? 1 : Math.min(1, dt * 14);
       v.laneX += (sim.lane - v.laneX) * k;
       v.shake = Math.max(0, v.shake - dt);
-      if (phaseRef.current === 'run' && !reducedMotion) v.bob += dt * (fastRef.current ? 22 : 12);
+      if (phaseRef.current === 'run' && !choiceRef.current && !reducedMotion) v.bob += dt * (fastRef.current ? 22 : 12);
       draw(ctx, sim, v, project, owned, reducedMotion, skin, pickedLanes.current, !!layout, markNew);
       raf = requestAnimationFrame(frame);
     };
@@ -156,7 +182,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
   }, [sim, handleEvents, project, owned, reducedMotion, skin]);
 
   const move = useCallback((dir: -1 | 1) => {
-    if (phaseRef.current !== 'done') {
+    if (phaseRef.current !== 'done' && !choiceRef.current && lockedGate.current === null) {
       sim.moveLane(dir);
       setLane(sim.lane);
     }
@@ -190,10 +216,42 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
     touch.current = null;
   };
 
+  /** Takes the card in `lane` at the gate being chosen (null = time is up: the card in the current lane). */
+  const choose = useCallback((pickLane: number | null) => {
+    const c = choiceRef.current;
+    if (!c) return;
+    chosenGates.current.add(c.gate);
+    if (pickLane !== null) {
+      handleEvents(sim.chooseLane(pickLane));
+      setLane(sim.lane);
+    } else {
+      const offer = sim.upcomingGate?.offers[sim.lane];
+      if (offer) setToast(`Zeit abgelaufen – du nimmst ${getCard(offer.cardId).name}`);
+    }
+    lockedGate.current = c.gate;
+    choiceRef.current = null;
+    setChoice(null);
+  }, [sim, handleEvents]);
+
+  // Countdown of the card choice.
+  useEffect(() => {
+    if (!choice) return;
+    const t = setInterval(() => {
+      setNow(Date.now());
+      if (Date.now() >= choice.deadline) choose(null);
+    }, 200);
+    return () => clearInterval(t);
+  }, [choice, choose]);
+
   function skip() {
     if (phase === 'ready') setPhase('run');
+    choiceRef.current = null;
+    setChoice(null);
     handleEvents(sim.skipToEnd());
   }
+
+  const choiceGate = choice ? sim.gates[choice.gate] : null;
+  const choiceLeft = choice ? Math.max(0, (choice.deadline - now) / 1000) : 0;
 
   return (
     <main className="screen runner">
@@ -219,9 +277,9 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
         onPointerCancel={onPointerUp}
       >
         <canvas ref={canvasRef} className="runner-canvas" aria-label="Laufstrecke mit drei Spuren" />
-        {phase === 'ready' && <div className="stage-banner">Los geht’s!<small>Wische oder tippe ◀ ▶</small></div>}
+        {phase === 'ready' && <div className="stage-banner">Los geht’s!<small>Weiche Steinen aus · vor jedem Tor wählst du deine Karte</small></div>}
         {phase === 'done' && <div className="stage-banner">8 Karten gesammelt!<small>Das Duell beginnt …</small></div>}
-        {phase !== 'done' && sim.gates[picks.length] && (
+        {phase !== 'done' && !choice && sim.gates[picks.length] && (
           <div className="gate-preview" aria-live="polite">
             {layout
               ? <span className="gate-preview-label">Tor {picks.length + 1} · 2 aus deinem Deck + 1 neutral{markNew ? ' · „NEU“ gewinnst du mit dem Match' : ''}</span>
@@ -241,6 +299,33 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
                 />
               ))}
             </div>
+          </div>
+        )}
+        {choice && choiceGate && (
+          <div className={`gate-choice ${choice.gate === FINAL_GATE ? 'final' : ''}`} role="dialog" aria-label={`Tor ${choice.gate + 1}: Karte wählen`}>
+            <p className="gate-choice-title">
+              {choice.gate === FINAL_GATE && !layout ? '★ Finaltor – wähle deine Entdeckung' : `Tor ${choice.gate + 1}/${GATE_COUNT} – wähle deine Karte`}
+            </p>
+            <div className="gate-choice-cards">
+              {choiceGate.offers.map((o, i) => (
+                <button key={`${choice.gate}-${i}`} type="button" className={`gate-choice-card ${i === lane ? 'current' : ''}`} onClick={() => choose(i)}
+                  aria-label={`${getCard(o.cardId).name} nehmen`}>
+                  <Card
+                    id={o.cardId}
+                    size="lg"
+                    badge={o.kind === 'discovery' ? 'discovery' : null}
+                    badgeText={layout ? (markNew && !owned.has(o.cardId) ? 'NEU' : 'Neutral') : owned.has(o.cardId) ? '★' : 'NEU'}
+                    mod={stumbled ? STUMBLE_PENALTY : 0}
+                  />
+                  <span className="gate-choice-fx">{effectLine(o.cardId, choice.gate === FINAL_GATE)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="gate-choice-timer" aria-hidden="true"><span style={{ width: `${(choiceLeft / choice.seconds) * 100}%` }} /></div>
+            <p className="gate-choice-hint">
+              Tippe eine Karte an · noch {Math.ceil(choiceLeft)} s{stumbled ? ` · Stolperstein: diese Karte ${STUMBLE_PENALTY}` : ''}
+              <br /><small>Ohne Wahl nimmst du die Karte auf deiner Spur (hervorgehoben).</small>
+            </p>
           </div>
         )}
         {toast && <div className="toast">{toast}</div>}
@@ -504,6 +589,14 @@ function drawRock(ctx: CanvasRenderingContext2D, at: { x: number; y: number; p: 
   ctx.beginPath();
   ctx.ellipse(at.x - r * 0.3, at.y - r * 0.75, r * 0.4, r * 0.25, 0, 0, Math.PI * 2);
   ctx.fill();
+}
+
+/** Effect of a card in words under the large choice (the final gate shows the full text). */
+function effectLine(cardId: string, full: boolean): string {
+  const def = getCard(cardId);
+  const fx = def.effect ? EFFECTS[def.effect] : null;
+  if (!fx) return def.cls ? `${CLASS_INFO[def.cls].icon} ohne Effekt` : 'ohne Effekt';
+  return `${fx.name}: ${full ? fx.text : fx.short}`;
 }
 
 const RARITY_FRAME: Record<Rarity, string> = {

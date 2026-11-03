@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CARDS, RARITIES, RARITY_POWER, STARTER_DECK, STARTING_UNLOCKED, cardPower, getCard } from '../src/game/cards';
 import { createRng } from '../src/game/rng';
-import { BASE_SPEED, FINAL_GATE, FINISH_DISTANCE, GATE_COUNT, LANES, RunnerSim, STUMBLE_PENALTY, generateGates, generateObstacles } from '../src/game/runner';
+import {
+  BASE_SPEED, CHOICE_AHEAD, FINAL_GATE, FINISH_DISTANCE, GATE_COUNT, LANES, RunnerSim, STUMBLE_PENALTY, generateGates, generateObstacles, replayRun, validateRunInputs,
+} from '../src/game/runner';
 
 /** Lane that avoids every stone in the next row ahead (rows can block two lanes). */
 function freeLane(sim: RunnerSim): number {
@@ -210,5 +212,33 @@ describe('Jede Karte nur einmal pro Lauf', () => {
     const sim = new RunnerSim(layout);
     sim.skipToEnd();
     expect(JSON.stringify(sim.gates)).toBe(before);
+  });
+});
+
+describe('Kartenwahl am Tor (Antippen)', () => {
+  it('die angetippte Karte wird genommen – und der Lauf lässt sich exakt nachspielen', () => {
+    for (let s = 1; s <= 30; s++) {
+      const rng = createRng(s);
+      const layout = { gates: generateGates(STARTER_DECK, createRng(s + 100)), obstacles: generateObstacles(createRng(s + 200)) };
+      const sim = new RunnerSim(layout);
+      const wanted: string[] = [];
+      while (!sim.finished) {
+        const gate = sim.upcomingGate;
+        if (!gate) { sim.advanceTo(FINISH_DISTANCE); break; }
+        // Sometimes a swipe right before the stop (the choice must still respect the minimum gap).
+        sim.advanceTo(gate.distance - CHOICE_AHEAD - (rng() < 0.3 ? 0.1 : 3));
+        if (rng() < 0.5) sim.moveLane(rng() < 0.5 ? -1 : 1);
+        sim.advanceTo(gate.distance - CHOICE_AHEAD);
+        const target = Math.floor(rng() * LANES);
+        wanted.push(gate.offers[target].cardId);
+        sim.chooseLane(target);
+        sim.advanceTo(gate.distance + 1);
+      }
+      expect(sim.picks.map((p) => p.cardId)).toEqual(wanted);
+      expect(validateRunInputs(sim.inputs)).toBeNull();
+      const replay = replayRun(layout, sim.inputs);
+      expect(replay.error).toBeNull();
+      expect(replay.picks).toEqual(sim.picks);
+    }
   });
 });

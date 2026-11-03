@@ -1592,3 +1592,25 @@ label.btn.disabled { opacity: .45; }
 .coin-face.front span { background: var(--player); }
 .coin-face.back span { background: #ef4444; }
 .plate-input { resize: none; font: inherit; line-height: 1.3; }
+
+/* Card choice in front of a gate: the run stands still, three large cards to tap. */
+.gate-choice {
+  position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 10px; background: rgba(12, 10, 32, 0.84); backdrop-filter: blur(3px); animation: menu-sub-in .18s ease-out;
+}
+.gate-choice-title { margin: 0; font-size: 18px; font-weight: 800; text-align: center; }
+.gate-choice.final .gate-choice-title { color: var(--accent); }
+.gate-choice-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 540px; }
+.gate-choice-card {
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 4px; margin: 0; border: 2px solid transparent; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04); color: inherit; cursor: pointer; font: inherit; touch-action: manipulation;
+}
+.gate-choice-card .card { width: 100%; }
+.gate-choice-card.current { border-color: var(--accent); box-shadow: 0 0 14px rgba(255, 196, 64, 0.45); }
+.gate-choice-card:active { transform: scale(0.97); }
+.gate-choice-fx { font-size: 11.5px; line-height: 1.25; color: var(--muted); text-align: center; overflow-wrap: anywhere; }
+.gate-choice.final .gate-choice-fx { font-size: 12px; color: #e9e3ff; }
+.gate-choice-timer { width: 100%; max-width: 540px; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.gate-choice-timer span { display: block; height: 100%; background: var(--accent); transition: width .2s linear; }
+.gate-choice-hint { margin: 0; font-size: 14px; text-align: center; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .gate-choice { animation: none; } }
