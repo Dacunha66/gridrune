@@ -9,7 +9,8 @@ import {
   Mission, Opponent, World, mergeContent, parseMission, parseOpponent, parseWorld, setCampaign, CAMPAIGN, visibleWorlds, worldMissions,
 } from '../game/campaign';
 import { CampaignProgress, missionUnlocked, recordResult, runeUnlocked, sanitizeProgress, worldUnlocked } from '../game/campaignProgress';
-import { GrantedReward, owedRewards, payRewards } from '../game/campaignRewards';
+import { GrantedReward, grantRewards, isPayable, owedRewards, payRewards } from '../game/campaignRewards';
+import { RaidConfig, raidOwed } from '../game/raid';
 import { deriveRng } from '../game/league';
 import { PackCard, buyPack, buySkin } from '../game/shop';
 import { SaveData, sanitize } from '../game/storage';
@@ -242,7 +243,15 @@ export {
 export {
   RAIDS_COLLECTION, checkRaid, expiredDamage, parseRaid, phaseIndex, raidDay, raidOpen, raidOwed, raidProblems, raidSnapshot,
 } from '../game/raid';
-export { grantRewards } from '../game/campaignRewards';
+
+/** Rewards the player has earned in a raid and not received yet, paid into the save (packs opened with the seed). */
+export function payRaidRewards(saveRaw: unknown, config: RaidConfig, stats: { totalDamage: number; attacks: number }, currentHp: number, claimed: string[], seed: string):
+  { keys: string[]; granted: GrantedReward[]; save: SaveData } | null {
+  const owed = raidOwed(config, stats, currentHp, claimed).filter((o) => isPayable(o.reward));
+  if (owed.length === 0) return null;
+  const r = grantRewards(sanitize(saveRaw), owed, deriveRng(seed, 'raid-rewards'));
+  return { keys: owed.map((o) => o.key), granted: r.granted, save: r.save };
+}
 
 /** Checks the 8 cards (different, owned, active) and the rune (any unlocked rune allowed in raids). */
 export function prepareRaid(saveRaw: unknown, campaignRaw: unknown, hand: unknown, rune: unknown, isAdmin: boolean):
