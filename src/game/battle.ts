@@ -94,6 +94,15 @@ export interface BattleState {
   lastRune: { side: Side; id: string } | null;
 }
 
+/**
+ * Does the attacking card take the defending one? The higher value wins. On a tie the attacker wins only with
+ * Dominanz – and never against a card with Standhaft.
+ */
+export function beats(attack: number, defense: number, attackerId: string, defenderId: string): boolean {
+  if (attack !== defense) return attack > defense;
+  return getCard(attackerId).effect === 'dominanz' && getCard(defenderId).effect !== 'standhaft';
+}
+
 /** One capture of a Kettenübernahme: the captured card `from` took `cell` in wave `level` (1 = after the first capture). */
 export interface ChainStep {
   from: number;
@@ -387,7 +396,7 @@ export function resolvePlacement(
     if (!other || other.owner === side) continue;
     const attack = boardValue(next, terrain, cell, n.mine);
     const defense = boardValue(next, terrain, n.cell, n.theirs);
-    clashes.push({ cell: n.cell, dir: n.mine, attack, defense, captured: attack > defense });
+    clashes.push({ cell: n.cell, dir: n.mine, attack, defense, captured: beats(attack, defense, placed.cardId, other.cardId) });
   }
   for (const c of clashes) if (c.captured) next[c.cell] = { ...next[c.cell]!, owner: side };
   const chain = effect === 'kettenuebernahme' ? runChain(next, terrain, clashes.filter((c) => c.captured).map((c) => c.cell), side, cell) : [];
@@ -414,7 +423,7 @@ function runChain(board: (BoardCell | null)[], terrain: readonly Terrain[], firs
       for (const n of neighbours(from)) {
         const other = board[n.cell];
         if (!other || other.owner === side || captured.some((c) => c.cell === n.cell)) continue;
-        if (boardValue(board, terrain, from, n.mine) > boardValue(board, terrain, n.cell, n.theirs)) captured.push({ from, cell: n.cell });
+        if (beats(boardValue(board, terrain, from, n.mine), boardValue(board, terrain, n.cell, n.theirs), board[from]!.cardId, other.cardId)) captured.push({ from, cell: n.cell });
       }
     }
     // All captures of a wave happen together (like the normal capture), then the next wave starts.

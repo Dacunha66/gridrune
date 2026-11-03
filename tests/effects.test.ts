@@ -33,6 +33,10 @@ const TEST_CARDS: CardDef[] = [
   card('k01', [6, 6, 6, 6], 'feuer', 'kettenuebernahme'),
   card('k02', [6, 6, 6, 6], 'feuer'),
   card('l66', [1, 6, 6, 1], 'krieger'), // weak on top/left, strong on right/bottom: chains run right and down
+  card('d05', [5, 5, 5, 5], 'krieger', 'dominanz'),
+  card('s05', [5, 5, 5, 5], 'frost', 'standhaft'),
+  card('kd5', [5, 5, 5, 5], 'feuer', 'kettenuebernahme'),
+  card('p04', [4, 4, 4, 4]),
 ];
 
 setCardCatalog([...BUILTIN_CARDS, ...TEST_CARDS]);
@@ -56,12 +60,12 @@ const values = (s: BattleState, cell: number) => cellBreakdown(s.board, s.terrai
 // Cell 5 has neighbours: top 1, right 6, bottom 9, left 4.
 
 describe('Effekt-Vorlagen', () => {
-  it('12 Fähigkeiten: 10 gehören zu genau einer Klasse, Wirbelwind und Kettenübernahme zu allen', () => {
-    expect(Object.keys(EFFECTS)).toHaveLength(12);
+  it('14 Fähigkeiten: 10 gehören zu genau einer Klasse, Wirbelwind, Kettenübernahme, Dominanz und Standhaft zu allen', () => {
+    expect(Object.keys(EFFECTS)).toHaveLength(14);
     const classes = ['krieger', 'magier', 'natur', 'feuer', 'frost', 'schatten'] as CardClass[];
     const total = classes.reduce((n, c) => n + effectsForClass(c).filter((e) => e.cls !== null).length, 0);
     expect(total).toBe(10);
-    for (const c of classes) expect(effectsForClass(c).map((e) => e.id)).toEqual(expect.arrayContaining(['wirbelwind', 'kettenuebernahme']));
+    for (const c of classes) expect(effectsForClass(c).map((e) => e.id)).toEqual(expect.arrayContaining(['wirbelwind', 'kettenuebernahme', 'dominanz', 'standhaft']));
   });
 });
 
@@ -388,5 +392,42 @@ describe('Kettenübernahme', () => {
     const a = applyMove(line(), { handIndex: 0, cell: 0 });
     const b = applyMove(line(), { handIndex: 0, cell: 0 });
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});
+
+describe('Dominanz und Standhaft', () => {
+  it('normal: Gleichstand übernimmt nicht', () => {
+    const s = applyMove(setup({ 6: at('p05', 'cpu') }, ['p05']), { handIndex: 0, cell: 5 });
+    expect(s.board[6]!.owner).toBe('cpu');
+  });
+  it('Dominanz gewinnt bei Gleichstand, verliert aber weiter gegen höhere Werte', () => {
+    const s = applyMove(setup({ 6: at('p05', 'cpu'), 4: at('p07', 'cpu') }, ['d05']), { handIndex: 0, cell: 5 });
+    expect(s.board[6]!.owner).toBe('player');
+    expect(s.board[4]!.owner).toBe('cpu');
+  });
+  it('Standhaft: bei Gleichstand nie übernommen – auch nicht durch Dominanz; höhere Werte übernehmen weiter', () => {
+    const a = applyMove(setup({ 6: at('s05', 'cpu') }, ['d05']), { handIndex: 0, cell: 5 });
+    expect(a.board[6]!.owner).toBe('cpu');
+    const b = applyMove(setup({ 6: at('s05', 'cpu') }, ['p07']), { handIndex: 0, cell: 5 });
+    expect(b.board[6]!.owner).toBe('player');
+  });
+  it('Dominanz verteidigt nicht: eine Karte mit Dominanz wird bei Gleichstand nicht übernommen, aber auch nicht geschützt', () => {
+    const s = applyMove(setup({ 6: at('d05', 'cpu') }, ['p05']), { handIndex: 0, cell: 5 });
+    expect(s.board[6]!.owner).toBe('cpu');
+  });
+  it('in der Kettenübernahme greift eine eroberte Karte mit Dominanz auch bei Gleichstand weiter an', () => {
+    // 5: Kette (5) erobert 6: Dominanz-Karte (geschwächt auf 4); die greift 7 (4) an – Gleichstand, Dominanz gewinnt.
+    const s = applyMove(setup({ 6: at('d05', 'cpu', { mod: -1 }), 7: at('p04', 'cpu') }, ['kd5']), { handIndex: 0, cell: 5 });
+    expect(s.board[6]!.owner).toBe('player');
+    expect(s.board[7]!.owner).toBe('player');
+    // gegen Standhaft hält auch die Kette nicht
+    const t = applyMove(setup({ 6: at('d05', 'cpu', { mod: -1 }), 7: at('s05', 'cpu', { mod: -1 }) }, ['kd5']), { handIndex: 0, cell: 5 });
+    expect(t.board[7]!.owner).toBe('cpu');
+  });
+  it('die KI erkennt Gleichstands-Übernahmen mit Dominanz', () => {
+    const s = setup({ 6: at('p05', 'cpu') }, ['d05', 'p01'], undefined, 'cpu');
+    const m = chooseCpuMove(s, createRng(1), { level: 'medium' });
+    expect(m.handIndex).toBe(0);
+    expect([5, 7, 2, 10]).toContain(m.cell);
   });
 });

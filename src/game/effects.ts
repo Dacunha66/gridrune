@@ -38,7 +38,7 @@ export const TERRAIN_INFO: Record<Terrain, { label: string; icon: string }> = {
 export type EffectId =
   | 'kampfgeist' | 'schildwall' | 'arkane_kraft' | 'magische_barriere' | 'wurzelkraft'
   | 'naturbund' | 'flammenherz' | 'frostpanzer' | 'schattenmantel' | 'schwaechender_blick'
-  | 'wirbelwind' | 'kettenuebernahme';
+  | 'wirbelwind' | 'kettenuebernahme' | 'dominanz' | 'standhaft';
 
 export interface EffectDef {
   id: EffectId;
@@ -105,6 +105,14 @@ export const EFFECTS: Record<EffectId, EffectDef> = {
   kettenuebernahme: {
     id: 'kettenuebernahme', short: 'Eroberte Karten greifen weiter an', name: 'Kettenübernahme', cls: null, trigger: 'play', value: 7,
     text: 'Erobert diese Karte beim Legen eine Gegnerkarte, greift die eroberte Karte ihrerseits angrenzende Gegner an – nach den normalen Regeln, höchstens zwei weitere Stufen.',
+  },
+  dominanz: {
+    id: 'dominanz', short: 'Gewinnt auch bei Gleichstand', name: 'Dominanz', cls: null, trigger: 'condition', value: 1.5,
+    text: 'Greift diese Karte an, setzt sie sich auch bei Gleichstand durch und übernimmt die Gegnerkarte – außer gegen Karten mit Standhaft.',
+  },
+  standhaft: {
+    id: 'standhaft', short: 'Bei Gleichstand nie übernommen', name: 'Standhaft', cls: null, trigger: 'condition', value: 0.6,
+    text: 'Bei Gleichstand kann diese Karte nie übernommen werden – auch nicht von Karten mit Dominanz.',
   },
 };
 
@@ -181,5 +189,9 @@ export function effectPreview(base: Four, effect: EffectId): { situation: string
       return { situation: 'Beim Legen (ungedreht)', values: v, note: `Gedreht um 90° nach rechts: ${[v[3], v[0], v[1], v[2]].join(' / ')} – die Werte werden nur neu angeordnet, nicht verändert.` };
     case 'kettenuebernahme':
       return { situation: 'Beim Legen', values: v, note: 'Die Werte bleiben gleich – eroberte Karten greifen weiter an.' };
+    case 'dominanz':
+      return { situation: 'Beim Angreifen', values: v, note: 'Die Werte bleiben gleich – bei Gleichstand übernimmt diese Karte trotzdem (nicht gegen Standhaft).' };
+    case 'standhaft':
+      return { situation: 'Beim Verteidigen', values: v, note: 'Die Werte bleiben gleich – bei Gleichstand nie übernommen, auch nicht durch Dominanz.' };
   }
 }

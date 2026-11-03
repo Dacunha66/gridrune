@@ -27,6 +27,10 @@ export const EFFECT_ICON: Record<EffectId, string> = {
   wirbelwind: 'M4.5 11a7.5 7.5 0 0 1 13-4.6M19.5 13a7.5 7.5 0 0 1-13 4.6M17.8 2.8v3.8H14M6.2 21.2v-3.8H10',
   // Two lightning bolts joined by a link.
   kettenuebernahme: 'M8.5 2L4 10.5h4.2L6.5 16M17.5 8L13 16.5h4.2L15.5 22M8.2 13.2l7.6-2.4',
+  // Crown.
+  dominanz: 'M3 18.5h18M4 18.5L3 7.5l5 4 4-7 4 7 5-4-1 11',
+  // Tower (holds its ground).
+  standhaft: 'M6 21.5V9h12v12.5M6 9V4.5h2.5V7h2.2V4.5h2.6V7h2.2V4.5H18V9M10 21.5v-4.5a2 2 0 0 1 4 0v4.5M4 21.5h16',
 };
 
 export function Icon({ path, className, color, fill = 'none' }: { path: string; className?: string; color?: string; fill?: string }) {
@@ -54,6 +58,8 @@ export const ABILITY_GLYPH: Record<EffectId, { d: string; fill: boolean }> = {
   schwaechender_blick: { d: EFFECT_ICON.schwaechender_blick, fill: false }, // eye
   wirbelwind: { d: EFFECT_ICON.wirbelwind, fill: false }, // two circular arrows
   kettenuebernahme: { d: EFFECT_ICON.kettenuebernahme, fill: false }, // linked lightning bolts
+  dominanz: { d: 'M2.5 19h19l1-12.5-6 4.5L12 3l-4.5 8-6-4.5z', fill: true }, // crown
+  standhaft: { d: 'M5.5 22V9h13v13h-4.5v-4.5a2 2 0 0 0-4 0V22zM5.5 8V3h3v2.5h2V3h3v2.5h2V3h3v5z', fill: true }, // tower
 };
 
 /** Heraldic shield in the class colour with the class symbol – the shape alone says "class". */

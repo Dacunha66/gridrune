@@ -3,7 +3,7 @@
 // The four effect kinds are rules; name, texts, strength, targets, classes, modes and pictures are data
 // the admin can change. Variants (rarity, artwork) always keep the effect of their base rune.
 import {
-  BattleState, BoardCell, Clash, Move, Side, applyMove, boardValue, cellName, isGameOver, neighbours,
+  BattleState, BoardCell, Clash, Move, Side, applyMove, boardValue, cellName, isGameOver, neighbours, beats,
 } from './battle';
 import { Rarity, getCard } from './cards';
 import { CLASS_INFO, CLASSES, CardClass, isCardClass } from './effects';
@@ -249,7 +249,7 @@ export function applyRune(state: BattleState, use: RuneUse): BattleState {
         if (!o || o.owner === side) continue;
         const attack = boardValue(board, state.terrain, use.cell!, n.mine);
         const defense = boardValue(board, state.terrain, n.cell, n.theirs);
-        clashes.push({ cell: n.cell, dir: n.mine, attack, defense, captured: attack > defense });
+        clashes.push({ cell: n.cell, dir: n.mine, attack, defense, captured: beats(attack, defense, board[use.cell!]!.cardId, o.cardId) });
       }
       // At most `maxTargets` captures (chosen by the player if more were possible); nothing else happens – no chain.
       const can = clashes.filter((c) => c.captured).map((c) => c.cell);

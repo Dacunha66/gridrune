@@ -24,7 +24,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
         <h2>2 · Das Duell</h2>
         <p>Ein 4×4-Feld, du und der Computer habt je 8 Karten und legt abwechselnd eine Karte auf ein freies Feld.</p>
         <p>Jede Karte hat 4 Werte (oben, rechts, unten, links). Liegt daneben eine gegnerische Karte, wird verglichen: <b>deine Seite gegen die zugewandte Seite</b> der Nachbarkarte.</p>
-        <p>Ist dein Wert <b>höher</b>, gehört die Karte jetzt dir. Gleichstand übernimmt nicht. Diagonal zählt nicht. Kettenreaktionen gibt es nur mit der Fähigkeit <b>Kettenübernahme</b>: Eine eroberte Karte greift dann ihre Nachbarn an ({SETTINGS.chainDepth ? `höchstens ${SETTINGS.chainDepth} weitere Stufen` : 'bis keine Karte mehr erobert wird'}).</p>
+        <p>Ist dein Wert <b>höher</b>, gehört die Karte jetzt dir. Gleichstand übernimmt nicht – außer mit der Fähigkeit <b>Dominanz</b> (eine Karte mit <b>Standhaft</b> hält aber jedem Gleichstand stand). Diagonal zählt nicht. Kettenreaktionen gibt es nur mit der Fähigkeit <b>Kettenübernahme</b>: Eine eroberte Karte greift dann ihre Nachbarn an ({SETTINGS.chainDepth ? `höchstens ${SETTINGS.chainDepth} weitere Stufen` : 'bis keine Karte mehr erobert wird'}).</p>
         <p>Nach 16 Zügen gewinnt, wer mehr Felder besitzt. 8:8 ist unentschieden.</p>
         <p>Vor dem Duell entscheidet ein <b>Münzwurf</b>: Wer gewinnt, wählt, wer beginnt. Tipp: Wer die <b>letzte</b> Karte legt, hat oft einen Vorteil.</p>
 
