@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Neue Fähigkeiten Dominanz und Standhaft (03.11.)
+
+Dominanz: Greift die Karte an, gewinnt sie auch bei Gleichstand (nicht gegen Standhaft). Standhaft: Bei Gleichstand nie übernommen, auch nicht durch Dominanz. Beide klassenübergreifend (jede Klasse darf sie haben), eigene Symbole (Krone, Turm). Gelten beim Legen, in der Kettenübernahme (die eroberte Karte greift mit ihrer eigenen Fähigkeit an) und beim Angriff mit der Rune des Nachhalls; KI und Server-Prüfung nutzen dieselbe Vergleichsregel. Alle vier Server-Funktionen auf Engine 2669e0a / engine-3ddf400c8f23, laufen (Startprüfung).
+
+Geprüft: 271 automatische Tests (neu: normaler Gleichstand, Dominanz bei Gleichstand / gegen höheren Wert, Standhaft gegen Dominanz und gegen höheren Wert, Dominanz schützt nicht, Kette mit Dominanz und gegen Standhaft, KI nutzt Dominanz). Noch keine Karte hat die Fähigkeiten – im Admin unter Karten zuweisen. Nicht geprüft: Darstellung der neuen Symbole auf dem Gerät.
+
 ## Weltboss-Raid – Pakete 4–7: Oberfläche, Admin, Testmodus, erster Boss (03.11.)
 
 Spieler: „👹 Weltboss-Raid“ im Spiel-Menü (mit Konto): Übersicht (Bossbild, LP-Balken mit Phasenmarken, Phase, Restzeit, Teilnehmer, Angriffe heute, eigener Schaden und Platz), 8 Karten aus der Sammlung wählen, Kampf (normales Duell gegen Boss-Deck/KI/Rune der Phase), Ergebnis nur mit Server-Werten, Rangliste (50 pro Seite, eigene Platzierung), Belohnungen. Begonnene Kämpfe werden auf dem Gerät mitgeschrieben: Neuladen setzt den Kampf an derselben Stelle fort (kein kostenloser Neustart); nach der Frist zählt er als Niederlage.
