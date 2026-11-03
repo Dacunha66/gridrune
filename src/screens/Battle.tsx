@@ -40,6 +40,10 @@ interface Props {
   online?: OnlineLink;
   /** Computer strength in the simple game (without setup). */
   ai?: AiOptions;
+  /** Continue a fight where it stopped (raid after reloading): position, the start after the toss, moves so far. */
+  resume?: { begin: BattleState; state: BattleState; moves: Action[]; ai: Rng; handOrigin: number[] };
+  /** Called after every action with the fight so far (raid: kept on the device to continue after reloading). */
+  onProgress?: (record: DuelRecord) => void;
 }
 
 export interface OnlineLink {
@@ -98,7 +102,7 @@ function cellCenter(cell: number): { x: number; y: number } {
   return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE) };
 }
 
-export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket, online, ai }: Props) {
+export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket, online, ai, resume, onProgress }: Props) {
   // Computer strength: league/campaign setups bring their own; a checked adventure uses the ticket's level.
   const aiOptions: AiOptions | undefined = setup?.ai ?? (ticket ? { level: ticket.level ?? 'medium' } : ai);
   // Checked adventures use the seed's random sources (the server replays them); otherwise a fresh random source.
@@ -107,13 +111,14 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     const rngs = adventureRngs(ticket.seed);
     return { rngs, ...adventureDuel(ticket, picks, rngs) };
   });
-  const rng = useMemo(() => seeded?.rngs.ai ?? setup?.rng ?? createRng(), [seeded, setup]);
+  const rng = useMemo(() => resume?.ai ?? seeded?.rngs.ai ?? setup?.rng ?? createRng(), [resume, seeded, setup]);
   // Adventure duels take a random active arena; league rounds bring their own.
   const arena = useMemo(() => seeded?.arena ?? setup?.arena ?? pickArena(rng), [seeded, setup, rng]);
   // Board picture and grid layout chosen in the board designer (only looks – the 16 cells stay the same).
   const [boardDesign] = useState(() => ACTIVE.board);
   const [initial] = useState<BattleState>(() => {
     if (online) return online.state;
+    if (resume) return resume.state;
     if (seeded) return seeded.start;
     const r = setup?.runes ?? runes;
     const basic = basicRunes().map((x) => x.id);
@@ -139,7 +144,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     return () => clearInterval(t);
   }, [online?.deadline]);
   const secondsLeft = online?.deadline ? Math.max(0, Math.ceil((new Date(online.deadline).getTime() - now) / 1000)) : null;
-  const record = useRef<DuelRecord>({ start: initial, moves: [] });
+  const record = useRef<DuelRecord>(resume ? { start: resume.begin, moves: [...resume.moves] } : { start: initial, moves: [] });
   /** Hand card shown large while it is held. */
   const [preview, setPreview] = useState<{ id: string; mod: number } | null>(null);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -179,19 +184,24 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   const [runeSheet, setRuneSheet] = useState<Side | null>(null);
   const [showLog, setShowLog] = useState(false);
   const terrainsUsed = useMemo(() => [...new Set(arena.cells)].filter((t): t is Exclude<Terrain, 'normal'> => t !== 'normal'), [arena]);
-  const [phase, setPhase] = useState<'toss' | 'play'>(setup?.first ? 'play' : 'toss');
+  const [phase, setPhase] = useState<'toss' | 'play'>(setup?.first || resume ? 'play' : 'toss');
   const [selected, setSelected] = useState<number | null>(null);
   const [banner, setBanner] = useState<string | null>(setup?.first ? (setup.first === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!') : null);
   /** Captured cells still showing their old colour until the flip animation starts. */
   const [pendingFlips, setPendingFlips] = useState<number[]>([]);
   const [showClashes, setShowClashes] = useState(false);
   const ended = useRef(false);
-  const starter = useRef<Side>(setup?.first ?? 'player');
+  const starter = useRef<Side>(resume?.begin.turn ?? setup?.first ?? 'player');
   const over = isGameOver(state);
   const sc = score(state);
   const discoveryIndexes = useMemo(() => new Set(picks.flatMap((p, i) => (p.kind === 'discovery' ? [i] : []))), [picks]);
   // Map current hand positions back to the original pick (to keep the "NEU" marker).
-  const [handOrigin, setHandOrigin] = useState<number[]>(() => picks.map((_, i) => i));
+  const [handOrigin, setHandOrigin] = useState<number[]>(() => resume?.handOrigin ?? picks.map((_, i) => i));
+  // Report the fight so far after every action (and after the coin toss).
+  useEffect(() => {
+    if (phase === 'play') onProgress?.(record.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, phase]);
   const animating = pendingFlips.length > 0;
   const fxTime = reducedMotion ? 0 : 1;
   // Admin test of the card designs: switch the look mid-duel (nothing in the game changes).

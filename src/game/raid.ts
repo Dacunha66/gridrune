@@ -8,7 +8,7 @@
 import { AiLevel, AI_LEVELS, chooseCpuMove, chooseCpuRune, drawCpuHand } from './ai';
 import { Arena, ARENAS } from './arenas';
 import { BattleState, HAND_SIZE, HandCard, Outcome, Side, coinToss, cpuChoosesFirst, createBattle, isGameOver, outcome, score, toHand } from './battle';
-import { applyAction } from './runes';
+import { Action, applyAction, isRuneUse } from './runes';
 import { ImageRef, Reward, findArena, parseImage, parseReward } from './campaign';
 import { CARDS } from './cards';
 import { CardClass, Terrain, isCardClass } from './effects';
@@ -387,4 +387,36 @@ export function aiRaidFight(snapshot: RaidSnapshot, rng: Rng): { outcome: Outcom
     state = applyAction(state, action);
   }
   return { outcome: outcome(state), fields: score(state).player };
+}
+
+/**
+ * Continues a fight after reloading: replays the moves recorded on this device (the boss's moves follow from the
+ * seed again) and returns the position and the boss's random source exactly where the fight stopped. null = the
+ * record does not fit (then the fight starts from the beginning).
+ */
+export function resumeRaid(ticket: Pick<RaidTicket, 'hand' | 'playerRune' | 'snapshot' | 'seed'>, partial: DuelLog):
+  { begin: BattleState; state: BattleState; moves: Action[]; ai: Rng; handOrigin: number[] } | null {
+  if (!partial || (partial.first !== 'player' && partial.first !== 'cpu') || !Array.isArray(partial.moves)) return null;
+  const rngs = raidRngs(ticket.seed);
+  coinToss(rngs.toss);
+  const begin: BattleState = { ...raidStart(ticket), turn: partial.first };
+  const opts = raidAi(ticket.snapshot);
+  let state = begin;
+  let handOrigin = Array.from({ length: HAND_SIZE }, (_, i) => i);
+  try {
+    for (const recorded of partial.moves) {
+      if (isGameOver(state)) return null;
+      if (state.turn === 'cpu') {
+        const action: Action = chooseCpuRune(state, rngs.ai, opts) ?? chooseCpuMove(state, rngs.ai, opts);
+        if (JSON.stringify(action) !== JSON.stringify(recorded)) return null;
+        state = applyAction(state, action);
+      } else {
+        state = applyAction(state, recorded);
+        if (!isRuneUse(recorded)) handOrigin = handOrigin.filter((_, i) => i !== (recorded as { handIndex: number }).handIndex);
+      }
+    }
+  } catch {
+    return null;
+  }
+  return { begin, state, moves: [...partial.moves], ai: rngs.ai, handOrigin };
 }

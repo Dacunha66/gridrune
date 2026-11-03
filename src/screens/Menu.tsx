@@ -39,12 +39,14 @@ interface Props {
   onOnline?: () => void;
   /** Draft League (online when signed in, practice against the computer for everyone). */
   onDraft?: () => void;
+  /** Signed in: the Weltboss-Raid. */
+  onRaid?: () => void;
   /** The "Spielen" submenu is open (kept by the app, so finishing a game returns there). */
   playOpen?: boolean;
   onPlayOpen?: (open: boolean) => void;
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, playOpen = false, onPlayOpen }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen }: Props) {
   const equipped = findRune(equippedRune);
   const [chooseLevel, setChooseLevel] = useState(false);
   const { wins, draws, losses } = save.stats;
@@ -94,6 +96,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
           <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}>🗺️ Kampagne</button>
           {onOnline && <button type="button" className="btn btn-online" onClick={onOnline}>⚔️ Online-Duell <span className="btn-sub">gegen echte Spieler</span></button>}
           {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}>🃏 Draft-Liga <span className="btn-sub">gleicher Pool für beide</span></button>}
+          {onRaid && <button type="button" className="btn btn-raid" onClick={onRaid}>👹 Weltboss-Raid <span className="btn-sub">alle gegen einen</span></button>}
           <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Rangliste <span className="btn-sub">Sieg = neue Karte</span></button>
           <button type="button" className="btn menu-back" onClick={() => { setChooseLevel(false); onPlayOpen?.(false); }}>← Zurück</button>
         </nav>

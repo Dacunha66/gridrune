@@ -5,6 +5,7 @@ import type { AiLevel } from './game/ai';
 import { Pick } from './game/runner';
 import { SaveData, loadSave, writeSave } from './game/storage';
 import { Menu } from './screens/Menu';
+import { Raid } from './screens/Raid';
 import { Online } from './screens/Online';
 import { DraftPractice } from './screens/Draft';
 import { Collection } from './screens/Collection';
@@ -43,7 +44,7 @@ import { AdventureLog, AdventureTicket } from './game/verify';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' | 'raid' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
   | { name: 'runner'; runId: number; deck: string[]; level: AiLevel; ticket?: AdventureTicket }
@@ -317,6 +318,7 @@ export function App() {
           onPlayOpen={setPlayMenu}
           onOnline={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'online' }) : undefined}
           onDraft={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'draftPractice' })}
+          onRaid={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'raid' }) : undefined}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}
@@ -357,6 +359,10 @@ export function App() {
           onFinished={cloud.retry}
           onExit={toMenu}
         />
+      )}
+      {screen.name === 'raid' && cloud.uid && (
+        <Raid unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck} rune={duelRune('raid')} reducedMotion={reducedMotion}
+          onSaveChanged={cloud.retry} onExit={toMenu} />
       )}
       {screen.name === 'draftPractice' && (
         <DraftPractice reducedMotion={reducedMotion} skin={getSkin(save.skins.runner).colors} rune={duelRune('league')}
