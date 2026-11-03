@@ -318,7 +318,7 @@ export function App() {
           onPlayOpen={setPlayMenu}
           onOnline={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'online' }) : undefined}
           onDraft={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'draftPractice' })}
-          onRaid={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'raid' }) : undefined}
+          onRaid={cloud.uid && cloud.phase === 'ready' && admin ? () => setScreen({ name: 'raid' }) : undefined}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}
