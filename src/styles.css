@@ -1660,3 +1660,11 @@ label.btn.disabled { opacity: .45; }
 .raid-rw-prize { text-align: right; }
 .raid-rw-state { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
 .warn-text { color: #fca5a5; }
+.raid-st-active { background: #166534; } .raid-st-planned, .raid-st-ready { background: #1e3a8a; } .raid-st-paused { background: #92400e; }
+.raid-st-defeated { background: #7e22ce; } .raid-st-expired, .raid-st-ended, .raid-st-archived { background: #374151; } .raid-st-draft { background: #4b5563; }
+.raid-reward-row { align-items: center; gap: 6px; }
+.raid-reward-row > .admin-input.num { width: 90px; }
+.raid-reward-edit { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.raid-test h4 { margin: 12px 0 4px; font-size: 15px; }
+.raid-sim p { margin: 4px 0; }
+.raid-live-note { margin: 0; padding: 10px; border-radius: 12px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.5); }

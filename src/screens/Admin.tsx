@@ -18,6 +18,8 @@ import { DesignerView } from './AdminDesigns';
 import { CampaignView } from './AdminCampaign';
 import { CardStyleView } from './AdminCardStyle';
 import { RunesView } from './AdminRunes';
+import { RaidsView } from './AdminRaids';
+import type { RaidConfig } from '../game/raid';
 import { ShopAdminView } from './AdminShop';
 import { Design, DesignState } from '../game/designs';
 import { CardClass, CLASS_INFO, CLASSES, effectFitsClass, EffectId, effectPreview, EFFECTS, effectsForClass } from '../game/effects';
@@ -33,13 +35,15 @@ interface Props {
   onCampaignChange: (content: CampaignContent) => void;
   /** Plays a mission in test mode (drafts visible, nothing saved). */
   onTestCampaign: (missionId?: string) => void;
+  /** Raid test fight on this device (nothing stored). */
+  onTestRaid: (config: RaidConfig, phase: number) => void;
   /** Campaign content in use (for rune unlock conditions). */
   campaign: CampaignContent;
   onBack: () => void;
 }
 
-type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'runes' | 'shop' | 'cardstyle';
-const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', runes: 'Runen', shop: 'Shop', cardstyle: 'Kartendesign' };
+type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'runes' | 'raids' | 'shop' | 'cardstyle';
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', runes: 'Runen', raids: 'Raids', shop: 'Shop', cardstyle: 'Kartendesign' };
 /** Tab to come back to (e.g. after testing a mission). */
 let lastTab: Tab = 'cards';
 
@@ -52,7 +56,7 @@ const STATUS_HINT: Record<CardStatus, string> = {
   disabled: 'Vorübergehend aus dem Spiel genommen – nicht gelöscht. Spieler behalten sie; jederzeit wieder aktivierbar.',
 };
 
-export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCampaignChange, onTestCampaign, campaign, onBack }: Props) {
+export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCampaignChange, onTestCampaign, onTestRaid, campaign, onBack }: Props) {
   const [access, setAccess] = useState<'checking' | 'denied' | 'ok'>('checking');
   const [db, setDb] = useState<Db | null>(null);
   const [assets, setAssets] = useState<Assets | null>(null);
@@ -196,6 +200,7 @@ export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCa
             onSettingsChange(s);
           }} />
       )}
+      {tab === 'raids' && records && records.length > 0 && <RaidsView db={db!} assets={assets} onToast={setToast} onTestFight={onTestRaid} />}
       {tab === 'shop' && records && records.length > 0 && <ShopAdminView db={db!} assets={assets} onToast={setToast} />}
       {tab === 'campaign' && records && records.length > 0 && <CampaignView db={db!} assets={assets} onToast={setToast} onCampaignChange={onCampaignChange} onTest={onTestCampaign} />}
       {toast && <div className="admin-toast" role="status">{toast}</div>}

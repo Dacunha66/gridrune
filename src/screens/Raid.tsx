@@ -17,7 +17,8 @@ import { LEVEL_LABEL, REWARD_ICON, Reward, rewardText } from '../game/campaign';
 import { grantedText } from '../game/campaignRewards';
 import { findRune } from '../game/runes';
 import { Pick } from '../game/runner';
-import { raidAi, raidRngs, resumeRaid } from '../game/raid';
+import { RaidConfig, checkRaid, raidAi, raidRngs, raidSnapshot, resumeRaid } from '../game/raid';
+import { newMatchSeed } from '../game/league';
 import {
   LeaderRow, OpenTicket, RaidInfo, RaidMe, RaidOverview, RaidResult, raidErrorText, raidFinishFight, raidLeaderboard, raidOverview, raidStartFight,
   readFight, writeFight,
@@ -297,27 +298,27 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
 }
 
 /** The fight: the normal duel against the boss's frozen setup; moves are kept on the device after every action. */
-function RaidFight({ ticket, reducedMotion, onDone, onQuit }: {
-  ticket: OpenTicket; reducedMotion: boolean; onDone: (record: DuelRecord) => void; onQuit: () => void;
+function RaidFight({ ticket, reducedMotion, onDone, onQuit, test = false }: {
+  ticket: OpenTicket; reducedMotion: boolean; onDone: (record: DuelRecord) => void; onQuit: () => void; test?: boolean;
 }) {
   const [setup] = useState<BattleSetup>(() => {
     const rngs = raidRngs(ticket.seed);
     const s = ticket.snapshot;
     return {
       cpuHand: toHand(s.deck), first: null, rocks: [], arena: { id: 'raid', name: s.arenaName, cells: s.cells, status: 'active', ranked: false, updatedAt: '' },
-      label: `👹 ${s.bossName} · Phase ${s.phase + 1}: ${s.phaseName}`, tossRng: rngs.toss, rng: rngs.ai, finishLabel: 'Ergebnis', ai: raidAi(s),
+      label: `${test ? '🧪 TEST · ' : '👹 '}${s.bossName} · Phase ${s.phase + 1}: ${s.phaseName}`, tossRng: rngs.toss, rng: rngs.ai, finishLabel: 'Ergebnis', ai: raidAi(s),
       badgeText: '', runes: { player: ticket.playerRune, cpu: s.bossRune },
     };
   });
   // Continue where the fight stopped (moves kept on this device).
   const [resume] = useState(() => {
-    const stored = readFight(ticket.id);
+    const stored = test ? null : readFight(ticket.id);
     return stored && !stored.done && stored.moves.length > 0 ? resumeRaid(ticket, stored) ?? undefined : undefined;
   });
   const [picks] = useState<Pick[]>(() => ticket.hand.map((cardId, i) => ({ cardId, kind: 'deck', gate: i, mod: 0 })));
   return (
     <Battle picks={picks} unlocked={ticket.hand} reducedMotion={reducedMotion} setup={setup} resume={resume}
-      onProgress={(rec) => writeFight(ticket.id, { first: rec.start.turn, moves: rec.moves, done: false })}
+      onProgress={test ? undefined : (rec) => writeFight(ticket.id, { first: rec.start.turn, moves: rec.moves, done: false })}
       onEnd={(_o, _s, _f, record) => record && onDone(record)} onQuit={onQuit} />
   );
 }
@@ -409,5 +410,49 @@ function RaidRewards({ raid, me, onBack }: { raid: RaidInfo; me: RaidMe; onBack:
         <p className="small">Niederlage {raid.damage.loss} · Unentschieden {raid.damage.draw} · Sieg {raid.damage.win} + {raid.damage.perField} je Feld über 8 · höchstens {raid.damage.max}</p>
       </div>
     </main>
+  );
+}
+
+/**
+ * Admin test fight: the raid as it is in the editor, on this device only. Nothing is sent – no attack is used, no
+ * damage reaches the boss, no ranking, no reward. The damage is calculated with the same check the server uses.
+ */
+export function RaidTestFight({ config, phase, unlocked, deck, rune, reducedMotion, onExit }: {
+  config: RaidConfig; phase: number; unlocked: string[]; deck: string[]; rune: string | null; reducedMotion: boolean; onExit: () => void;
+}) {
+  const [hand] = useState(() => savedHand(ownedActiveIds(unlocked), deck));
+  const [ticket, setTicket] = useState<OpenTicket | null>(() => {
+    const snapshot = raidSnapshot(config, phase);
+    return snapshot ? { id: 'test', seed: newMatchSeed(), hand, playerRune: rune, snapshot, expiresAt: '' } : null;
+  });
+  const [result, setResult] = useState<{ text: string; damage: number; fields: number } | null>(null);
+  if (!ticket) return <main className="screen raid"><Header title="Testkampf" onBack={onExit} /><p className="hint">Diese Phase ist noch nicht vollständig (Bossdeck oder Arena fehlt).</p></main>;
+  if (result) {
+    return (
+      <main className="screen result raid-result">
+        <div className="scroll result-body">
+          <div className="result-icon" aria-hidden="true">🧪</div>
+          <h1>Testkampf: {result.text}</h1>
+          <ul className="raid-facts">
+            <li><span>Phase</span><b>{phase + 1}: {config.phases[phase]?.name}</b></li>
+            <li><span>Kontrollierte Felder</span><b>{result.fields}</b></li>
+            <li><span>Schaden (so würde der Server rechnen)</span><b className="raid-dmg">{fmt(result.damage)}</b></li>
+          </ul>
+          <p className="muted small">Nur ein Test – nichts wurde gespeichert, kein Angriff verbraucht, keine Belohnung.</p>
+        </div>
+        <div className="menu-buttons">
+          <button type="button" className="btn btn-primary btn-big" onClick={() => { setResult(null); setTicket({ ...ticket, seed: newMatchSeed() }); }}>🧪 Noch ein Testkampf</button>
+          <button type="button" className="btn" onClick={onExit}>Zurück zum Admin</button>
+        </div>
+      </main>
+    );
+  }
+  return (
+    <RaidFight key={ticket.seed} ticket={ticket} reducedMotion={reducedMotion} test onQuit={onExit}
+      onDone={(record) => {
+        const check = checkRaid(ticket, { duel: { first: record.start.turn, moves: record.moves } });
+        if (!check.ok) setResult({ text: `Prüfung fehlgeschlagen (${check.error})`, damage: 0, fields: 0 });
+        else setResult({ text: check.outcome === 'win' ? 'Sieg' : check.outcome === 'draw' ? 'Unentschieden' : 'Niederlage', damage: check.damage, fields: check.fields });
+      }} />
   );
 }

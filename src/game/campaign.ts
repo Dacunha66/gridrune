@@ -35,7 +35,7 @@ export interface ImageRef {
   fit: ImageFit;
 }
 
-export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground' | 'runeArt' | 'runeIcon' | 'packArt';
+export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground' | 'runeArt' | 'runeIcon' | 'packArt' | 'raidBoss';
 
 /**
  * Recommended sizes, derived from the layout: the world map and boss background fill a phone screen
@@ -55,6 +55,8 @@ export const IMAGE_SPECS: Record<ImageKind, { label: string; w: number; h: numbe
   runeIcon: { label: 'Runen-Symbol', w: 256, h: 256, ratio: '1:1 (PNG mit Transparenz)', aspect: 1 },
   // Booster pack: up to ~200 points wide in the shop and the opening animation (768 px is sharp at 3×).
   packArt: { label: 'Booster-Bild', w: 768, h: 1024, ratio: '3:4 (Hochformat)', aspect: 3 / 4 },
+  // Weltboss: square picture up to ~300 points wide on the raid page (1024 px is sharp at 3×).
+  raidBoss: { label: 'Weltboss-Bild', w: 1024, h: 1024, ratio: '1:1 (quadratisch)', aspect: 1 },
 };
 
 export type RewardType = 'coins' | 'card' | 'pack' | 'alt_art' | 'frame' | 'title' | 'achievement' | 'unlock';

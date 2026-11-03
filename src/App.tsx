@@ -5,7 +5,8 @@ import type { AiLevel } from './game/ai';
 import { Pick } from './game/runner';
 import { SaveData, loadSave, writeSave } from './game/storage';
 import { Menu } from './screens/Menu';
-import { Raid } from './screens/Raid';
+import { Raid, RaidTestFight } from './screens/Raid';
+import type { RaidConfig } from './game/raid';
 import { Online } from './screens/Online';
 import { DraftPractice } from './screens/Draft';
 import { Collection } from './screens/Collection';
@@ -47,6 +48,8 @@ export type Screen =
   | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' | 'raid' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
+  /** Admin: raid test fight with the raid as it is in the editor (nothing stored). */
+  | { name: 'raidTest'; config: RaidConfig; phase: number }
   | { name: 'runner'; runId: number; deck: string[]; level: AiLevel; ticket?: AdventureTicket }
   | { name: 'battle'; picks: Pick[]; level: AiLevel; ticket?: AdventureTicket; run?: AdventureLog['run'] }
   | { name: 'result'; outcome: Outcome; reward: Reward; level: AiLevel; score: { player: number; cpu: number }; status?: 'checking' | 'paid' | 'pending' | 'rejected' };
@@ -318,7 +321,7 @@ export function App() {
           onPlayOpen={setPlayMenu}
           onOnline={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'online' }) : undefined}
           onDraft={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'draftPractice' })}
-          onRaid={cloud.uid && cloud.phase === 'ready' && admin ? () => setScreen({ name: 'raid' }) : undefined}
+          onRaid={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'raid' }) : undefined}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}
@@ -364,6 +367,10 @@ export function App() {
         <Raid unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck} rune={duelRune('raid')} reducedMotion={reducedMotion}
           onSaveChanged={cloud.retry} onExit={toMenu} />
       )}
+      {screen.name === 'raidTest' && (
+        <RaidTestFight config={screen.config} phase={screen.phase} unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck}
+          rune={duelRune('raid')} reducedMotion={reducedMotion} onExit={() => setScreen({ name: 'admin' })} />
+      )}
       {screen.name === 'draftPractice' && (
         <DraftPractice reducedMotion={reducedMotion} skin={getSkin(save.skins.runner).colors} rune={duelRune('league')}
           onExit={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'menu' })} />
@@ -390,6 +397,7 @@ export function App() {
           onDesignsChange={applyDesigns}
           onCampaignChange={applyCampaign}
           onTestCampaign={(missionId) => setScreen({ name: 'campaign', preview: true, missionId })}
+          onTestRaid={(config, phase) => setScreen({ name: 'raidTest', config, phase })}
           campaign={campaign}
           onBack={toMenu}
         />
