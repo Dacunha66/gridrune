@@ -9,7 +9,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
   checkRaid, expiredDamage, loadContent, parseRaid, payRaidRewards, phaseIndex, prepareRaid, raidDay, raidOpen, raidProblems, raidSnapshot,
-} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@COMMIT/public/server/engine-HASH.js';
+} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@dd8785b1d71d2528df912f7b57d19a0371a4d718/public/server/engine-868c51bd4c1b.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

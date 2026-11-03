@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Weltboss-Raid – Pakete 1–3: Regeln, Datenbank, Server (03.11.)
+
+Raid-Regeln in `src/game/raid.ts` (Konfiguration als Admin-Dokument „raids“, Phasen nach LP, Momentaufnahme beim Start, Prüfung am Ende wie in der Kampagne, Schaden nur auf dem Server, Belohnungen, Simulation). Datenbank-Änderung 016: `raid_state`, `raid_attempts` (ein Platz je Angriff und UTC-Tag → Limit auch bei parallelen Anfragen), `raid_player_stats`, `raid_reward_claims`, atomare Funktionen `raid_reserve` / `raid_finish` / `raid_claim`; Spieler lesen nur, schreiben kann nur die Funktion `raid`. Server-Funktion `raid` (Engine dd8785b / engine-868c51bd4c1b).
+
+Geprüft: 265 automatische Tests (12 neue: Konfiguration, Phasengrenzen, Schaden mit Höchstwert, Zeitraum/UTC-Tag, ehrliche und manipulierte Kämpfe, Momentaufnahme bei Phasenwechsel, Belohnungen einmalig/nur mit Teilnahme, Hand/Rune auf dem Server, Simulation ohne Speichern). Live mit zwei Testkonten und einem versteckten Test-Raid (danach alles gelöscht): gültiger Start (1), fremde Karte (2), gesperrte Rune (3), Tageslimit (4), zwei gleichzeitige Starts → ein Kampf (5), Abschluss (6), doppelter Abschluss bucht nichts (7), mitgeschickter Schaden/manipuliertes Protokoll zählt nicht (8), LP genau 0 (9), gleichzeitiger letzter Treffer: zusammen genau die restlichen LP (10), Phasenwechsel während des Kampfes (11), Raid läuft während des Kampfes ab (12), offener Kampf fortsetzbar / nach Ablauf Niederlage (13), Belohnungen nur einmal (14), Nicht-Admin darf nichts ändern (15), Rangliste mit eigener Platzierung. Noch offen: Oberfläche (Paket 4), Admin + Testmodus (5/6), Testboss (7).
+
 ## Kartenwahl am Tor per Antippen (03.11.)
 
 Der Lauf hält kurz vor jedem Tor an: die drei Karten erscheinen groß nebeneinander (mit Effekt), der Spieler tippt eine an. 5 Sekunden Zeit, am Finaltor 10 Sekunden (voller Effekttext). Ohne Wahl gilt die Karte auf der eigenen Spur (hervorgehoben). Gilt für alle Läufe (einfaches Spiel, Kampagne, Rangliste, Draft). Die Wahl wird intern als normale Spurwechsel kurz vor dem Tor gespeichert – die Server-Prüfung bleibt unverändert, keine neue Server-Version nötig.
