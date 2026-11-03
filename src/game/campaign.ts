@@ -75,6 +75,8 @@ export interface Reward {
   cardId?: string;
   /** Name of a frame, title, achievement or unlock; description of an illustration. */
   label?: string;
+  /** Booster packs: which pack from the shop (default: the first one). */
+  packId?: string;
 }
 
 export interface Milestone {
@@ -186,6 +188,7 @@ export function parseReward(raw: unknown): Reward | null {
   if ((out.type === 'card' || out.type === 'alt_art') && typeof r.cardId === 'string' && /^[a-z]\d{2,4}$/.test(r.cardId)) out.cardId = r.cardId;
   const label = str(r.label, 60);
   if (label) out.label = label;
+  if (out.type === 'pack' && typeof r.packId === 'string' && /^[a-z0-9_-]{1,40}$/.test(r.packId)) out.packId = r.packId;
   return out;
 }
 

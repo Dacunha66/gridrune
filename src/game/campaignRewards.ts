@@ -52,6 +52,13 @@ export function owedRewards(progress: CampaignProgress, content: CampaignContent
 
 /** Pays the owed rewards into the save (packs are opened with `rng`) and marks them paid in the progress. */
 export function payRewards(save: SaveData, progress: CampaignProgress, owed: OwedReward[], rng: Rng): { save: SaveData; progress: CampaignProgress; granted: GrantedReward[] } {
+  const r = grantRewards(save, owed, rng);
+  const paid = [...new Set([...(progress.paid ?? []), ...owed.map((o) => o.key)])];
+  return { save: r.save, progress: { ...progress, paid }, granted: r.granted };
+}
+
+/** Adds rewards to the save: coins, cards (already owned → coins), booster packs opened with `rng`. */
+export function grantRewards(save: SaveData, owed: OwedReward[], rng: Rng): { save: SaveData; granted: GrantedReward[] } {
   let coins = save.coins;
   const unlocked = [...save.unlocked];
   const granted: GrantedReward[] = [];
@@ -75,13 +82,16 @@ export function payRewards(save: SaveData, progress: CampaignProgress, owed: Owe
     } else if (o.reward.type === 'card' && o.reward.cardId) {
       give(o.reward.cardId, g);
     } else if (o.reward.type === 'pack') {
-      for (let i = 0; i < (o.reward.amount ?? 1); i++) for (const id of rollPack(PACKS[0], rng)) give(id, g);
+      const pack = PACKS.find((p) => p.id === o.reward.packId) ?? PACKS[0];
+      for (let i = 0; i < (o.reward.amount ?? 1); i++) for (const id of rollPack(pack, rng)) give(id, g);
     }
     granted.push(g);
   }
-  const paid = [...new Set([...(progress.paid ?? []), ...owed.map((o) => o.key)])];
-  return { save: { ...save, coins, unlocked }, progress: { ...progress, paid }, granted };
+  return { save: { ...save, coins, unlocked }, granted };
 }
+
+/** Reward types that are really paid out (the others are previews until they exist in the game). */
+export const isPayable = (r: Reward) => PAYABLE.has(r.type);
 
 /** Short German summary, e.g. "🪙 250 · 2 neue Karten". */
 export function grantedText(list: GrantedReward[]): string {

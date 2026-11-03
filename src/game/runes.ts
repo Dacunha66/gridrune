@@ -18,9 +18,9 @@ export const RUNE_EFFECT_LABEL: Record<RuneEffect, string> = {
   curse: 'Schwächen (Gegnerkarten einer gewählten Klasse)',
 };
 
-export type GameMode = 'adventure' | 'campaign' | 'league';
-export const GAME_MODES: GameMode[] = ['adventure', 'campaign', 'league'];
-export const MODE_NAME: Record<GameMode, string> = { adventure: 'Abenteuer', campaign: 'Kampagne', league: 'Liga' };
+export type GameMode = 'adventure' | 'campaign' | 'league' | 'raid';
+export const GAME_MODES: GameMode[] = ['adventure', 'campaign', 'league', 'raid'];
+export const MODE_NAME: Record<GameMode, string> = { adventure: 'Abenteuer', campaign: 'Kampagne', league: 'Liga', raid: 'Weltboss-Raid' };
 
 /** How a player gets the rune: from the start, or later in the campaign. */
 export type RuneUnlock = { kind: 'start' } | { kind: 'mission'; missionId: string } | { kind: 'stars'; n: number };
@@ -55,7 +55,7 @@ export const RUNES_COLLECTION = 'runes';
 /** Rune rarities (only the look): selten, episch, legendär, mystisch. */
 export const RUNE_RARITIES: Rarity[] = ['rare', 'epic', 'legendary', 'mythic'];
 export const RUNE_ID_RE = /^rn\d{2,4}$/;
-const ALL_MODES: Record<GameMode, boolean> = { adventure: true, campaign: true, league: true };
+const ALL_MODES: Record<GameMode, boolean> = { adventure: true, campaign: true, league: true, raid: true };
 
 function rune(id: string, name: string, effect: RuneEffect, glyph: string, description: string, extra: Partial<RuneDef> = {}): RuneDef {
   return {
@@ -323,7 +323,7 @@ export function parseRune(id: string, raw: unknown): RuneDef | null {
     maxTargets: int(r.maxTargets, 1, 3, 1),
     // Older saved runes have no threshold yet: they keep the built-in value of the same id.
     minPlaced: int(r.minPlaced, 0, 15, BUILTIN_RUNES.find((b) => b.id === id)?.minPlaced ?? 0),
-    modes: { adventure: m.adventure !== false, campaign: m.campaign !== false, league: m.league !== false },
+    modes: { adventure: m.adventure !== false, campaign: m.campaign !== false, league: m.league !== false, raid: m.raid !== false },
     unlock,
     status: CONTENT_STATUSES.includes(r.status as ContentStatus) ? (r.status as ContentStatus) : 'draft',
     image: parseImage(r.image),

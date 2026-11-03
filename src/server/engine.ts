@@ -3,7 +3,7 @@
 import { CardRecord, buildCatalog, parseCardRecord } from '../game/catalog';
 import { CARDS, DECK_SIZE, setCardCatalog } from '../game/cards';
 import { Arena, parseArena, setArenas } from '../game/arenas';
-import { RuneDef, RUNES, availableRunes, parseRune, setRunes } from '../game/runes';
+import { GameMode, RuneDef, RUNES, availableRunes, parseRune, setRunes } from '../game/runes';
 import { GameSettings, SETTINGS, parseSettings, released, setGameSettings } from '../game/settings';
 import {
   Mission, Opponent, World, mergeContent, parseMission, parseOpponent, parseWorld, setCampaign, CAMPAIGN, visibleWorlds, worldMissions,
@@ -65,7 +65,7 @@ const validDeck = (save: SaveData, deck: unknown): deck is string[] => {
 };
 
 /** The rune the player may take into this mode (null = none / not allowed). */
-function allowedRune(save: SaveData, progress: CampaignProgress, rune: unknown, mode: 'adventure' | 'campaign' | 'league', isAdmin: boolean): string | null {
+function allowedRune(save: SaveData, progress: CampaignProgress, rune: unknown, mode: GameMode, isAdmin: boolean): string | null {
   if (typeof rune !== 'string' || !released(SETTINGS.features.runes, isAdmin)) return null;
   const ownedRunes = [...new Set([...save.runes.owned, ...RUNES.filter((r) => runeUnlocked(r, progress, CAMPAIGN)).map((r) => r.id)])];
   return availableRunes(mode, ownedRunes).some((r) => r.id === rune) ? rune : null;
@@ -236,3 +236,21 @@ export function preparePvp(saveRaw: unknown, campaignRaw: unknown, hand: unknown
 export {
   DRAFT_DECK_SECONDS, DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS, completeDraftDeck, draftLayout, draftPool, picksToHand, replayDraftRun, validDraftDeck,
 } from '../game/draft';
+
+// ---------- Weltboss-Raid ----------
+
+export {
+  RAIDS_COLLECTION, checkRaid, expiredDamage, parseRaid, phaseIndex, raidDay, raidOpen, raidOwed, raidProblems, raidSnapshot,
+} from '../game/raid';
+export { grantRewards } from '../game/campaignRewards';
+
+/** Checks the 8 cards (different, owned, active) and the rune (any unlocked rune allowed in raids). */
+export function prepareRaid(saveRaw: unknown, campaignRaw: unknown, hand: unknown, rune: unknown, isAdmin: boolean):
+  { ok: true; hand: string[]; rune: string | null } | { ok: false; error: string } {
+  const save = sanitize(saveRaw);
+  if (!validPvpHand(hand, save.unlocked)) return { ok: false, error: 'hand' };
+  const progress = sanitizeProgress(campaignRaw);
+  const allowed = allowedRune(save, progress, rune, 'raid', isAdmin);
+  if (rune !== null && rune !== undefined && allowed === null && released(SETTINGS.features.runes, isAdmin)) return { ok: false, error: 'rune' };
+  return { ok: true, hand: hand as string[], rune: allowed };
+}
