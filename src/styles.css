@@ -58,7 +58,8 @@ button { font: inherit; color: inherit; }
   height: 100%;
   max-width: 560px;
   margin: 0 auto;
-  background: radial-gradient(120% 60% at 50% 0%, #22304d 0%, var(--bg) 62%);
+  /* Old stone wall with carved runes (own artwork, src/assets/stone-wall.webp); an admin page picture replaces it. */
+  background: radial-gradient(120% 55% at 50% 0%, rgba(34, 48, 77, 0.55) 0%, transparent 65%), url('./assets/stone-wall.webp') center top / cover no-repeat, var(--bg);
 }
 h1, h2, h3 { font-family: var(--f-display); font-weight: 700; letter-spacing: 0.02em; }
 
