@@ -138,7 +138,7 @@ export function goalProgress(goal: Goal, st: DuelStats): string {
 
 /** Text for players, e.g. "Gewinne mit mindestens 10 Feldern". */
 export function goalText(goal: Goal): string {
-  const cls = goal.cls ? `${CLASS_INFO[goal.cls].icon} ${CLASS_INFO[goal.cls].label}` : '?';
+  const cls = goal.cls ? CLASS_INFO[goal.cls].label : '?';
   switch (goal.type) {
     case 'win': return 'Gewinne die Mission';
     case 'min_fields': return `Gewinne mit mindestens ${goal.n} Feldern`;

@@ -1,4 +1,5 @@
 import { Card } from '../components/Card';
+import { ClassGlyph } from '../components/GlyphIcons';
 import { RARITY_LABEL, getCard } from '../game/cards';
 import { CLASS_INFO, EFFECTS } from '../game/effects';
 
@@ -13,7 +14,7 @@ export function CardDetail({ id, locked, status, onClose }: { id: string; locked
         {!locked && (
           <p className="values-line">↑ {c.top} · → {c.right} · ↓ {c.bottom} · ← {c.left}</p>
         )}
-        {!locked && c.cls && <p className="values-line">{CLASS_INFO[c.cls].icon} {CLASS_INFO[c.cls].label}</p>}
+        {!locked && c.cls && <p className="values-line"><ClassGlyph cls={c.cls} /> {CLASS_INFO[c.cls].label}</p>}
         {!locked && c.effect && (
           <div className="effect-box">
             <p><strong>{EFFECTS[c.effect].name}</strong></p>

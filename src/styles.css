@@ -1792,3 +1792,9 @@ label.btn.disabled { opacity: .45; }
 .logo-mark { display: inline-block; flex: none; }
 .logo-mark svg { display: block; width: 100%; height: 100%; }
 .brand-mark { width: clamp(56px, 17vw, 84px); height: clamp(56px, 17vw, 84px); filter: drop-shadow(0 0 10px var(--glow-soft)); }
+
+/* Class and terrain symbols (line icons instead of emojis). */
+.glyph { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: none; display: inline-block; }
+.cell .terrain-icon .glyph { width: clamp(20px, 7vw, 34px); height: auto; aspect-ratio: 1; opacity: 0.85; filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6)); }
+.terrain-mini i .glyph { width: 80%; height: auto; aspect-ratio: 1; }
+.terrain-chip { border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; background: rgba(11, 17, 32, 0.6); }

@@ -1,4 +1,5 @@
 import { AbilityMedallion, ClassShield } from '../components/cardIcons';
+import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { Coin } from '../components/Coin';
 import { Header } from './Header';
 import { AI_COINS, LEAGUE_NO_CARD_COINS } from '../game/rewards';
@@ -29,13 +30,13 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
         <p>Vor dem Duell entscheidet ein <b>Münzwurf</b>: Wer gewinnt, wählt, wer beginnt. Tipp: Wer die <b>letzte</b> Karte legt, hat oft einen Vorteil.</p>
 
         <h2>Klassen, Effekte und Gelände</h2>
-        <p>Jede Karte gehört zu einer <b>Klasse</b> (Symbol im Zahnrad oben links): {CLASSES.map((c) => `${CLASS_INFO[c].icon} ${CLASS_INFO[c].label}`).join(' · ')}. Jede Klasse hat ein <b>Element</b>: 🌿 Natur → 🌲 Wald, 🔥 Feuer → 🌋 Lava, ❄️ Frost → ❄️ Eis, 🌑 Schatten → 🌑 Schatten, 🔮 Magier → ᚱ Runenfeld, ⚔️ Krieger → ⚔️ Schlachtfeld.</p>
+        <p>Jede Karte gehört zu einer <b>Klasse</b> (Symbol im Zahnrad oben links): {CLASSES.map((c, i) => <span key={c}>{i > 0 && ' · '}<ClassGlyph cls={c} /> {CLASS_INFO[c].label}</span>)}. Jede Klasse hat ein <b>Element</b>: {CLASSES.map((c, i) => <span key={c}>{i > 0 && ', '}<ClassGlyph cls={c} /> {CLASS_INFO[c].label} → <TerrainGlyph terrain={CLASS_TERRAIN[c]} /> {TERRAIN_INFO[CLASS_TERRAIN[c]].label}</span>)}.</p>
         <p>Manche Karten haben einen <b>Spezialeffekt</b> – erkennbar am <b style={{ color: 'var(--accent)' }}>goldenen Symbol</b> unten rechts (große Ansicht: Effekttext auf dem Pergament). Effekte gelten nur im laufenden Duell; im nächsten Duell ist alles wieder normal.</p>
         <ul>
-          {EFFECT_IDS.map((id) => <li key={id}>{EFFECTS[id].cls ? CLASS_INFO[EFFECTS[id].cls!].icon : '✦'} <b>{EFFECTS[id].name}</b>: {EFFECTS[id].text}</li>)}
+          {EFFECT_IDS.map((id) => <li key={id}>{EFFECTS[id].cls ? <ClassGlyph cls={EFFECTS[id].cls!} /> : '✦'} <b>{EFFECTS[id].name}</b>: {EFFECTS[id].text}</li>)}
         </ul>
         <p>„Beim Ausspielen“-Effekte wirken <b>vor</b> dem Vergleich und nur einmal. Bedingungen (z. B. „solange eine eigene Karte angrenzt“) werden laufend neu geprüft: Wird eine Nachbarkarte erobert, ändert sich der Bonus sofort – aber es wird dadurch nie nachträglich etwas erobert.</p>
-        <p><b>Gelände</b> (farbiger Rand): {TERRAINS.filter((t) => t !== 'normal').map((t) => `${TERRAIN_INFO[t].icon} ${TERRAIN_INFO[t].label}`).join(' · ')}. Liegt eine Karte auf dem Gelände ihres Elements, bekommt sie <b>+1 auf alle Werte</b> (das Feld leuchtet beim Auswählen). Mehr als +1 gibt Gelände nie: Geländeeffekte wie Wurzelkraft wirken nicht zusätzlich zum Element. Der Fels liegt immer auf einem normalen Feld.</p>
+        <p><b>Gelände</b> (farbiger Rand): {TERRAINS.filter((t) => t !== 'normal').map((t, i) => <span key={t}>{i > 0 && ' · '}<TerrainGlyph terrain={t} /> {TERRAIN_INFO[t].label}</span>)}. Liegt eine Karte auf dem Gelände ihres Elements, bekommt sie <b>+1 auf alle Werte</b> (das Feld leuchtet beim Auswählen). Mehr als +1 gibt Gelände nie: Geländeeffekte wie Wurzelkraft wirken nicht zusätzlich zum Element. Der Fels liegt immer auf einem normalen Feld.</p>
         <p>Die Werte stehen in Tintenklecksen. Auf dem Spielfeld zeigt ein dünner Ring, wem die Karte gehört: <b style={{ color: 'var(--player)' }}>blau</b> (deine Karte) oder <b style={{ color: '#ff6b6b' }}>rot</b> (Gegner). <b style={{ color: '#4ade80' }}>Grüner Klecks</b> = gerade verstärkt, <b style={{ color: '#ffb15c' }}>orange Zahl</b> = geschwächt, 🛡 unten links = Schild. Werte bleiben immer zwischen 1 und 10. <b>Tippe eine Karte auf dem Feld an</b>, um Klasse, Effekt und alle Änderungen zu sehen. <b>Halte eine Handkarte gedrückt</b> für eine große Vorschau.</p>
 
         <h2>Symbole auf den Karten</h2>
@@ -44,7 +45,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
           {CLASSES.map((c) => (
             <li key={c}>
               <span className="legend-icon"><ClassShield cls={c} /></span>
-              <span><b>{CLASS_INFO[c].label}</b> · Element {TERRAIN_INFO[CLASS_TERRAIN[c]].icon} {TERRAIN_INFO[CLASS_TERRAIN[c]].label}: dort +1 auf alle Werte</span>
+              <span><b>{CLASS_INFO[c].label}</b> · Element <TerrainGlyph terrain={CLASS_TERRAIN[c]} /> {TERRAIN_INFO[CLASS_TERRAIN[c]].label}: dort +1 auf alle Werte</span>
             </li>
           ))}
           {EFFECT_IDS.map((id) => (

@@ -1,6 +1,7 @@
 // Rune choice (tab "Rune" in the deck editor): one rune for the next duels. Runes are unlocked in the
 // campaign; without any rune the player plays without. Using a rune in a duel never removes it from the collection.
 import { RuneBadge } from '../components/RuneBadge';
+import { ClassGlyph } from '../components/GlyphIcons';
 import { GameIcon } from '../components/GameIcon';
 import { RARITY_LABEL } from '../game/cards';
 import { CLASS_INFO } from '../game/effects';
@@ -37,7 +38,7 @@ export function RunePicker({ owned, equipped, onEquip, lockText }: RuneChoicePro
               <b>{r.name}</b>
               <span className="small">{r.description}</span>
               <span className="muted small">
-                <span className={`rarity-text rarity-${r.rarity}`}>{RARITY_LABEL[r.rarity]}</span>{rules.cls ? ` · ${CLASS_INFO[rules.cls].icon} ${CLASS_INFO[rules.cls].label}` : ''} · {(Object.keys(r.modes) as (keyof typeof r.modes)[]).filter((m) => r.modes[m]).map((m) => MODE_NAME[m]).join(', ')}
+                <span className={`rarity-text rarity-${r.rarity}`}>{RARITY_LABEL[r.rarity]}</span>{rules.cls ? <> · <ClassGlyph cls={rules.cls} /> {CLASS_INFO[rules.cls].label}</> : ''} · {(Object.keys(r.modes) as (keyof typeof r.modes)[]).filter((m) => r.modes[m]).map((m) => MODE_NAME[m]).join(', ')}
               </span>
               {!own && <span className="small"><GameIcon name="lock" /> {lockText(r)}</span>}
             </span>

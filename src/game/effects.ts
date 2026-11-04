@@ -75,24 +75,24 @@ export const EFFECTS: Record<EffectId, EffectDef> = {
     text: 'Beim Ausspielen: Der niedrigste Wert erhält +1 (bei Gleichstand alle niedrigsten). Ein Schild 🛡 verhindert die nächste Schwächung durch einen gegnerischen Effekt.',
   },
   wurzelkraft: {
-    id: 'wurzelkraft', short: 'Auf Wald 🌲 alle Werte +1', name: 'Wurzelkraft', cls: 'natur', trigger: 'condition', terrain: 'wald', value: 0.9,
-    text: 'Solange die Karte auf einem Waldfeld 🌲 liegt: Alle vier Werte +1. Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
+    id: 'wurzelkraft', short: 'Auf Wald alle Werte +1', name: 'Wurzelkraft', cls: 'natur', trigger: 'condition', terrain: 'wald', value: 0.9,
+    text: 'Solange die Karte auf einem Waldfeld liegt: Alle vier Werte +1. Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
   },
   naturbund: {
     id: 'naturbund', short: '+1 neben eigener Naturkarte', name: 'Naturbund', cls: 'natur', trigger: 'condition', value: 0.9,
     text: 'Solange eine eigene Naturkarte direkt angrenzt: +1 auf alle Seiten, die nicht zu einer eigenen Karte zeigen.',
   },
   flammenherz: {
-    id: 'flammenherz', short: 'Auf Lava 🌋 oben +2', name: 'Flammenherz', cls: 'feuer', trigger: 'condition', terrain: 'lava', value: 0.3,
-    text: 'Solange die Karte auf einem Lavafeld 🌋 liegt: Der obere Wert erhält +2. Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
+    id: 'flammenherz', short: 'Auf Lava oben +2', name: 'Flammenherz', cls: 'feuer', trigger: 'condition', terrain: 'lava', value: 0.3,
+    text: 'Solange die Karte auf einem Lavafeld liegt: Der obere Wert erhält +2. Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
   },
   frostpanzer: {
-    id: 'frostpanzer', short: 'Auf Eis ❄️ links und rechts +1', name: 'Frostpanzer', cls: 'frost', trigger: 'condition', terrain: 'eis', value: 0.3,
-    text: 'Solange die Karte auf einem Eisfeld ❄️ liegt: Linker und rechter Wert erhalten je +1. Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
+    id: 'frostpanzer', short: 'Auf Eis links und rechts +1', name: 'Frostpanzer', cls: 'frost', trigger: 'condition', terrain: 'eis', value: 0.3,
+    text: 'Solange die Karte auf einem Eisfeld liegt: Linker und rechter Wert erhalten je +1. Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
   },
   schattenmantel: {
-    id: 'schattenmantel', short: 'Auf Schatten 🌑 niedrigster Wert +2', name: 'Schattenmantel', cls: 'schatten', trigger: 'condition', terrain: 'schatten', value: 0.3,
-    text: 'Solange die Karte auf einem Schattenfeld 🌑 liegt: Der niedrigste Wert erhält +2 (bei Gleichstand oben, rechts, unten, links). Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
+    id: 'schattenmantel', short: 'Auf Schatten niedrigster Wert +2', name: 'Schattenmantel', cls: 'schatten', trigger: 'condition', terrain: 'schatten', value: 0.3,
+    text: 'Solange die Karte auf einem Schattenfeld liegt: Der niedrigste Wert erhält +2 (bei Gleichstand oben, rechts, unten, links). Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
   },
   schwaechender_blick: {
     id: 'schwaechender_blick', short: 'Gegner daneben −1 auf alle Werte', name: 'Schwächender Blick', cls: 'schatten', trigger: 'play', value: 3.1,
@@ -181,7 +181,7 @@ export function effectPreview(base: Four, effect: EffectId): { situation: string
     case 'schattenmantel': {
       const t = EFFECTS[effect].terrain!;
       [0, 1, 2, 3].forEach((i) => add(i, ELEMENT_BONUS));
-      return { situation: `Auf ${TERRAIN_INFO[t].label} ${TERRAIN_INFO[t].icon}`, values: v, note: 'Nur der Element-Bonus +1 – der Effekt wirkt nicht zusätzlich.' };
+      return { situation: `Auf ${TERRAIN_INFO[t].label}`, values: v, note: 'Nur der Element-Bonus +1 – der Effekt wirkt nicht zusätzlich.' };
     }
     case 'schwaechender_blick':
       return { situation: 'Beim Ausspielen', values: v, note: 'Die eigenen Werte bleiben gleich – eine Gegnerkarte daneben bekommt −1 auf alle Werte.' };

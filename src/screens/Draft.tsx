@@ -1,6 +1,7 @@
 // Draft League screens: building a deck of 20 from the shared pool of 30, and the practice mode against the
 // computer (same pool rules, same fair track, no rewards). The online draft uses the deck builder from here.
 import { Coin } from '../components/Coin';
+import { ClassGlyph } from '../components/GlyphIcons';
 import { GameIcon } from '../components/GameIcon';
 import { ResultIcon } from '../components/ResultIcon';
 import { useEffect, useMemo, useState } from 'react';
@@ -12,7 +13,7 @@ import { Runner } from './Runner';
 import { leagueArena } from '../game/arenas';
 import { Outcome } from '../game/battle';
 import { RARITY_LABEL, Rarity, cardPower, getCard } from '../game/cards';
-import { CLASS_INFO, isCardClass } from '../game/effects';
+import { isCardClass } from '../game/effects';
 import { DRAFT_DECK_SIZE, DRAFT_POOL_PLAN, completeDraftDeck, computerDraftHand, draftLayout, draftPool } from '../game/draft';
 import { newMatchSeed, roundRock } from '../game/league';
 import { createRng } from '../game/rng';
@@ -76,7 +77,7 @@ export function DraftDeckBuilder({ pool, deadline, busy, title, onBack, onDone }
       </p>
       <div className="draft-bar">
         <span className={`draft-count ${deck.length === DRAFT_DECK_SIZE ? 'full' : ''}`}>{deck.length}/{DRAFT_DECK_SIZE}</span>
-        <span className="draft-classes">{Object.entries(classes).map(([c, n]) => <span key={c}>{isCardClass(c) ? CLASS_INFO[c].icon : '◇'} {n}</span>)}</span>
+        <span className="draft-classes">{Object.entries(classes).map(([c, n]) => <span key={c}>{isCardClass(c) ? <ClassGlyph cls={c} /> : '◇'} {n}</span>)}</span>
         <select className="admin-input draft-sort" value={sort} aria-label="Sortieren" onChange={(e) => setSort(e.target.value as typeof sort)}>
           <option value="rarity">Seltenheit</option>
           <option value="power">Stärke</option>

@@ -2,6 +2,7 @@
 // 8 cards, the fight (the normal duel against the boss AI – continued after reloading), the server-confirmed
 // result, the leaderboard and the rewards. Everything that counts comes from the server function "raid".
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ClassGlyph } from '../components/GlyphIcons';
 import { GameIcon } from '../components/GameIcon';
 import { ResultIcon } from '../components/ResultIcon';
 import { Header } from './Header';
@@ -256,7 +257,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
               </div>
               <h2 className="raid-boss-name">{raid.bossName}</h2>
               <p className="raid-sub">
-                {raid.cls && <>{CLASS_INFO[raid.cls].icon} {CLASS_INFO[raid.cls].label} · </>}
+                {raid.cls && <><ClassGlyph cls={raid.cls} /> {CLASS_INFO[raid.cls].label} · </>}
                 Phase {raid.phase + 1}: <b>{raid.phases[raid.phase]?.name}</b> · KI {LEVEL_LABEL[raid.phases[raid.phase]?.level ?? 'medium']}
               </p>
               {raid.phases[raid.phase]?.mechanic && <p className="raid-mechanic">✦ {raid.phases[raid.phase].mechanic}</p>}

@@ -17,13 +17,13 @@ export function symbolText(sym: string): { title: string; text: string } | null 
   if (kind === 'cls' && isCardClass(id)) {
     const t = CLASS_TERRAIN[id];
     return {
-      title: `${CLASS_INFO[id].icon} ${CLASS_INFO[id].label} · Klasse`,
-      text: `Element: ${TERRAIN_INFO[t].icon} ${TERRAIN_INFO[t].label} – auf diesen Feldern +${ELEMENT_BONUS} auf alle vier Werte. ${CLASS_INFO[id].focus}.`,
+      title: `${CLASS_INFO[id].label} · Klasse`,
+      text: `Element: ${TERRAIN_INFO[t].label} – auf diesen Feldern +${ELEMENT_BONUS} auf alle vier Werte. ${CLASS_INFO[id].focus}.`,
     };
   }
   if (kind === 'fx' && isEffectId(id)) {
     const e = EFFECTS[id];
-    return { title: `✨ ${e.name} · Fähigkeit`, text: e.text };
+    return { title: `${e.name} · Fähigkeit`, text: e.text };
   }
   return null;
 }

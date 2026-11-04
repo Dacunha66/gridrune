@@ -1,4 +1,5 @@
 import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { Coin, coinLargeImg } from '../components/Coin';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
@@ -384,9 +385,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           : selected === null
             ? 'Karte wählen · Feldkarte antippen = Details'
             : selectedEffect
-              ? `${selectedEffect.cls ? CLASS_INFO[selectedEffect.cls].icon : '✦'} ${selectedEffect.name}: ${selectedEffect.short}`
+              ? <>{selectedEffect.cls && <ClassGlyph cls={selectedEffect.cls} />} {selectedEffect.name}: {selectedEffect.short}</>
               : selectedElement
-                ? `${CLASS_INFO[selectedDef!.cls!].icon} ${CLASS_INFO[selectedDef!.cls!].label}: auf ${TERRAIN_INFO[selectedElement].icon} ${TERRAIN_INFO[selectedElement].label} +1 auf alle Werte`
+                ? <><ClassGlyph cls={selectedDef!.cls!} /> {CLASS_INFO[selectedDef!.cls!].label}: auf <TerrainGlyph terrain={selectedElement} /> {TERRAIN_INFO[selectedElement].label} +1 auf alle Werte</>
                 : 'Tippe auf ein freies Feld.';
   const placedAt = state.lastOrigin !== null ? cellCenter(state.lastOrigin) : null;
   const enemyRune: RuneDef | null = state.runes.cpu ? findRune(state.runes.cpu.id) : null;
@@ -425,7 +426,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
             </button>
           ) : <span className="rune-chip-space" />}
           <p className="arena-label">
-            {terrainsUsed.length > 0 && <>{arena.name}: {terrainsUsed.map((t) => <span key={t} className={`terrain-chip terrain-${t}`}>{TERRAIN_INFO[t].icon} {TERRAIN_INFO[t].label}</span>)}</>}
+            {terrainsUsed.length > 0 && <>{arena.name}: {terrainsUsed.map((t) => <span key={t} className={`terrain-chip terrain-${t}`}><TerrainGlyph terrain={t} /> {TERRAIN_INFO[t].label}</span>)}</>}
             {state.log.length > 0 && <button type="button" className="log-btn" onClick={() => setShowLog(true)} aria-label="Spielprotokoll"><GameIcon name="scroll" /></button>}
           </p>
           {enemyRune ? (
@@ -470,7 +471,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 disabled={!cell && (over || phase !== 'play')}
                 aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei${terrain !== 'normal' ? `, ${TERRAIN_INFO[terrain].label}` : ''}`}
               >
-                {!cell && terrain !== 'normal' && !ghost && <span className="terrain-icon" aria-hidden="true">{TERRAIN_INFO[terrain].icon}</span>}
+                {!cell && terrain !== 'normal' && !ghost && <span className="terrain-icon" aria-hidden="true"><TerrainGlyph terrain={terrain} /></span>}
                 {ghost && placingValues && (
                   <Card id={placingCard!.cardId} mod={placingCard!.mod} size="sm" owner="player" values={placingValues} base={placingValues} rot={placing!.rot} className="ghost-card" />
                 )}
@@ -541,7 +542,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
         </div>
 
         <p className="hint" aria-live="polite">
-          {secondsLeft !== null && !over && <span className={`turn-timer ${secondsLeft <= 10 ? 'urgent' : ''}`}>⏱ {secondsLeft}s</span>} {hint}
+          {secondsLeft !== null && !over && <span className={`turn-timer ${secondsLeft <= 10 ? 'urgent' : ''}`}>{secondsLeft}s</span>} {hint}
         </p>
         {placing && (
           <div className="action-bar" role="group" aria-label="Wirbelwind: Ausrichtung">
@@ -554,7 +555,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
         {runeMode && myRuneRules && (
           <div className="action-bar" role="group" aria-label="Rune einsetzen">
             {myRuneRules.effect === 'curse' && !runeMode.cls && runeChoice!.classes.map((c) => (
-              <button key={c} type="button" className="btn btn-small" onClick={() => setRuneMode({ cells: [], cls: c })}>{CLASS_INFO[c].icon} {CLASS_INFO[c].label}</button>
+              <button key={c} type="button" className="btn btn-small" onClick={() => setRuneMode({ cells: [], cls: c })}><ClassGlyph cls={c} /> {CLASS_INFO[c].label}</button>
             ))}
             {myRuneRules.effect === 'twist' && runeMode.cells.length === 1 && (
               <>

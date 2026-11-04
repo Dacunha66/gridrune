@@ -2,6 +2,7 @@
 // Guests keep their progress on this device and see rewards as a preview. Signed-in players get a ticket from the
 // server before each mission; the server replays the duel, stores the stars and pays coins, cards and packs.
 import { CoinText, RewardIcon } from '../components/Coin';
+import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { GameIcon, GameIconName } from '../components/GameIcon';
 import { ResultIcon } from '../components/ResultIcon';
 import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
@@ -237,7 +238,7 @@ export function Stars({ earned, className = '', fresh = [] }: { earned: boolean[
 export function TerrainMini({ cells }: { cells: readonly Terrain[] }) {
   return (
     <span className="terrain-mini" aria-hidden="true">
-      {cells.map((t, i) => <i key={i} className={`tm-${t}`}>{TERRAIN_INFO[t].icon}</i>)}
+      {cells.map((t, i) => <i key={i} className={`tm-${t}`}><TerrainGlyph terrain={t} /></i>)}
     </span>
   );
 }
@@ -444,7 +445,7 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
           <OpponentFace o={opponent} />
           <div>
             <p className="opp-name">{opponent.name} {opponent.rank !== 'normal' && <span className={`kind-pill kind-${opponent.rank}`}>{RANK_LABEL[opponent.rank]}</span>}</p>
-            <p className="muted small">KI: {LEVEL_LABEL[opponent.level]}{opponent.prefer.length > 0 && ` · mag ${opponent.prefer.map((c) => CLASS_INFO[c].icon).join(' ')}`}</p>
+            <p className="muted small">KI: {LEVEL_LABEL[opponent.level]}{opponent.prefer.length > 0 && <> · mag {opponent.prefer.map((c) => <ClassGlyph key={c} cls={c} />)}</>}</p>
             <p className="small">{mission.description || opponent.description}</p>
           </div>
         </section>
@@ -455,9 +456,9 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
           <TerrainMini cells={arena.cells} />
           <div>
             <p><b>{arena.name}</b></p>
-            <p className="muted small">{terrains.length > 0 ? terrains.map((t) => `${TERRAIN_INFO[t].icon} ${TERRAIN_INFO[t].label}`).join(' · ') : 'Keine Geländefelder'}</p>
+            <p className="muted small">{terrains.length > 0 ? terrains.map((t, i) => <span key={t}>{i > 0 && ' · '}<TerrainGlyph terrain={t} /> {TERRAIN_INFO[t].label}</span>) : 'Keine Geländefelder'}</p>
             {runner && <p className="small"><GameIcon name="run" /> Erst laufen, dann mit den gesammelten Karten kämpfen.</p>}
-            {mission.onlyClass && <p className="small">Nur {CLASS_INFO[mission.onlyClass].icon} {CLASS_INFO[mission.onlyClass].label}-Karten erlaubt.</p>}
+            {mission.onlyClass && <p className="small">Nur <ClassGlyph cls={mission.onlyClass} /> {CLASS_INFO[mission.onlyClass].label}-Karten erlaubt.</p>}
           </div>
         </section>
 

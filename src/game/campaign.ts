@@ -387,8 +387,8 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
   mission('m002', 2, 'Waldpfad', 'normal', 'a01', 'o002', goals('m002', { type: 'min_captures', n: 5 }, { type: 'min_fields', n: 10 }),
     'Ein Streuner versperrt den Pfad tiefer in den Wald.', { x: 0.28, y: 0.84 }),
   mission('m003', 3, 'Mooslichtung', 'normal', 'a07', 'o003', goals('m003', { type: 'terrain_bonus', n: 2 }, { type: 'play_class', n: 3, cls: 'natur' }),
-    'Hier gibt es Waldfelder 🌲: Naturkarten werden dort stärker.', { x: 0.62, y: 0.75 }, {
-      tips: ['Naturkarten 🌿 bekommen auf Waldfeldern 🌲 +1 auf alle Werte.', 'Wählst du eine Karte aus, leuchten die Felder, auf denen sie ihren Bonus bekommt.'],
+    'Hier gibt es Waldfelder: Naturkarten werden dort stärker.', { x: 0.62, y: 0.75 }, {
+      tips: ['Naturkarten bekommen auf Waldfeldern +1 auf alle Werte.', 'Wählst du eine Karte aus, leuchten die Felder, auf denen sie ihren Bonus bekommt.'],
     }),
   mission('m004', 4, 'Waldhüter', 'normal', 'a02', 'o004', goals('m004', { type: 'min_fields', n: 10 }, { type: 'effect_active', n: 1, effect: 'naturbund' }),
     'Waldhüter Bram prüft, ob du deine Karten klug nebeneinander legst.', { x: 0.8, y: 0.65 }),
@@ -407,8 +407,8 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
   // World 2: Glutgebirge (from the foot of the mountain up to the crater)
   ...([
     ['m011', 'Funkenpfad', 'normal', 'a03', 'o011', [{ type: 'min_fields', n: 9 }, { type: 'min_captures', n: 4 }],
-      'Am Fuß des Glutgebirges: Lavafelder 🌋 machen Feuerkarten stärker.', { x: 0.5, y: 0.94 }, {
-        tips: ['Feuerkarten 🔥 bekommen auf Lavafeldern 🌋 +1 auf alle Werte.', 'Die Gegner hier sind stärker als im Wald – lege deine starken Seiten an ihre schwachen.'],
+      'Am Fuß des Glutgebirges: Lavafelder machen Feuerkarten stärker.', { x: 0.5, y: 0.94 }, {
+        tips: ['Feuerkarten bekommen auf Lavafeldern +1 auf alle Werte.', 'Die Gegner hier sind stärker als im Wald – lege deine starken Seiten an ihre schwachen.'],
       }],
     ['m012', 'Glutwiesen', 'normal', 'a03', 'o012', [{ type: 'min_fields', n: 10 }, { type: 'min_margin', n: 3 }],
       'Ein Schwarm Glutkäfer summt über die heißen Wiesen.', { x: 0.27, y: 0.85 }, {}],

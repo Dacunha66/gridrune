@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ClassGlyph } from '../components/GlyphIcons';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { GameIcon } from '../components/GameIcon';
 import { Burst } from '../components/Effects';
 import { RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
-import { CLASS_INFO, EFFECTS } from '../game/effects';
+import { EFFECTS } from '../game/effects';
 import { RunTicket, adventureRunner } from '../game/verify';
 import {
   BASE_SPEED, CHOICE_AHEAD, CHOICE_SECONDS, FINAL_CHOICE_SECONDS, FINAL_GATE, GATE_COUNT, LANES, Pick, RunInput, RunnerEvent, RunnerLayout, RunnerSim, STUMBLE_PENALTY,
@@ -598,10 +599,10 @@ function drawRock(ctx: CanvasRenderingContext2D, at: { x: number; y: number; p: 
 }
 
 /** Effect of a card in words under the large choice (the final gate shows the full text). */
-function effectLine(cardId: string, full: boolean): string {
+function effectLine(cardId: string, full: boolean): ReactNode {
   const def = getCard(cardId);
   const fx = def.effect ? EFFECTS[def.effect] : null;
-  if (!fx) return def.cls ? `${CLASS_INFO[def.cls].icon} ohne Effekt` : 'ohne Effekt';
+  if (!fx) return def.cls ? <><ClassGlyph cls={def.cls} /> ohne Effekt</> : 'ohne Effekt';
   return `${fx.name}: ${full ? fx.text : fx.short}`;
 }
 

@@ -271,7 +271,7 @@ function auraParts(board: readonly (BoardCell | null)[], terrain: readonly Terra
   const here = terrain[cell] ?? 'normal';
   // Element: a card on the terrain of its class gets +1 on all values (Natur → Wald, Feuer → Lava, Frost → Eis, Schatten → Schatten).
   const element: Part[] = def.cls && here !== 'normal' && CLASS_TERRAIN[def.cls] === here
-    ? [{ source: `Element ${TERRAIN_INFO[here].icon} ${TERRAIN_INFO[here].label}`, d: [ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS], kind: 'element' }]
+    ? [{ source: `Element ${TERRAIN_INFO[here].label}`, d: [ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS], kind: 'element' }]
     : [];
   // Terrain gives at most +1: a terrain effect (Wurzelkraft, …) never adds to the element bonus.
   const effect = def.effect ? EFFECTS[def.effect] : null;
