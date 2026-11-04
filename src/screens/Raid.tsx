@@ -212,7 +212,8 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
     return (
       <main className="screen raid">
         <Header title="Deine 8 Karten" onBack={() => setView({ k: 'overview' })} right={<span className={`pill ${hand.length === HAND_SIZE ? 'ok' : 'warn'}`}>{hand.length}/{HAND_SIZE}</span>} />
-        <p className="hint">Wähle 8 Karten aus deiner Sammlung. {runeDef ? <>Deine Rune: <RuneBadge rune={runeDef} className="small" /> {runeDef.name}</> : 'Ohne Rune.'}</p>
+        <p className="hint">Wähle 8 Karten aus deiner Sammlung.</p>
+        <p className="pick-rune">{runeDef ? <>Deine Rune: <RuneBadge rune={runeDef} className="small" /> <b>{runeDef.name}</b></> : 'Ohne Rune'}</p>
         <div className="scroll">
           <div className="hand-grid pool">
             {sorted.map((id) => (
