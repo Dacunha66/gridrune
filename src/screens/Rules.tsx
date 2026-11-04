@@ -20,7 +20,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
           <li><b>Tor 1–7</b> – Karten aus <b>deinem Deck</b>. Stell dir dein Deck vorher gut zusammen!</li>
           <li><b>Tor 8 (Finale)</b> – <b>3 Entdeckungen</b>: Karten, die du noch nicht hast. Die gewählte spielst du im Duell mit.</li>
         </ul>
-        <p><b>Stolpersteine</b> halten dich nicht auf, aber die <b>nächste Karte</b>, die du danach nimmst, ist im Duell um <b>1 schwächer</b> (alle vier Werte, mindestens 1). Weiche ihnen aus! Mit ⏩ läufst du schneller.</p>
+        <p><b>Stolpersteine</b> halten dich nicht auf, aber die <b>nächste Karte</b>, die du danach nimmst, ist im Duell um <b>1 schwächer</b> (alle vier Werte, mindestens 1). Weiche ihnen aus! Mit dem Schneller-Knopf oben läufst du schneller.</p>
 
         <h2>2 · Das Duell</h2>
         <p>Ein 4×4-Feld, du und der Computer habt je 8 Karten und legt abwechselnd eine Karte auf ein freies Feld.</p>

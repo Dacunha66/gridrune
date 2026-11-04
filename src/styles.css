@@ -1811,3 +1811,10 @@ label.btn.disabled { opacity: .45; }
 .pick-rune b { color: var(--text); }
 .draft-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 30px 10px; padding-bottom: 20px; }
 .draft-pick .draft-tag { bottom: -18px; z-index: 2; }
+
+/* Scroll areas: their children keep their natural height and the area scrolls (iOS otherwise squeezes them and
+   cuts off the last lines, e.g. "★ 30/30 · 100 % geschafft" on the world tiles). */
+.scroll > * { flex-shrink: 0; }
+.world-tile { flex-shrink: 0; box-shadow: none; border: 1px solid var(--gold-line); }
+.world-tile-art { border-bottom: 1px solid var(--gold-faint); }
+.world-meta { color: var(--gold-light); }
