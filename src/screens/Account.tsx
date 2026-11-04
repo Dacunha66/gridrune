@@ -3,8 +3,7 @@
 import { Coin } from '../components/Coin';
 import { GameIcon } from '../components/GameIcon';
 import { FormEvent, ReactNode, useState } from 'react';
-import logoMark from '../assets/gridrune-mark.png';
-import logoWord from '../assets/gridrune-wordmark.png';
+import { LogoMark } from '../components/LogoMark';
 import { Header } from './Header';
 import { SaveData } from '../game/storage';
 import { loadProgress } from '../game/campaignProgress';
@@ -69,8 +68,8 @@ export function Welcome({ onGuest }: { onGuest: () => void }) {
     <main className="screen account-screen">
       <div className="logo small-logo">
         <h1 className="brand">
-          <img className="brand-mark" src={logoMark} alt="" />
-          <img className="brand-word" src={logoWord} alt="GridRune" />
+          <LogoMark className="brand-mark" />
+          <span className="brand-name">GridRune</span>
         </h1>
       </div>
       {mode === 'start' ? (
@@ -237,8 +236,8 @@ export function CloudGate({ phase, notice, browserSave, onChoose, onRetry }: {
     <main className="screen account-screen">
       <div className="logo small-logo">
         <h1 className="brand">
-          <img className="brand-mark" src={logoMark} alt="" />
-          <img className="brand-word" src={logoWord} alt="GridRune" />
+          <LogoMark className="brand-mark" />
+          <span className="brand-name">GridRune</span>
         </h1>
       </div>
       <div className="account-card">

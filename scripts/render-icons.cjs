@@ -1,0 +1,24 @@
+// Renders the GridRune symbol (LOGO_SVG in src/components/LogoMark.tsx) to the favicon and the home-screen icon.
+// Usage: node scripts/render-icons.cjs   (needs Playwright with Chromium)
+const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
+const src = fs.readFileSync(path.join(__dirname, '../src/components/LogoMark.tsx'), 'utf8');
+const svg = /LOGO_SVG = `([\s\S]*?)`;/.exec(src)[1];
+(async () => {
+  const b = await chromium.launch();
+  const p = await b.newPage();
+  const render = async (size, bg, pad, out) => {
+    await p.setViewportSize({ width: size, height: size });
+    await p.setContent(`<html><body style="margin:0;background:${bg};width:${size}px;height:${size}px;display:grid;place-items:center">
+      <div style="width:${size - pad * 2}px;height:${size - pad * 2}px">${svg.replace('<svg ', '<svg width="100%" height="100%" ')}</div></body></html>`);
+    await p.screenshot({ path: out, omitBackground: bg === 'transparent' });
+  };
+  const assets = path.join(__dirname, '../src/assets');
+  await render(64, 'transparent', 0, path.join(assets, 'favicon.png'));
+  // iOS rounds the corners itself: full square, ink background behind the tablet.
+  await render(180, '#0b1120', 6, path.join(assets, 'apple-touch-icon.png'));
+  await render(512, 'transparent', 0, path.join(assets, 'gridrune-mark.png'));
+  await b.close();
+  console.log('icons written');
+})();

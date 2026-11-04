@@ -1,7 +1,7 @@
 import { RuneBadge } from '../components/RuneBadge';
 import { Coin, CoinText } from '../components/Coin';
 import { findRune } from '../game/runes';
-import logoMark from '../assets/gridrune-mark.png';
+import { LogoMark } from '../components/LogoMark';
 import { GameIcon, GameIconName } from '../components/GameIcon';
 import { CARDS, ownedActiveIds } from '../game/cards';
 import { SaveData } from '../game/storage';
@@ -54,7 +54,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
     <main className="screen menu">
       <div className="logo">
         <h1 className="brand">
-          <img className="brand-mark" src={logoMark} alt="" />
+          <LogoMark className="brand-mark" />
           <span className="brand-name">GridRune</span>
         </h1>
         <p className="tagline">Renne. Sammle. Erobere das Raster.</p>

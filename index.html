@@ -6,14 +6,32 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#14112b" />
+    <meta name="theme-color" content="#0b1120" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@600;800&family=Cinzel:wght@600;700;800&family=Alegreya+Sans:wght@500;700;800&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
     <meta name="apple-mobile-web-app-title" content="GridRune" />
     <title>GridRune</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Start picture while the game loads (React replaces it). -->
+      <div class="splash" role="status" aria-label="GridRune lädt">
+        <img class="splash-mark" src="/src/assets/gridrune-mark.png" alt="" />
+        <div class="splash-name">GridRune</div>
+        <div class="splash-runes" aria-hidden="true">ᚠ ᚱ ᛟ ᚦ ᛉ</div>
+      </div>
+    </div>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0b1120; }
+      .splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+        background: radial-gradient(90% 55% at 50% 40%, #22304d 0%, #0b1120 70%); }
+      .splash-mark { width: 112px; height: 112px; filter: drop-shadow(0 0 22px rgba(69, 227, 207, 0.35)); animation: splash-breathe 2.4s ease-in-out infinite; }
+      .splash-name { font: 800 34px/1 'Cinzel', Georgia, serif; letter-spacing: 0.06em; color: #e3b75a; text-shadow: 0 2px 0 #6b4e17; }
+      .splash-runes { font: 600 13px/1 'Cinzel', Georgia, serif; letter-spacing: 0.8em; color: #45e3cf; text-shadow: 0 0 10px rgba(69, 227, 207, 0.6); animation: splash-runes 1.6s ease-in-out infinite; }
+      @keyframes splash-breathe { 50% { filter: drop-shadow(0 0 34px rgba(69, 227, 207, 0.6)); transform: scale(1.03); } }
+      @keyframes splash-runes { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { .splash-mark, .splash-runes { animation: none; } }
+    </style>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

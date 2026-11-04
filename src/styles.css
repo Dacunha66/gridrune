@@ -1788,3 +1788,7 @@ label.btn.disabled { opacity: .45; }
 .raid-open { border-radius: 6px; }
 .raid-open .gi, .reward-line .gi, .league-prize .gi, .plain-list .gi { color: var(--gold); }
 .searching { font-family: var(--f-display); color: var(--gold-light); }
+
+.logo-mark { display: inline-block; flex: none; }
+.logo-mark svg { display: block; width: 100%; height: 100%; }
+.brand-mark { width: clamp(56px, 17vw, 84px); height: clamp(56px, 17vw, 84px); filter: drop-shadow(0 0 10px var(--glow-soft)); }
