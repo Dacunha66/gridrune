@@ -1810,3 +1810,4 @@ label.btn.disabled { opacity: .45; }
 .pick-rune { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 4px; color: var(--muted); font-size: 15px; }
 .pick-rune b { color: var(--text); }
 .draft-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 30px 10px; padding-bottom: 20px; }
+.draft-pick .draft-tag { bottom: -18px; z-index: 2; }
