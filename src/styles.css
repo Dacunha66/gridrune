@@ -1,12 +1,23 @@
 :root {
-  --bg: #14112b;
-  --bg2: #1f1a40;
-  --panel: #262050;
-  --panel2: #30296a;
-  --text: #f4f1ff;
-  --muted: #b9b2dc;
-  --accent: #ffcc33;
-  --accent-text: #2a1a00;
+  /* GridRune "Runen-Grimoire": an old spell book at night – ink blue, gold leaf, parchment – with glowing cyan runes. */
+  --bg: #0b1120;
+  --bg2: #111a2e;
+  --panel: #16203a;
+  --panel2: #1d2946;
+  --text: #f1e7cf;
+  --muted: #b3aa92;
+  --accent: #e3b75a;
+  --accent-text: #2a1a06;
+  --gold: #d4a64a;
+  --gold-light: #f3d68e;
+  --gold-dark: #6b4e17;
+  --gold-line: rgba(212, 166, 74, 0.5);
+  --gold-faint: rgba(212, 166, 74, 0.22);
+  --glow: #45e3cf;
+  --glow-soft: rgba(69, 227, 207, 0.38);
+  --parchment: #e9dcc0;
+  --f-display: 'Cinzel', Georgia, serif;
+  --f-body: 'Alegreya Sans', -apple-system, system-ui, sans-serif;
   --blue: #3b82f6;
   --blue-dark: #1e3a8a;
   --red: #ef4444;
@@ -18,7 +29,7 @@
   --legendary: #fbbf24;
   --mythic: #ff7ad9;
   --rainbow: conic-gradient(#ff5f6d, #ffc371, #f9f871, #4ade80, #60a5fa, #c084fc, #ff5f6d);
-  --radius: 14px;
+  --radius: 8px;
   --player: #4f8ff7;
   --player-dark: #1e3a8a;
   --player-light: #9cc3ff;
@@ -32,7 +43,8 @@ html, body, #root {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--f-body);
+  font-size: 17px;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
@@ -46,8 +58,9 @@ button { font: inherit; color: inherit; }
   height: 100%;
   max-width: 560px;
   margin: 0 auto;
-  background: radial-gradient(120% 60% at 50% 0%, #2c2266 0%, var(--bg) 60%);
+  background: radial-gradient(120% 60% at 50% 0%, #22304d 0%, var(--bg) 62%);
 }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; letter-spacing: 0.02em; }
 
 .screen {
   height: 100%;
@@ -59,39 +72,51 @@ button { font: inherit; color: inherit; }
 
 .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 12px; }
 
-/* ---------- Buttons ---------- */
+/* ---------- Buttons: engraved plaques with a gold rim; the primary one is gold leaf ---------- */
 .btn {
   min-height: 48px;
   padding: 10px 18px;
   border-radius: var(--radius);
-  border: 2px solid rgba(255, 255, 255, 0.14);
-  background: var(--panel2);
+  border: 1px solid var(--gold-line);
+  background: linear-gradient(180deg, #1c2744, #131b31);
+  box-shadow: inset 0 0 0 3px #0f1628, inset 0 0 0 4px var(--gold-faint);
+  color: var(--text);
   font-weight: 700;
   font-size: 17px;
   cursor: pointer;
-  transition: transform 0.1s, background 0.2s;
+  transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
 }
-.btn:active { transform: scale(0.96); }
+.btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.45; cursor: default; transform: none; }
-.btn.active { background: var(--accent); color: var(--accent-text); }
-.btn-danger { background: var(--red); border-color: #ffb0b0; }
-.btn-primary { background: linear-gradient(180deg, #ffd95a, #f5a623); color: var(--accent-text); border-color: #ffe9a3; }
-.btn-big { min-height: 64px; font-size: 22px; }
+.btn:focus-visible { outline: none; box-shadow: inset 0 0 0 3px #0f1628, 0 0 0 2px var(--glow), 0 0 16px var(--glow-soft); }
+.btn.active { background: linear-gradient(180deg, #24345a, #1a2644); border-color: var(--glow); box-shadow: inset 0 0 0 3px #0f1628, 0 0 14px var(--glow-soft); }
+.btn-danger { background: linear-gradient(180deg, #7f1d1d, #4c1010); border-color: #f87171; }
+.btn-primary {
+  font-family: var(--f-display); letter-spacing: 0.05em;
+  background: linear-gradient(180deg, var(--gold-light), #c99a3e 55%, #a77a26);
+  color: var(--accent-text); border-color: var(--gold-dark);
+  box-shadow: inset 0 1px 0 #fff3c8, inset 0 0 0 3px rgba(107, 78, 23, 0.22), 0 0 18px rgba(227, 183, 90, 0.28);
+}
+.btn-primary:focus-visible { box-shadow: inset 0 1px 0 #fff3c8, 0 0 0 2px var(--glow), 0 0 22px var(--glow-soft); }
+.btn-big { min-height: 64px; font-size: 22px; font-family: var(--f-display); letter-spacing: 0.04em; }
 .btn-small { min-height: 44px; padding: 6px 12px; font-size: 15px; }
 .btn-wide { width: 100%; }
 .btn-lane { flex: 1; min-height: 64px; font-size: 28px; }
 
 .pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--panel);
+  border-radius: 4px;
+  border: 1px solid var(--gold-line);
+  background: rgba(10, 14, 26, 0.75);
   font-weight: 700;
   font-size: 15px;
 }
-.pill.ok { background: #166534; }
-.pill.warn { background: #92400e; }
-.pill-warn { background: var(--red); }
+.pill.ok { background: #14532d; border-color: #4ade80; }
+.pill.warn { background: #78350f; border-color: #fbbf24; }
+.pill-warn { background: var(--red-dark); border-color: var(--red); }
 
 .muted { color: var(--muted); }
 .hint { text-align: center; color: var(--muted); min-height: 1.3em; margin: 6px 0; font-size: 15px; }
@@ -101,7 +126,8 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Top bar ---------- */
 .topbar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-bottom: 8px; }
-.topbar h1 { margin: 0; text-align: center; font-size: 22px; }
+.topbar h1 { margin: 0; text-align: center; font-size: 21px; color: var(--gold-light); text-shadow: 0 1px 0 var(--gold-dark); }
+.btn-back { display: inline-flex; align-items: center; gap: 2px; padding-left: 8px; }
 .topbar-right { min-width: 60px; text-align: right; }
 .bottombar { padding-top: 8px; }
 
@@ -119,13 +145,13 @@ button { font: inherit; color: inherit; }
 .logo h1 strong { font-size: 44px; font-weight: 900; letter-spacing: 1px; background: linear-gradient(180deg, #fff3b0, #ffb020); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .tagline { color: var(--muted); margin: 0; }
 .wallet { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 16px 0; }
-.wallet span { background: var(--panel); padding: 8px 12px; border-radius: 999px; font-weight: 700; }
+.wallet span { display: inline-flex; align-items: center; gap: 6px; background: rgba(10, 14, 26, 0.75); border: 1px solid var(--gold-line); padding: 7px 12px; border-radius: 4px; font-weight: 700; }
 .menu-buttons { display: flex; flex-direction: column; gap: 12px; }
-.menu-sub-title { margin: 0 0 2px; font-size: 20px; text-align: center; color: var(--accent); }
+.menu-sub-title { margin: 0 0 2px; font-size: 22px; text-align: center; color: var(--gold-light); text-shadow: 0 1px 0 var(--gold-dark); }
 .menu-sub { animation: menu-sub-in .18s ease-out; }
 @keyframes menu-sub-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .menu-sub { animation: none; } }
-.menu-back { background: transparent; border: 1px solid rgba(255,255,255,.18); }
+.menu-back { background: transparent; box-shadow: none; }
 .level-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; animation: menu-sub-in .18s ease-out; }
 .level-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; min-height: 0; }
 .level-name { font-size: 17px; font-weight: 800; }
@@ -474,7 +500,6 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Admin dashboard ---------- */
 .app.app-wide { max-width: 1100px; }
-.btn-admin { background: #1d2a4a; border-color: #3b5b9a; }
 .admin { gap: 8px; }
 .admin-topbar h1 { font-size: 20px; }
 .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 0.92em; }
@@ -538,8 +563,8 @@ button { font: inherit; color: inherit; }
 label.btn { display: inline-flex; align-items: center; }
 label.btn.disabled { opacity: 0.5; }
 .segmented { display: flex; flex-wrap: wrap; gap: 6px; }
-.seg { min-height: 44px; padding: 6px 12px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.15); background: var(--panel); font-weight: 700; cursor: pointer; }
-.seg.active { border-color: var(--accent); background: #3a3170; }
+.seg { min-height: 44px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--gold-faint); background: var(--panel); color: var(--text); font-weight: 700; cursor: pointer; }
+.seg.active { border-color: var(--glow); background: #1d2c4a; box-shadow: 0 0 12px var(--glow-soft); }
 .rarity-seg-common.active { border-color: var(--common); }
 .rarity-seg-uncommon.active { border-color: var(--uncommon); }
 .rarity-seg-rare.active { border-color: var(--rare); }
@@ -613,7 +638,6 @@ label.btn.disabled { opacity: 0.5; }
 .gate-preview-label.final { background: var(--accent); color: var(--accent-text); }
 
 /* ---------- League test mode ---------- */
-.btn-league { background: linear-gradient(180deg, #3b2f7a, #241c55); border-color: #8b7bff; }
 .cell.rock { display: grid; place-items: center; font-size: clamp(26px, 8vw, 44px); background: repeating-linear-gradient(45deg, #2b2840, #2b2840 6px, #252238 6px, #252238 12px); cursor: default; }
 .round-label { margin: 0; text-align: center; font-weight: 800; color: var(--accent); font-size: 14px; }
 .ranked-pill { background: #3b2f7a; white-space: nowrap; }
@@ -936,7 +960,6 @@ button.card { cursor: pointer; }
 
 /* ---------- Kampagne ---------- */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.btn-campaign { background: linear-gradient(180deg, #1f6b3a, #134425); border-color: #6ee79a; }
 .test-banner { margin: 0 0 8px; padding: 6px 10px; border-radius: 10px; background: #713f12; color: #fef3c7; font-size: 13px; font-weight: 700; text-align: center; }
 .c-img { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .c-img .design-img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1386,8 +1409,8 @@ label.btn.disabled { opacity: .45; }
 .account-card p { margin: 0; line-height: 1.4; }
 .account-done { padding: 10px 12px; border-radius: 10px; background: rgba(74, 222, 128, 0.12); border: 1px solid rgba(74, 222, 128, 0.5); }
 .btn-ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--muted); }
-.account-chip { align-self: center; margin: 8px auto 0; padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(0, 0, 0, 0.25); color: inherit; font-size: 14px; cursor: pointer; }
-.account-chip.guest b { color: #ffe08a; }
+.account-chip { display: inline-flex; align-items: center; gap: 6px; align-self: center; margin: 8px auto 0; padding: 6px 14px; border-radius: 4px; border: 1px solid var(--gold-line); background: rgba(10, 14, 26, 0.6); color: inherit; font-size: 14px; cursor: pointer; }
+.account-chip.guest b { color: var(--gold-light); }
 
 /* ---------- Shop: Booster ---------- */
 .pack-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -1474,7 +1497,6 @@ label.btn.disabled { opacity: .45; }
 .result-status.status-rejected { color: #fca5a5; }
 
 /* ---------- Online duel ---------- */
-.btn-online { background: linear-gradient(180deg, #8a2f2f, #5a1b1b); border-color: #ff8a8a; }
 .online-body { display: flex; flex-direction: column; gap: 14px; }
 .online-card { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; padding: 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); }
 .invite-code { font-size: 2.4rem; font-weight: 800; letter-spacing: 0.25em; font-family: ui-monospace, monospace; margin: 0; }
@@ -1563,7 +1585,6 @@ label.btn.disabled { opacity: .45; }
 @media (prefers-reduced-motion: reduce) { .reveal-overlay *, .reveal-overlay, .station-loot { animation: none !important; } }
 
 /* ---------- Draft League ---------- */
-.btn-draft { background: linear-gradient(180deg, #7a4a12, #4a2a08); border-color: #f5b041; }
 .draft-steps { text-align: left; margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
 .draft-bar { display: flex; align-items: center; gap: 10px; padding: 0 2px 6px; }
 .draft-count { font-weight: 900; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
@@ -1616,7 +1637,6 @@ label.btn.disabled { opacity: .45; }
 @media (prefers-reduced-motion: reduce) { .gate-choice { animation: none; } }
 
 /* ---------- Weltboss-Raid ---------- */
-.btn-raid { background: linear-gradient(180deg, #5b1d6e, #2e0d3a); border-color: #d36bff; }
 .raid-body { display: flex; flex-direction: column; gap: 12px; padding-bottom: 8px; }
 .raid-empty { text-align: center; padding: 36px 12px; }
 .raid-empty-icon { font-size: 54px; margin: 0; }
@@ -1668,3 +1688,36 @@ label.btn.disabled { opacity: .45; }
 .raid-test h4 { margin: 12px 0 4px; font-size: 15px; }
 .raid-sim p { margin: 4px 0; }
 .raid-live-note { margin: 0; padding: 10px; border-radius: 12px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.5); }
+
+/* ---------- Grimoire: menu, symbols, rune glow ---------- */
+.gi { width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.22em; }
+.btn .gi { color: var(--gold); filter: drop-shadow(0 0 4px rgba(212, 166, 74, 0.35)); }
+.btn-primary .gi { color: var(--accent-text); filter: none; }
+.menu-buttons .btn { display: flex; align-items: center; justify-content: center; gap: 10px; font-family: var(--f-display); letter-spacing: 0.03em; }
+.menu-buttons .btn .btn-sub { font-family: var(--f-body); letter-spacing: 0; font-weight: 600; color: var(--muted); opacity: 1; margin-left: 0; }
+.menu-buttons .btn-primary .btn-sub { color: rgba(42, 26, 6, 0.75); }
+/* Game modes: same plaque, the symbol glows in the mode's colour. */
+.btn-campaign .gi { color: #8fe0a0; filter: drop-shadow(0 0 6px rgba(143, 224, 160, 0.6)); }
+.btn-online .gi { color: #ff9a8a; filter: drop-shadow(0 0 6px rgba(255, 120, 100, 0.55)); }
+.btn-draft .gi { color: #f5c26b; filter: drop-shadow(0 0 6px rgba(245, 194, 107, 0.55)); }
+.btn-league .gi { color: #c4b5fd; filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.6)); }
+.btn-raid .gi { color: var(--glow); filter: drop-shadow(0 0 7px var(--glow-soft)); }
+.btn-admin .gi { color: var(--muted); filter: none; }
+.rune-rule { display: flex; align-items: center; gap: 10px; color: var(--glow); font: 600 12px/1 var(--f-display); letter-spacing: 0.7em; text-shadow: 0 0 8px var(--glow-soft); margin: 2px 0; justify-content: center; }
+.rune-rule::before, .rune-rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-line), transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .rune-rule { animation: rune-breathe 4s ease-in-out infinite; }
+  .menu .btn-primary.btn-big { animation: gold-breathe 3.2s ease-in-out infinite; }
+}
+@keyframes rune-breathe { 0%, 100% { opacity: 0.65; } 50% { opacity: 1; } }
+@keyframes gold-breathe { 0%, 100% { box-shadow: inset 0 1px 0 #fff3c8, inset 0 0 0 3px rgba(107, 78, 23, 0.22), 0 0 14px rgba(227, 183, 90, 0.22); } 50% { box-shadow: inset 0 1px 0 #fff3c8, inset 0 0 0 3px rgba(107, 78, 23, 0.22), 0 0 26px rgba(227, 183, 90, 0.45), 0 0 6px var(--glow-soft); } }
+/* Word mark: gold Cinzel next to the glowing rune symbol. */
+.brand-name { font: 800 clamp(34px, 10vw, 46px)/1 var(--f-display); letter-spacing: 0.06em; background: linear-gradient(180deg, #fff1c2, var(--gold) 60%, #a77a26); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 rgba(107, 78, 23, 0.8)); }
+.brand-mark { filter: drop-shadow(0 0 14px var(--glow-soft)) drop-shadow(0 0 4px var(--glow-soft)); }
+.tagline { font-style: italic; }
+.account-chip .gi { color: var(--gold); }
+
+.level-btn .level-coins, .level-btn .level-text { font-family: var(--f-body); letter-spacing: 0; }
+.level-btn .level-name { display: inline-flex; align-items: center; gap: 4px; }
+.seg .gi { color: var(--gold); margin-right: 2px; }
+.seg.active .gi { color: var(--glow); filter: drop-shadow(0 0 5px var(--glow-soft)); }

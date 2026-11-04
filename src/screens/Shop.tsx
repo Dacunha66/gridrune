@@ -1,3 +1,4 @@
+import { GameIcon } from '../components/GameIcon';
 import { CSSProperties, useEffect, useMemo, useState } from 'react';
 import { Coin, CoinText } from '../components/Coin';
 import { Burst, useCountUp } from '../components/Effects';
@@ -133,8 +134,8 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
     <main className="screen shop">
       <Header title="Shop" onBack={onBack} right={<span key={save.coins} className="pill coin-pill"><Coin /> {coins}</span>} />
       <div className="segmented deck-tabs" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === 'packs'} className={`seg ${tab === 'packs' ? 'active' : ''}`} onClick={() => { setTab('packs'); setMessage(''); }}>🎴 Booster</button>
-        <button type="button" role="tab" aria-selected={tab === 'skins'} className={`seg ${tab === 'skins' ? 'active' : ''}`} onClick={() => { setTab('skins'); setMessage(''); }}>🎨 Skins</button>
+        <button type="button" role="tab" aria-selected={tab === 'packs'} className={`seg ${tab === 'packs' ? 'active' : ''}`} onClick={() => { setTab('packs'); setMessage(''); }}><GameIcon name="gift" /> Booster</button>
+        <button type="button" role="tab" aria-selected={tab === 'skins'} className={`seg ${tab === 'skins' ? 'active' : ''}`} onClick={() => { setTab('skins'); setMessage(''); }}><GameIcon name="crown" /> Skins</button>
       </div>
       <p className="hint" aria-live="polite">{message ? <CoinText text={message} /> : (tab === 'packs' ? 'Münzen verdienst du in jedem Duell – Siege bringen am meisten.' : 'Skins ändern nur das Aussehen, nie die Kartenwerte.')}</p>
 

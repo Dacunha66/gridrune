@@ -2,17 +2,17 @@ import { RuneBadge } from '../components/RuneBadge';
 import { Coin, CoinText } from '../components/Coin';
 import { findRune } from '../game/runes';
 import logoMark from '../assets/gridrune-mark.png';
-import logoWord from '../assets/gridrune-wordmark.png';
+import { GameIcon, GameIconName } from '../components/GameIcon';
 import { CARDS, ownedActiveIds } from '../game/cards';
 import { SaveData } from '../game/storage';
 import { useState } from 'react';
 import type { AiLevel } from '../game/ai';
 import { AI_COINS } from '../game/rewards';
 
-const LEVELS: { level: AiLevel; label: string; icon: string; text: string }[] = [
-  { level: 'easy', label: 'Leicht', icon: '🌱', text: 'spielt oft zufällig' },
-  { level: 'medium', label: 'Normal', icon: '⚔️', text: 'der klassische Gegner' },
-  { level: 'hard', label: 'Schwer', icon: '🔥', text: 'denkt deine Antwort voraus' },
+const LEVELS: { level: AiLevel; label: string; icon: GameIconName; text: string }[] = [
+  { level: 'easy', label: 'Leicht', icon: 'leaf', text: 'spielt oft zufällig' },
+  { level: 'medium', label: 'Normal', icon: 'sword', text: 'der klassische Gegner' },
+  { level: 'hard', label: 'Schwer', icon: 'flame', text: 'denkt deine Antwort voraus' },
 ];
 
 interface Props {
@@ -55,14 +55,14 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
       <div className="logo">
         <h1 className="brand">
           <img className="brand-mark" src={logoMark} alt="" />
-          <img className="brand-word" src={logoWord} alt="GridRune" />
+          <span className="brand-name">GridRune</span>
         </h1>
         <p className="tagline">Renne. Sammle. Erobere das Raster.</p>
       </div>
 
       {account && (
         <button type="button" className={`account-chip ${account === 'guest' ? 'guest' : ''}`} onClick={onAccount}>
-          {account === 'guest' ? <>👤 Gast · <b>Anmelden / Konto erstellen</b></> : <>👤 <b>{account}</b></>}
+          <GameIcon name="user" /> {account === 'guest' ? <>Gast · <b>Anmelden / Konto erstellen</b></> : <b>{account}</b>}
         </button>
       )}
 
@@ -72,45 +72,47 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
 
       <div className="wallet" aria-label="Spielstand">
         <span><Coin /> {save.coins}</span>
-        <span>🃏 {ownedActiveIds(save.unlocked).length}/{CARDS.length}</span>
-        <span>🏆 {wins} · 🤝 {draws} · 💀 {losses}</span>
+        <span><GameIcon name="cards" label="Karten" /> {ownedActiveIds(save.unlocked).length}/{CARDS.length}</span>
+        <span><GameIcon name="crown" label="Siege" /> {wins} · <GameIcon name="handshake" label="Unentschieden" /> {draws} · <GameIcon name="skull" label="Niederlagen" /> {losses}</span>
       </div>
 
       {playOpen ? (
         <nav className="menu-buttons menu-sub" aria-label="Spielen">
-          <h2 className="menu-sub-title">▶ Spielen</h2>
+          <h2 className="menu-sub-title">Spielen</h2>
+          <div className="rune-rule" aria-hidden="true">ᚠ ᚱ ᛟ ᚦ ᛉ</div>
           <button type="button" className={`btn btn-primary ${chooseLevel ? '' : 'btn-big'}`} aria-expanded={chooseLevel} onClick={() => setChooseLevel(!chooseLevel)}>
-            🏃 Einfaches Spiel <span className="btn-sub">gegen die KI</span>
+            <GameIcon name="run" /> Einfaches Spiel <span className="btn-sub">gegen die KI</span>
           </button>
           {chooseLevel && (
             <div className="level-pick" role="group" aria-label="Schwierigkeit wählen">
               {LEVELS.map((l) => (
                 <button key={l.level} type="button" className={`btn level-btn level-${l.level}`} onClick={() => onPlay(l.level)}>
-                  <span className="level-name">{l.icon} {l.label}</span>
+                  <span className="level-name"><GameIcon name={l.icon} /> {l.label}</span>
                   <span className="level-coins">Sieg <Coin /> {AI_COINS[l.level].win}</span>
                   <span className="level-text">{l.text}</span>
                 </button>
               ))}
             </div>
           )}
-          <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}>🗺️ Kampagne</button>
-          {onOnline && <button type="button" className="btn btn-online" onClick={onOnline}>⚔️ Online-Duell <span className="btn-sub">gegen echte Spieler</span></button>}
-          {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}>🃏 Draft-Liga <span className="btn-sub">gleicher Pool für beide</span></button>}
-          {onRaid && <button type="button" className="btn btn-raid" onClick={onRaid}>👹 Weltboss-Raid <span className="btn-sub">alle gegen einen</span></button>}
-          <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}>🏆 Rangliste <span className="btn-sub">Sieg = neue Karte</span></button>
-          <button type="button" className="btn menu-back" onClick={() => { setChooseLevel(false); onPlayOpen?.(false); }}>← Zurück</button>
+          <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}><GameIcon name="map" /> Kampagne</button>
+          {onOnline && <button type="button" className="btn btn-online" onClick={onOnline}><GameIcon name="swords" /> Online-Duell <span className="btn-sub">gegen echte Spieler</span></button>}
+          {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}><GameIcon name="draft" /> Draft-Liga <span className="btn-sub">gleicher Pool für beide</span></button>}
+          {onRaid && <button type="button" className="btn btn-raid" onClick={onRaid}><GameIcon name="raid" /> Weltboss-Raid <span className="btn-sub">alle gegen einen</span></button>}
+          <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}><GameIcon name="trophy" /> Rangliste <span className="btn-sub">Sieg = neue Karte</span></button>
+          <button type="button" className="btn menu-back" onClick={() => { setChooseLevel(false); onPlayOpen?.(false); }}><GameIcon name="back" /> Zurück</button>
         </nav>
       ) : (
         <nav className="menu-buttons">
-          <button type="button" className="btn btn-primary btn-big" onClick={() => onPlayOpen?.(true)}>▶ Spielen</button>
-          <button type="button" className="btn" onClick={() => onNavigate('shop')}>🛒 Shop <span className="btn-sub"><Coin /> {save.coins}</span></button>
-          <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>
+          <button type="button" className="btn btn-primary btn-big" onClick={() => onPlayOpen?.(true)}><GameIcon name="play" /> Spielen</button>
+          <div className="rune-rule" aria-hidden="true">ᚠ ᚱ ᛟ ᚦ ᛉ</div>
+          <button type="button" className="btn" onClick={() => onNavigate('shop')}><GameIcon name="shop" /> Shop <span className="btn-sub"><Coin /> {save.coins}</span></button>
+          <button type="button" className="btn" onClick={() => onNavigate('collection')}><GameIcon name="book" /> Sammlung</button>
           <button type="button" className="btn btn-deck" onClick={() => onNavigate('deck')}>
-            🗂️ Deck bearbeiten
+            <GameIcon name="deck" /> Deck bearbeiten
             {runes && (equipped ? <span className="btn-sub"><RuneBadge rune={equipped} className="small" /></span> : <span className="btn-sub">ohne Rune</span>)}
           </button>
-          <button type="button" className="btn" onClick={() => onNavigate('rules')}>📜 Regeln</button>
-          {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}>🛠️ Kartenverwaltung</button>}
+          <button type="button" className="btn" onClick={() => onNavigate('rules')}><GameIcon name="scroll" /> Regeln</button>
+          {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}><GameIcon name="gear" /> Kartenverwaltung</button>}
         </nav>
       )}
 
