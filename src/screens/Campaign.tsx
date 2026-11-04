@@ -2,6 +2,8 @@
 // Guests keep their progress on this device and see rewards as a preview. Signed-in players get a ticket from the
 // server before each mission; the server replays the duel, stores the stars and pays coins, cards and packs.
 import { CoinText, RewardIcon } from '../components/Coin';
+import { GameIcon, GameIconName } from '../components/GameIcon';
+import { ResultIcon } from '../components/ResultIcon';
 import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
@@ -74,6 +76,7 @@ type View =
     runId: number; status?: CheckStatus; granted?: GrantedReward[];
   };
 
+const KIND_GLYPH: Record<Mission['kind'], GameIconName> = { tutorial: 'book-open', normal: 'sword', special: 'flame', elite: 'skull', boss: 'crown' };
 const KIND_ICON: Record<Mission['kind'], string> = { tutorial: '📖', normal: '⚔️', special: '✴️', elite: '💀', boss: '👑' };
 
 export function Campaign({
@@ -297,7 +300,7 @@ function WorldList({ content, progress, preview, onOpen, onBack }: { content: Ca
   return (
     <main className="screen campaign">
       <Header title="Kampagne" onBack={onBack} />
-      {preview && <p className="test-banner">🧪 Testmodus – zählt nicht für den Fortschritt</p>}
+      {preview && <p className="test-banner">Testmodus – zählt nicht für den Fortschritt</p>}
       <div className="scroll world-list">
         {worlds.length === 0 && <p className="muted">Noch keine Welt veröffentlicht.</p>}
         {worlds.map((w) => {
@@ -307,8 +310,8 @@ function WorldList({ content, progress, preview, onOpen, onBack }: { content: Ca
           return (
             <button key={w.id} type="button" className={`world-tile ${open ? '' : 'locked'}`} onClick={() => open && onOpen(w.id)} aria-disabled={!open}>
               <span className="world-tile-art">
-                {w.tile ? <CampaignImage img={w.tile} /> : <span className="world-tile-fallback" aria-hidden="true">🌲🍄🌿</span>}
-                {!open && <span className="lock-big" aria-hidden="true">🔒</span>}
+                {w.tile ? <CampaignImage img={w.tile} /> : <span className="world-tile-fallback" aria-hidden="true"><GameIcon name="map" /></span>}
+                {!open && <span className="lock-big" aria-hidden="true"><GameIcon name="lock" /></span>}
                 {w.status === 'draft' && <span className="status-pill status-draft">Entwurf</span>}
               </span>
               <span className="world-tile-body">
@@ -317,7 +320,7 @@ function WorldList({ content, progress, preview, onOpen, onBack }: { content: Ca
                 {open ? (
                   <span className="world-meta">★ {stars}/{max} · {worldPercent(content, progress, w.id, preview)} % geschafft</span>
                 ) : (
-                  <span className="world-meta">🔒 {worldLockText(content, w)}</span>
+                  <span className="world-meta"><GameIcon name="lock" /> {worldLockText(content, w)}</span>
                 )}
               </span>
             </button>
@@ -354,7 +357,7 @@ function WorldMap({ world, content, progress, preview, runesOn, onMission, onBac
   return (
     <main className="screen campaign world-screen">
       <Header title={world.name} onBack={onBack} right={<span className="pct">{worldPercent(content, progress, world.id, preview)} %</span>} />
-      {preview && <p className="test-banner">🧪 Testmodus – alle Missionen offen, nichts wird gespeichert</p>}
+      {preview && <p className="test-banner">Testmodus – alle Missionen offen, nichts wird gespeichert</p>}
       <StarBar world={world} stars={stars} max={max} />
       {current && (() => {
         const l = loot(current);
@@ -393,8 +396,8 @@ function WorldMap({ world, content, progress, preview, runesOn, onMission, onBac
               >
                 <span className="station-orb">
                   {state === 'locked' ? (
-                    <span className="station-lock" aria-hidden="true">🔒</span>
-                  ) : m.icon ? <CampaignImage img={m.icon} /> : <span className="station-icon">{KIND_ICON[m.kind]}</span>}
+                    <span className="station-lock" aria-hidden="true"><GameIcon name="lock" /></span>
+                  ) : m.icon ? <CampaignImage img={m.icon} /> : <span className="station-icon"><GameIcon name={KIND_GLYPH[m.kind]} /></span>}
                   {done && <span className="station-check" aria-hidden="true">✓</span>}
                 </span>
                 {!done && (() => {
@@ -435,7 +438,7 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
   return (
     <main className={`screen campaign briefing kind-${mission.kind}`}>
       <Header title={mission.name} onBack={onBack} right={<span className={`kind-pill kind-${mission.kind}`}>{KIND_LABEL[mission.kind]}</span>} />
-      {preview && <p className="test-banner">🧪 Testmodus – zählt nicht für den Fortschritt</p>}
+      {preview && <p className="test-banner">Testmodus – zählt nicht für den Fortschritt</p>}
       <div className="scroll brief-body">
         <section className={`brief-opponent rank-${opponent.rank}`}>
           <OpponentFace o={opponent} />
@@ -453,7 +456,7 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
           <div>
             <p><b>{arena.name}</b></p>
             <p className="muted small">{terrains.length > 0 ? terrains.map((t) => `${TERRAIN_INFO[t].icon} ${TERRAIN_INFO[t].label}`).join(' · ') : 'Keine Geländefelder'}</p>
-            {runner && <p className="small">🏃 Erst laufen, dann mit den gesammelten Karten kämpfen.</p>}
+            {runner && <p className="small"><GameIcon name="run" /> Erst laufen, dann mit den gesammelten Karten kämpfen.</p>}
             {mission.onlyClass && <p className="small">Nur {CLASS_INFO[mission.onlyClass].icon} {CLASS_INFO[mission.onlyClass].label}-Karten erlaubt.</p>}
           </div>
         </section>
@@ -525,7 +528,7 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
       </div>
       {notice && <p className="hint brief-notice" role="alert">{notice}</p>}
       <button type="button" className="btn btn-primary btn-big brief-start" disabled={starting || (!runner && (hand.length !== HAND_SIZE || choosing))} onClick={() => onStart(hand)}>
-        {starting ? '☁️ Wird gestartet …' : mission.kind === 'boss' ? '👑 Zum Boss' : runner ? '🏃 Lauf starten' : '⚔️ Duell starten'}
+        {starting ? 'Wird gestartet …' : mission.kind === 'boss' ? <><GameIcon name="crown" /> Zum Boss</> : runner ? <><GameIcon name="run" /> Lauf starten</> : <><GameIcon name="swords" /> Duell starten</>}
       </button>
     </main>
   );
@@ -544,7 +547,7 @@ function BriefRewards({ mission, world, content, progress, runesOn, preview }: {
   if (!runes.length && !mission.firstReward && !starRewards.length && !next) return null;
   return (
     <section className="brief-rewards">
-      <h2>🎁 Zu gewinnen</h2>
+      <h2><GameIcon name="gift" /> Zu gewinnen</h2>
       {runes.map((r) => (
         <div key={r.id} className={`reward-tile rune-tile rarity-${r.rarity} ${done ? 'won' : ''}`}>
           <RuneBadge rune={r} className="big" />
@@ -690,7 +693,7 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
         {boss ? (
           <div className="boss-portrait small">{opponent.portrait ? <CampaignImage img={opponent.portrait} /> : <span className="boss-emoji" aria-hidden="true">{opponent.emoji}</span>}</div>
         ) : (
-          <div className="result-icon" aria-hidden="true">{outcome === 'win' ? '🏆' : outcome === 'draw' ? '🤝' : '💀'}</div>
+          <ResultIcon outcome={outcome} />
         )}
         <h1>{title}</h1>
         {text && <p className="boss-text">{text}</p>}
@@ -700,7 +703,7 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
         <ul className="result-goals">
           {mission.goals.map((g, i) => (
             <li key={g.id} className={result.met[i] ? 'met' : slots[i] ? 'had' : ''}>
-              <span aria-hidden="true">{result.met[i] ? '✅' : slots[i] ? '★' : '⬜'}</span>
+              <span aria-hidden="true" className={`goal-mark ${result.met[i] ? 'met' : slots[i] ? 'had' : ''}`}>{result.met[i] || slots[i] ? '★' : '☆'}</span>
               <span>{goalText(g)}</span>
               <span className="muted small">{goalProgress(g, stats)}</span>
             </li>
@@ -709,10 +712,10 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
         {world && <StarBar world={world} stars={stars} max={max} />}
         {view.status && (
           <p className={`result-status status-${view.status}`} role="status">
-            {view.status === 'checking' ? '☁️ Ergebnis wird vom Server geprüft …'
+            {view.status === 'checking' ? 'Ergebnis wird vom Server geprüft …'
               : view.status === 'paid' ? '✓ Geprüft und in deinem Konto gespeichert'
-                : view.status === 'pending' ? '⏳ Keine Verbindung – Sterne und Belohnungen werden gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).'
-                  : '⚠️ Das Ergebnis konnte nicht bestätigt werden – es zählt nicht.'}
+                : view.status === 'pending' ? 'Keine Verbindung – Sterne und Belohnungen werden gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).'
+                  : 'Das Ergebnis konnte nicht bestätigt werden – es zählt nicht.'}
           </p>
         )}
         {view.status === 'paid' && (view.granted?.length ?? 0) > 0 && (
@@ -725,7 +728,7 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
           <div className="reward-box">
             <p><b>Freigeschaltet</b></p>
             {previewRewards.map((r, i) => <p key={i}><RewardLine reward={r} /></p>)}
-            <p className="muted small">🎁 {view.status ? PAID_NOTE : PREVIEW_NOTE}</p>
+            <p className="muted small"><GameIcon name="gift" /> {view.status ? PAID_NOTE : PREVIEW_NOTE}</p>
           </div>
         )}
         {newRunes.length > 0 && (
@@ -737,7 +740,7 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
             <p className="muted small">Auswählen unter „Deck bearbeiten“ → „Rune“.</p>
           </div>
         )}
-        {preview && <p className="test-banner">🧪 Testmodus – nichts wurde gespeichert</p>}
+        {preview && <p className="test-banner">Testmodus – nichts wurde gespeichert</p>}
       </div>
       {revealOpen && reveal.length > 0 && (
         <RewardReveal items={reveal} reducedMotion={reducedMotion} guest={!view.status} onClose={() => setRevealOpen(false)} />
@@ -746,7 +749,7 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
         {revealOpen === false && reveal.length > 0 && <button type="button" className="btn btn-reward" onClick={() => setRevealOpen(true)}>🎁 Belohnungen ansehen</button>}
         {onNext && outcome === 'win' && <button type="button" className="btn btn-primary btn-big" onClick={onNext}>▶ Nächste Mission</button>}
         <button type="button" className={`btn ${onNext && outcome === 'win' ? '' : 'btn-primary'}`} onClick={onAgain}>↻ Nochmal</button>
-        <button type="button" className="btn" onClick={onMap}>🗺️ Zur Karte</button>
+        <button type="button" className="btn" onClick={onMap}><GameIcon name="map" /> Zur Karte</button>
       </div>
     </main>
   );

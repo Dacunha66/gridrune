@@ -1,6 +1,8 @@
 // Draft League screens: building a deck of 20 from the shared pool of 30, and the practice mode against the
 // computer (same pool rules, same fair track, no rewards). The online draft uses the deck builder from here.
 import { Coin } from '../components/Coin';
+import { GameIcon } from '../components/GameIcon';
+import { ResultIcon } from '../components/ResultIcon';
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
@@ -67,7 +69,7 @@ export function DraftDeckBuilder({ pool, deadline, busy, title, onBack, onDone }
   }, {});
   return (
     <main className="screen draft-build">
-      <Header title={title} onBack={onBack} right={left !== null ? <span className={`pill ${left <= 30 ? 'urgent-pill' : ''}`}>⏱ {fmt(left)}</span> : undefined} />
+      <Header title={title} onBack={onBack} right={left !== null ? <span className={`pill ${left <= 30 ? 'urgent-pill' : ''}`}>{fmt(left)}</span> : undefined} />
       <p className="hint">
         Wähle <b>{DRAFT_DECK_SIZE}</b> der {pool.length} Karten. Beide haben denselben Pool – dein Deck sieht der Gegner nicht.
         Legendäre Karten in deinem Deck kommen im Lauf sicher vorbei.
@@ -97,7 +99,7 @@ export function DraftDeckBuilder({ pool, deadline, busy, title, onBack, onDone }
       <div className="row-buttons draft-actions">
         <button type="button" className="btn" disabled={busy || sent} onClick={() => setDeck(completeDraftDeck(pool, deck))}>Auffüllen</button>
         <button type="button" className="btn btn-primary" disabled={busy || sent || deck.length !== DRAFT_DECK_SIZE} onClick={() => send(deck)}>
-          {sent ? '☁️ …' : 'Deck fertig ▶'}
+          {sent ? '…' : 'Deck fertig'}
         </button>
       </div>
     </main>
@@ -134,14 +136,14 @@ export function DraftPractice({ reducedMotion, skin, rune, onExit }: {
     <main className={`screen result result-${stage.outcome}`}>
       {stage.outcome === 'win' && !reducedMotion && <Confetti count={50} />}
       <div className="scroll result-body">
-        <div className="result-icon" aria-hidden="true">{stage.outcome === 'win' ? '🏆' : stage.outcome === 'draw' ? '🤝' : '💀'}</div>
+        <ResultIcon outcome={stage.outcome} />
         <h1>{title}</h1>
         <p className="muted">Draft-Übung gegen die KI</p>
         <p className="result-score"><span className="blue">{stage.score.player}</span> : <span className="red">{stage.score.cpu}</span></p>
         <p className="muted small">Übung – keine Belohnung. Online gegen echte Spieler gibt es <Coin /> für einen Sieg.</p>
       </div>
       <div className="menu-buttons">
-        <button type="button" className="btn btn-primary btn-big" onClick={restart}>🃏 Neuer Pool</button>
+        <button type="button" className="btn btn-primary btn-big" onClick={restart}><GameIcon name="draft" /> Neuer Pool</button>
         <button type="button" className="btn" onClick={onExit}>Zurück</button>
       </div>
     </main>
@@ -157,7 +159,7 @@ function PracticeDuel({ seed, pool, picks, rune, reducedMotion, onEnd, onQuit }:
     // The computer builds its deck from the same pool and takes the strongest card at every gate of its own track.
     const cpuHand = computerDraftHand(draftLayout(seed, 'b', completeDraftDeck(pool)));
     return {
-      cpuHand, first: null, rocks: [roundRock(seed, 0, arena.cells)], arena, label: '🃏 Draft-Übung', tossRng: createRng(),
+      cpuHand, first: null, rocks: [roundRock(seed, 0, arena.cells)], arena, label: 'Draft-Übung', tossRng: createRng(),
       finishLabel: 'Ergebnis', ai: { level: 'medium' }, runes: { player: rune, cpu: null },
     };
   });

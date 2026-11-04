@@ -2,6 +2,8 @@
 // 8 cards, the fight (the normal duel against the boss AI – continued after reloading), the server-confirmed
 // result, the leaderboard and the rewards. Everything that counts comes from the server function "raid".
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { GameIcon } from '../components/GameIcon';
+import { ResultIcon } from '../components/ResultIcon';
 import { Header } from './Header';
 import { Battle, BattleSetup, DuelRecord } from './Battle';
 import { Card } from '../components/Card';
@@ -159,7 +161,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
   if (view.k === 'sending') {
     return (
       <main className="screen raid">
-        <div className="admin-empty"><p>☁️ Der Server prüft deinen Kampf …</p></div>
+        <div className="admin-empty"><p>Der Server prüft deinen Kampf …</p></div>
       </main>
     );
   }
@@ -172,7 +174,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
       <main className={`screen result raid-result result-${r.outcome === 'expired' ? 'loss' : r.outcome}`}>
         {r.outcome === 'win' && !reducedMotion && <Confetti count={60} />}
         <div className="scroll result-body">
-          <div className="result-icon" aria-hidden="true">{r.outcome === 'win' ? '⚔️' : r.outcome === 'draw' ? '🤝' : '💀'}</div>
+          <ResultIcon outcome={r.outcome} />
           <h1>{title}</h1>
           <ul className="raid-facts">
             <li><span>Kontrollierte Felder</span><b>{r.fields}</b></li>
@@ -183,13 +185,13 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
             <li><span>Angriffe heute übrig</span><b>{r.attacksLeft}</b></li>
           </ul>
           <HpBar current={r.currentHp} max={r.maxHp} />
-          {r.granted.length > 0 && <p className="reward-line">🎁 <CoinText text={grantedText(r.granted)} /></p>}
+          {r.granted.length > 0 && <p className="reward-line"><GameIcon name="gift" /> <CoinText text={grantedText(r.granted)} /></p>}
           <p className="muted small">Vom Server geprüft und gewertet.</p>
         </div>
         <div className="menu-buttons">
-          {r.attacksLeft > 0 && r.currentHp > 0 && <button type="button" className="btn btn-primary btn-big" onClick={() => setView({ k: 'hand' })}>⚔️ Erneut angreifen</button>}
+          {r.attacksLeft > 0 && r.currentHp > 0 && <button type="button" className="btn btn-primary btn-big" onClick={() => setView({ k: 'hand' })}><GameIcon name="swords" /> Erneut angreifen</button>}
           <button type="button" className="btn" onClick={() => { setView({ k: 'overview' }); void load(); }}>Zur Raid-Übersicht</button>
-          <button type="button" className="btn" onClick={() => setView({ k: 'leaderboard' })}>🏆 Rangliste ansehen</button>
+          <button type="button" className="btn" onClick={() => setView({ k: 'leaderboard' })}><GameIcon name="trophy" /> Rangliste ansehen</button>
         </div>
       </main>
     );
@@ -222,7 +224,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
         {error && <p className="hint warn-text" role="alert">{error}</p>}
         <div className="row-buttons">
           <button type="button" className="btn btn-primary btn-wide" disabled={hand.length !== HAND_SIZE || busy} onClick={() => void challenge()}>
-            {busy ? '☁️ …' : `⚔️ ${raid.bossName} angreifen`}
+            {busy ? '…' : <><GameIcon name="swords" /> {raid.bossName} angreifen</>}
           </button>
         </div>
       </main>
@@ -238,7 +240,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
         {error && <p className="hint warn-text" role="alert">{error}</p>}
         {data && !raid && (
           <section className="raid-empty">
-            <p className="raid-empty-icon" aria-hidden="true">🌙</p>
+            <p className="raid-empty-icon" aria-hidden="true"><GameIcon name="raid" /></p>
             <h2>Gerade ist kein Weltboss erwacht.</h2>
             <p className="muted">Sobald ein Raid startet, findest du ihn hier.</p>
           </section>
@@ -249,7 +251,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
               <div className="raid-boss-art">
                 {raid.image && imageUrl(raid.image.id)
                   ? <DesignImage src={imageUrl(raid.image.id)!} fit={raid.image.fit} />
-                  : <span className="raid-boss-emoji" aria-hidden="true">{raid.cls ? CLASS_INFO[raid.cls].icon : '👹'}</span>}
+                  : <span className="raid-boss-emoji" aria-hidden="true"><GameIcon name="raid" /></span>}
                 <span className="raid-status-pill">{STATUS_TEXT[raid.status]}</span>
               </div>
               <h2 className="raid-boss-name">{raid.bossName}</h2>
@@ -273,23 +275,23 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
             </section>
 
             {data.open && !readFight(data.open.id)?.done && (
-              <p className="raid-open">⏳ Du hast einen begonnenen Kampf – er zählt als Niederlage, wenn du ihn nicht bis {new Date(data.open.expiresAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr beendest.</p>
+              <p className="raid-open"><GameIcon name="hourglass" /> Du hast einen begonnenen Kampf – er zählt als Niederlage, wenn du ihn nicht bis {new Date(data.open.expiresAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr beendest.</p>
             )}
-            {data.granted && data.granted.length > 0 && <p className="reward-line">🎁 Gutgeschrieben: <CoinText text={grantedText(data.granted)} /></p>}
+            {data.granted && data.granted.length > 0 && <p className="reward-line"><GameIcon name="gift" /> Gutgeschrieben: <CoinText text={grantedText(data.granted)} /></p>}
           </>
         )}
       </div>
       {raid && me && (
         <div className="menu-buttons raid-actions">
           {data?.open
-            ? <button type="button" className="btn btn-primary btn-big" onClick={() => setView({ k: 'fight', ticket: data.open! })}>⚔️ Kampf fortsetzen</button>
+            ? <button type="button" className="btn btn-primary btn-big" onClick={() => setView({ k: 'fight', ticket: data.open! })}><GameIcon name="swords" /> Kampf fortsetzen</button>
             : <button type="button" className="btn btn-primary btn-big" disabled={raid.status !== 'active' || me.attacksLeft <= 0}
               onClick={() => { setError(null); setView({ k: 'hand' }); }}>
-              {raid.status !== 'active' ? STATUS_TEXT[raid.status] : me.attacksLeft <= 0 ? 'Heute keine Angriffe mehr' : '⚔️ Boss herausfordern'}
+              {raid.status !== 'active' ? STATUS_TEXT[raid.status] : me.attacksLeft <= 0 ? 'Heute keine Angriffe mehr' : 'Boss herausfordern'}
             </button>}
           <div className="row-buttons">
-            <button type="button" className="btn" onClick={() => setView({ k: 'rewards' })}>🎁 Belohnungen</button>
-            <button type="button" className="btn" onClick={() => setView({ k: 'leaderboard' })}>🏆 Rangliste</button>
+            <button type="button" className="btn" onClick={() => setView({ k: 'rewards' })}><GameIcon name="gift" /> Belohnungen</button>
+            <button type="button" className="btn" onClick={() => setView({ k: 'leaderboard' })}><GameIcon name="trophy" /> Rangliste</button>
           </div>
         </div>
       )}
@@ -306,7 +308,7 @@ function RaidFight({ ticket, reducedMotion, onDone, onQuit, test = false }: {
     const s = ticket.snapshot;
     return {
       cpuHand: toHand(s.deck), first: null, rocks: [], arena: { id: 'raid', name: s.arenaName, cells: s.cells, status: 'active', ranked: false, updatedAt: '' },
-      label: `${test ? '🧪 TEST · ' : '👹 '}${s.bossName} · Phase ${s.phase + 1}: ${s.phaseName}`, tossRng: rngs.toss, rng: rngs.ai, finishLabel: 'Ergebnis', ai: raidAi(s),
+      label: `${test ? 'TEST · ' : ''}${s.bossName} · Phase ${s.phase + 1}: ${s.phaseName}`, tossRng: rngs.toss, rng: rngs.ai, finishLabel: 'Ergebnis', ai: raidAi(s),
       badgeText: '', runes: { player: ticket.playerRune, cpu: s.bossRune },
     };
   });
@@ -431,7 +433,7 @@ export function RaidTestFight({ config, phase, unlocked, deck, rune, reducedMoti
     return (
       <main className="screen result raid-result">
         <div className="scroll result-body">
-          <div className="result-icon" aria-hidden="true">🧪</div>
+          <div className="result-icon" aria-hidden="true"><GameIcon name="gear" /></div>
           <h1>Testkampf: {result.text}</h1>
           <ul className="raid-facts">
             <li><span>Phase</span><b>{phase + 1}: {config.phases[phase]?.name}</b></li>
@@ -441,7 +443,7 @@ export function RaidTestFight({ config, phase, unlocked, deck, rune, reducedMoti
           <p className="muted small">Nur ein Test – nichts wurde gespeichert, kein Angriff verbraucht, keine Belohnung.</p>
         </div>
         <div className="menu-buttons">
-          <button type="button" className="btn btn-primary btn-big" onClick={() => { setResult(null); setTicket({ ...ticket, seed: newMatchSeed() }); }}>🧪 Noch ein Testkampf</button>
+          <button type="button" className="btn btn-primary btn-big" onClick={() => { setResult(null); setTicket({ ...ticket, seed: newMatchSeed() }); }}>Noch ein Testkampf</button>
           <button type="button" className="btn" onClick={onExit}>Zurück zum Admin</button>
         </div>
       </main>

@@ -1,6 +1,8 @@
 // Collection League ("Rangliste") against the computer. Same rules the online league will use:
 // deck limits, seeded fair runner, rock cells, two rounds with swapped start and a decider. Signed in, the server hands out the match and checks it; a won match unlocks the rarest new discovery.
 import { useMemo, useRef, useState } from 'react';
+import { GameIcon } from '../components/GameIcon';
+import { ResultIcon } from '../components/ResultIcon';
 import { Card } from '../components/Card';
 import { CARDS, RARITY_LABEL, RARITY_ORDER, Rarity, cardPower, getCard, ownedActiveIds } from '../game/cards';
 import { Outcome, Side } from '../game/battle';
@@ -171,13 +173,13 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
             <h2>Match {matchCode(seed)}</h2>
             <p className="muted small">Fingerabdruck (vor dem Match festgelegt): <span className="mono break">{fingerprint || '…'}</span></p>
             <ul className="plain-list">
-              <li>🏃 Lauf mit 8 Toren: je <b>2 Karten aus deinem Deck</b> und <b>1 neutrale Entdeckung</b> (für beide Spieler gleich).</li>
-              <li>🪨 Stolpersteine: −1 für die nächste Karte. Kein Vorspulen, kein Überspringen.</li>
-              <li>⚔️ <b>2 Runden</b> mit derselben Hand, der Start wird getauscht. 2:0 gewinnt, bei 1:1 folgt ein <b>Entscheidungsduell</b>.</li>
-              <li>🪨 In jedem Duell blockiert ein <b>Fels</b> ein Feld: 15 Felder, kein Unentschieden, kein Startvorteil.</li>
+              <li><GameIcon name="run" /> Lauf mit 8 Toren: je <b>2 Karten aus deinem Deck</b> und <b>1 neutrale Entdeckung</b> (für beide Spieler gleich).</li>
+              <li><GameIcon name="skip" /> Stolpersteine: −1 für die nächste Karte. Kein Vorspulen, kein Überspringen.</li>
+              <li><GameIcon name="swords" /> <b>2 Runden</b> mit derselben Hand, der Start wird getauscht. 2:0 gewinnt, bei 1:1 folgt ein <b>Entscheidungsduell</b>.</li>
+              <li><GameIcon name="lock" /> In jedem Duell blockiert ein <b>Fels</b> ein Feld: 15 Felder, kein Unentschieden, kein Startvorteil.</li>
             </ul>
             {runes && <RuneMatchup player={playerRune} cpu={cpuRune} note={runeNote} />}
-            <p className="league-prize">🎁 <b>Gewinnst du das Match</b>, gehört dir die seltenste <b>neue Entdeckung</b> aus deinem Lauf. Ist keine neu, gibt es <Coin /> 50.</p>
+            <p className="league-prize"><GameIcon name="gift" /> <b>Gewinnst du das Match</b>, gehört dir die seltenste <b>neue Entdeckung</b> aus deinem Lauf. Ist keine neu, gibt es <Coin /> 50.</p>
             <p className="muted small">{account ? 'Match gegen den Computer – der Server prüft Lauf und Duelle, bevor die Belohnung gutgeschrieben wird.' : 'Als Gast spielst du ohne Belohnung – melde dich an, um Karten zu gewinnen.'}</p>
           </section>
         </div>
@@ -233,17 +235,17 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
     ? [{ kind: 'card', cardId: reward.newCard, source: 'Sieg in der Rangliste' }]
     : reward && reward.coins > 0 ? [{ kind: 'coins', amount: reward.coins, sources: ['Sieg in der Rangliste (keine neue Entdeckung)'] }] : [];
   const statusText = !payout ? '' : {
-    checking: '☁️ Match wird vom Server geprüft …',
+    checking: 'Match wird vom Server geprüft …',
     paid: reward?.newCard ? `✓ Geprüft – neue Karte: ${getCard(reward.newCard).name}` : `✓ Geprüft – keine neue Entdeckung, dafür 🪙 ${reward?.coins ?? 0}`,
-    pending: '⏳ Keine Verbindung – die Belohnung wird gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).',
-    rejected: '⚠️ Das Match konnte nicht bestätigt werden – es gibt keine Belohnung.',
+    pending: 'Keine Verbindung – die Belohnung wird gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).',
+    rejected: 'Das Match konnte nicht bestätigt werden – es gibt keine Belohnung.',
     guest: 'Als Gast gibt es keine Belohnung – mit einem Konto gewinnst du hier Karten.',
     lost: 'Nur ein gewonnenes Match bringt eine neue Karte.',
   }[payout.status];
   return (
     <main className={`screen result ${won ? 'result-win' : 'result-loss'}`}>
       {revealOpen && reveal.length > 0 && <RewardReveal items={reveal} reducedMotion={reducedMotion} onClose={() => setRevealOpen(false)} />}
-      <div className="result-icon" aria-hidden="true">{won ? '🏆' : '💀'}</div>
+      <ResultIcon outcome={won ? 'win' : 'loss'} />
       <h1>{won ? 'Match gewonnen!' : 'Match verloren'}</h1>
       <p className="result-score"><span className="blue">{wins(match, 'player')}</span> : <span className="red">{wins(match, 'cpu')}</span></p>
       <div className="reward-box">
@@ -335,7 +337,7 @@ function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay, busy = false,
       <footer className="bottombar">
         {notice && <p className="league-notice" role="alert">{notice}</p>}
         <button type="button" className="btn btn-primary btn-wide" disabled={errors.length > 0 || busy} onClick={onPlay}>
-          {errors.length ? 'Deck ist noch nicht gültig' : busy ? '☁️ Match wird vorbereitet …' : '▶ Match starten'}
+          {errors.length ? 'Deck ist noch nicht gültig' : busy ? 'Match wird vorbereitet …' : 'Match starten'}
         </button>
       </footer>
     </main>

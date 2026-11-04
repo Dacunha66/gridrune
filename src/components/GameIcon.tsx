@@ -2,7 +2,7 @@
 // same Grimoire style. Colour comes from `currentColor`; `.gi` in styles.css sets size and the rune glow.
 export type GameIconName =
   | 'play' | 'shop' | 'book' | 'deck' | 'scroll' | 'gear' | 'map' | 'swords' | 'draft' | 'trophy' | 'raid' | 'back'
-  | 'cards' | 'crown' | 'handshake' | 'skull' | 'user' | 'leaf' | 'sword' | 'flame' | 'run' | 'gift' | 'lock' | 'check' | 'close' | 'fast' | 'skip' | 'next';
+  | 'cards' | 'crown' | 'handshake' | 'skull' | 'user' | 'leaf' | 'sword' | 'flame' | 'run' | 'gift' | 'lock' | 'check' | 'close' | 'fast' | 'skip' | 'next' | 'share' | 'dice' | 'bot' | 'book-open' | 'hourglass';
 
 const PATHS: Record<GameIconName, string> = {
   play: 'M14.5 3.5h6v6L9.5 20.5l-6-6zM5 13l6 6M3 21l3-3',
@@ -33,6 +33,11 @@ const PATHS: Record<GameIconName, string> = {
   fast: 'M4 6l7 6-7 6zM13 6l7 6-7 6z',
   skip: 'M4 6l7 6-7 6zM12 6l7 6-7 6zM20.5 5.5v13',
   next: 'M9 5l7 7-7 7',
+  share: 'M12 15V3.5M7.5 8L12 3.5 16.5 8M5 12.5v7.5h14v-7.5',
+  dice: 'M5 5h14v14H5zM9 9h.01M15 9h.01M12 12h.01M9 15h.01M15 15h.01',
+  bot: 'M6 9h12v10H6zM12 4.5V9M9.5 13h.01M14.5 13h.01M9.5 16.5h5M3.5 13v3M20.5 13v3',
+  'book-open': 'M3 5.5c3-1 6-1 9 1 3-2 6-2 9-1V19c-3-1-6-1-9 1-3-2-6-2-9-1zM12 6.5V20',
+  hourglass: 'M6.5 3.5h11M6.5 20.5h11M7.5 3.5c0 5 9 6 9 8.5s-9 3.5-9 8.5M16.5 3.5c0 5-9 6-9 8.5s9 3.5 9 8.5',
 };
 
 export function GameIcon({ name, className = '', label }: { name: GameIconName; className?: string; label?: string }) {

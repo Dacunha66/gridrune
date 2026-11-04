@@ -1,6 +1,8 @@
 // Online duel against a real player: choose 8 cards, then challenge a friend (invite code), enter a friend's
 // code, or look for a random opponent. The server is the referee; this screen shows its view live.
 import { Coin } from '../components/Coin';
+import { GameIcon } from '../components/GameIcon';
+import { ResultIcon } from '../components/ResultIcon';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
@@ -166,7 +168,7 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
       <main className={`screen result result-${r.outcome}`}>
         {r.outcome === 'win' && !reducedMotion && <Confetti count={60} />}
         <div className="scroll result-body">
-          <div className="result-icon" aria-hidden="true">{r.outcome === 'win' ? '🏆' : r.outcome === 'draw' ? '🤝' : '💀'}</div>
+          <ResultIcon outcome={r.outcome} />
           <h1>{title}</h1>
           <p className="muted">gegen {view.opponentName ?? 'Gegner'}</p>
           <p className="result-score"><span className="blue">{r.score.me}</span> : <span className="red">{r.score.opponent}</span></p>
@@ -174,10 +176,10 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
           {r.outcome === 'win' && (
             <p className="reward-line">{r.coins > 0 ? <><Coin /> +{r.coins} gutgeschrieben</> : r.score.me + r.score.opponent === 0 ? 'Keine Münzen – das Duell hatte noch nicht begonnen.' : 'Heute keine Münzen mehr gegen diesen Gegner (zählt aber in der Statistik).'}</p>
           )}
-          {stats && <p className="muted small">{draftMode ? 'Draft' : 'Online'}-Bilanz: 🏆 {stats.wins} · 🤝 {stats.draws} · 💀 {stats.losses}</p>}
+          {stats && <p className="muted small">{draftMode ? 'Draft' : 'Online'}-Bilanz: <GameIcon name="crown" /> {stats.wins} · <GameIcon name="handshake" /> {stats.draws} · <GameIcon name="skull" /> {stats.losses}</p>}
         </div>
         <div className="menu-buttons">
-          <button type="button" className="btn btn-primary btn-big" onClick={() => { setView(null); setDuelDone(false); }}>{draftMode ? '🃏 Neuer Draft' : '⚔️ Neues Online-Duell'}</button>
+          <button type="button" className="btn btn-primary btn-big" onClick={() => { setView(null); setDuelDone(false); }}>{draftMode ? 'Neuer Draft' : 'Neues Online-Duell'}</button>
           <button type="button" className="btn" onClick={onExit}>Zum Menü</button>
         </div>
       </main>
@@ -207,12 +209,12 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
             <section className="online-card">
               <p>Dein Einladungs-Code:</p>
               <p className="invite-code" aria-label={`Code ${view.code?.split('').join(' ')}`}>{view.code}</p>
-              <button type="button" className="btn btn-primary" onClick={share}>📤 Einladung teilen</button>
+              <button type="button" className="btn btn-primary" onClick={share}><GameIcon name="share" /> Einladung teilen</button>
               <p className="muted small">Dein Freund öffnet GridRune, meldet sich an, tippt auf „{title}“ und gibt den Code ein. Das Duell startet automatisch.</p>
             </section>
           ) : (
             <section className="online-card">
-              <p className="searching" aria-live="polite">🔎 Suche einen Gegner …</p>
+              <p className="searching" aria-live="polite">Suche einen Gegner …</p>
               <p className="muted small">Sobald jemand anderes ebenfalls sucht, startet das Duell. Lass diese Seite dafür geöffnet.</p>
             </section>
           )}
@@ -253,7 +255,7 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
             Ist ein Spieler {PVP_ABSENT_SECONDS} Sekunden nicht verbunden, gewinnt der andere. Ein Sieg bringt <Coin /> {PVP_WIN_COINS}.
           </p>
         )}
-        {stats && <p className="small">Deine {draftMode ? 'Draft' : 'Online'}-Bilanz: 🏆 {stats.wins} · 🤝 {stats.draws} · 💀 {stats.losses}</p>}
+        {stats && <p className="small">Deine {draftMode ? 'Draft' : 'Online'}-Bilanz: <GameIcon name="crown" /> {stats.wins} · <GameIcon name="handshake" /> {stats.draws} · <GameIcon name="skull" /> {stats.losses}</p>}
 
         {!draftMode && <section className="brief-hand">
           <h2>Deine 8 Karten <span className="muted small">{hand.length}/{HAND_SIZE}</span></h2>
@@ -278,15 +280,15 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
         {draftMode && runeDef && <p className="small rune-reward"><RuneBadge rune={runeDef} className="small" /> <span>Deine Rune: <b>{runeDef.name}</b></span></p>}
 
         <section className="online-actions">
-          <button type="button" className="btn btn-primary btn-big" disabled={!ready || busy} onClick={() => start('invite')}>🤝 Freund herausfordern</button>
+          <button type="button" className="btn btn-primary btn-big" disabled={!ready || busy} onClick={() => start('invite')}>Freund herausfordern</button>
           <form className="code-form" onSubmit={submitCode}>
             <input className="admin-input code-input" value={code} placeholder="CODE" inputMode="text" autoCapitalize="characters" autoComplete="off"
               aria-label="Einladungs-Code" maxLength={8} onChange={(e) => setCode(normalizeCode(e.target.value))} />
             <button type="submit" className="btn" disabled={!ready || busy}>Beitreten</button>
           </form>
-          <button type="button" className="btn" disabled={!ready || busy} onClick={() => start('queue')}>🎲 Zufälligen Gegner suchen</button>
-          {onPractice && <button type="button" className="btn btn-ghost" onClick={onPractice}>🤖 Üben gegen die KI</button>}
-          {busy && <p className="muted small">☁️ Einen Moment …</p>}
+          <button type="button" className="btn" disabled={!ready || busy} onClick={() => start('queue')}><GameIcon name="dice" /> Zufälligen Gegner suchen</button>
+          {onPractice && <button type="button" className="btn btn-ghost" onClick={onPractice}><GameIcon name="bot" /> Üben gegen die KI</button>}
+          {busy && <p className="muted small">Einen Moment …</p>}
           {error && <p className="admin-warning" role="alert">{error}</p>}
         </section>
       </div>
@@ -305,7 +307,7 @@ function OnlineDuel({ view, reducedMotion, onView, onDone, onQuit }: {
     first: state.turn,
     rocks: state.rocks,
     arena: { ...CLASSIC_ARENA, name: view.arenaName ?? CLASSIC_ARENA.name, cells: state.terrain },
-    label: `⚔️ Online · ${view.opponentName ?? 'Gegner'}`,
+    label: `Online · ${view.opponentName ?? 'Gegner'}`,
     tossRng: Math.random,
     finishLabel: 'Ergebnis',
   }));
@@ -366,7 +368,7 @@ function DraftPrep({ view, skin, reducedMotion, onView, onQuit }: {
       <Header title="Draft-Liga" onBack={onQuit} />
       <div className="scroll online-body">
         <section className="online-card">
-          <p className="searching" aria-live="polite">{d.runDone ? `Warte auf ${opponent} …` : '☁️ Einen Moment …'}</p>
+          <p className="searching" aria-live="polite">{d.runDone ? `Warte auf ${opponent} …` : 'Einen Moment …'}</p>
           <ul className="draft-status">
             <li>Du: Deck {d.deck ? '✓' : '…'} · Lauf {d.runDone ? '✓' : '…'}</li>
             <li>{opponent}: Deck {d.opponentDeckDone ? '✓' : '…'} · Lauf {d.opponentRunDone ? '✓' : '…'}</li>

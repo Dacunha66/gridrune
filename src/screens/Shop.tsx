@@ -26,7 +26,7 @@ export function skinStyle(colors: [string, string, string]): CSSProperties {
   return { '--player': colors[0], '--player-dark': colors[1], '--player-light': colors[2] } as CSSProperties;
 }
 
-const PACK_ART: Record<string, string> = { abenteurer: '🎴', helden: '👑' };
+const PACK_ART: Record<string, 'gift' | 'crown'> = { abenteurer: 'gift', helden: 'crown' };
 
 /** The booster: the admin's picture, otherwise a foil pack drawn in CSS with the pack's symbol and name. */
 export function PackArt({ pack, big = false, look }: { pack: PackDef; big?: boolean; look?: PackLook }) {
@@ -36,7 +36,7 @@ export function PackArt({ pack, big = false, look }: { pack: PackDef; big?: bool
       {view.image ? <CampaignImage img={view.image} /> : (
         <>
           <span className="pack-crimp top" />
-          <span className="pack-emblem">{PACK_ART[pack.id] ?? '🎴'}</span>
+          <span className="pack-emblem"><GameIcon name={PACK_ART[pack.id] ?? 'gift'} /></span>
           <span className="pack-label">{view.name}</span>
           <span className="pack-crimp bottom" />
         </>
@@ -89,7 +89,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
       if (busy) return;
       if (save.coins < pack.price) return setMessage(`Dir fehlen noch 🪙 ${pack.price - save.coins}.`);
       setBusy(true);
-      setMessage('☁️ Kauf wird bestätigt …');
+      setMessage('Kauf wird bestätigt …');
       const r = await buyPackRemote(pack.id);
       setBusy(false);
       if (r.cloud) server.adopt(r.cloud);
@@ -114,7 +114,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
     if (server) {
       if (busy) return;
       setBusy(true);
-      setMessage('☁️ Kauf wird bestätigt …');
+      setMessage('Kauf wird bestätigt …');
       const r = await buySkinRemote(skin.id);
       setBusy(false);
       if (r.cloud) server.adopt(r.cloud);

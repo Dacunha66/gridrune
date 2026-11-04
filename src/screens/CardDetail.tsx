@@ -11,12 +11,12 @@ export function CardDetail({ id, locked, status, onClose }: { id: string; locked
         <h2>{locked ? '???' : c.name}</h2>
         <p className={`rarity-text rarity-${c.rarity}`}>{RARITY_LABEL[c.rarity]}</p>
         {!locked && (
-          <p className="values-line">⬆ {c.top} · ➡ {c.right} · ⬇ {c.bottom} · ⬅ {c.left}</p>
+          <p className="values-line">↑ {c.top} · → {c.right} · ↓ {c.bottom} · ← {c.left}</p>
         )}
         {!locked && c.cls && <p className="values-line">{CLASS_INFO[c.cls].icon} {CLASS_INFO[c.cls].label}</p>}
         {!locked && c.effect && (
           <div className="effect-box">
-            <p><strong>✨ {EFFECTS[c.effect].name}</strong></p>
+            <p><strong>{EFFECTS[c.effect].name}</strong></p>
             <p>{EFFECTS[c.effect].text}</p>
           </div>
         )}

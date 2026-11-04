@@ -1753,3 +1753,38 @@ label.btn.disabled { opacity: .45; }
 .board:not(.has-art) .cell.terrain-schlacht { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #5c2029; }
 .board:not(.has-art) .cell.rock { background: #222b40; }
 .board:not(.has-art) .cell.droppable { background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.1)), #24506a; box-shadow: inset 0 0 0 2px var(--glow), 0 0 14px var(--glow-soft); }
+
+/* ---------- Grimoire: one panel language for every screen (step 4) ---------- */
+.chip { border-radius: 4px; border-color: var(--gold-faint); background: rgba(16, 24, 44, 0.85); color: var(--text); }
+.chip.active { background: linear-gradient(180deg, var(--gold-light), #c99a3e); color: var(--accent-text); border-color: var(--gold-dark); box-shadow: 0 0 10px rgba(227, 183, 90, 0.3); }
+.shop-item, .skin-item, .admin-row, .runner-info, .world-tile, .brief-body section, .result-goals li, .check-world, .rune-row, .rune-side,
+.account-card, .reward-tile, .raid-me > div, .raid-facts li, .raid-myrank, .raid-rewards li, .deck-tray {
+  border-radius: 8px; border: 1px solid var(--gold-faint); background: rgba(16, 24, 44, 0.88);
+}
+.world-tile, .shop-item, .deck-tray, .account-card { box-shadow: inset 0 0 0 3px rgba(11, 17, 32, 0.6), inset 0 0 0 4px rgba(212, 166, 74, 0.12); }
+.world-tile:not(.locked):hover, .world-tile:not(.locked):focus-visible { border-color: var(--gold-line); box-shadow: 0 0 18px var(--glow-soft); }
+.reward-tile { border-color: var(--gold-line); box-shadow: 0 0 14px rgba(227, 183, 90, 0.12); }
+.rune-row.on, .rune-row.equipped { border-color: var(--glow); box-shadow: 0 0 14px var(--glow-soft); }
+.league-row.in-deck-row { border-color: var(--gold-line); }
+.in-deck-tag, .draft-tag { border-radius: 3px; background: linear-gradient(180deg, var(--gold-light), #c99a3e); color: var(--accent-text); font-family: var(--f-body); }
+.in-deck { border-radius: 3px !important; background: rgba(11, 17, 32, 0.85) !important; color: var(--glow) !important; border: 1px solid var(--glow); text-shadow: 0 0 6px var(--glow-soft); }
+.world-tile h2, .world-name, .brief-head h2, .rune-row strong, .shop-item h3, .pack-name { font-family: var(--f-display); color: var(--gold-light); letter-spacing: 0.02em; }
+.prose h2 { font-family: var(--f-display); color: var(--gold-light); }
+.lock-big .gi { width: 46px; height: 46px; color: var(--parchment); filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7)); }
+.station-lock .gi, .station-icon .gi { width: 60%; height: 60%; color: var(--parchment); }
+.world-tile-fallback .gi { width: 56px; height: 56px; color: var(--gold); }
+.pack-emblem .gi { width: 48px; height: 48px; color: var(--gold-light); filter: drop-shadow(0 0 8px rgba(227, 183, 90, 0.5)); }
+.goal-mark { color: var(--muted); } .goal-mark.met { color: var(--gold-light); text-shadow: 0 0 8px rgba(227, 183, 90, 0.7); } .goal-mark.had { color: var(--gold); }
+.test-banner { border-radius: 4px; }
+/* Raid in Grimoire colours: the boss glows in rune cyan. */
+.btn-raid { background: linear-gradient(180deg, #1c2744, #131b31); border-color: var(--gold-line); }
+.raid-boss { background: radial-gradient(120% 90% at 50% 0%, rgba(69, 227, 207, 0.14), rgba(11, 17, 32, 0.92)); border: 1px solid var(--gold-line); border-radius: 8px; box-shadow: inset 0 0 0 3px #0b1120, inset 0 0 0 4px var(--gold-faint); }
+.raid-boss-art { border-radius: 6px; border: 1px solid var(--gold-line); background: radial-gradient(circle at 50% 40%, #1c2a46, #0b1120); box-shadow: 0 0 30px rgba(69, 227, 207, 0.22), inset 0 0 40px rgba(0, 0, 0, 0.6); }
+.raid-boss-emoji .gi { width: 46%; height: 46%; color: var(--glow); filter: drop-shadow(0 0 16px var(--glow-soft)); }
+.raid-boss-name { font-family: var(--f-display); color: var(--gold-light); text-shadow: 0 0 14px rgba(69, 227, 207, 0.35), 0 2px 0 var(--gold-dark); }
+.raid-status-pill { border-radius: 4px; border: 1px solid var(--gold-line); }
+.raid-hp { border-radius: 4px; border-color: var(--gold-line); }
+.raid-empty-icon .gi { width: 56px; height: 56px; color: var(--glow); filter: drop-shadow(0 0 12px var(--glow-soft)); }
+.raid-open { border-radius: 6px; }
+.raid-open .gi, .reward-line .gi, .league-prize .gi, .plain-list .gi { color: var(--gold); }
+.searching { font-family: var(--f-display); color: var(--gold-light); }

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { GameIcon } from '../components/GameIcon';
 import { Card } from '../components/Card';
 import { ClassShield } from '../components/cardIcons';
 import { DECK_SIZE, RARITY_LABEL, RARITY_ORDER, Rarity, STARTER_DECK, cardPower, getCard, ownedActiveIds } from '../game/cards';
@@ -62,10 +63,10 @@ export function DeckEditor({ save, onSave, onBack, runes = null }: Props) {
 
   return (
     <main className="screen deck-screen">
-      <Header title="Deck" onBack={onBack} backButton={<ConfirmButton label="◀ Zurück" ariaLabel="Zurück" confirmLabel="Verwerfen?" onConfirm={onBack} skipConfirm={!dirty} />} right={<span className={`pill ${valid ? 'ok' : 'warn'}`}>{deck.length}/{DECK_SIZE}</span>} />
+      <Header title="Deck" onBack={onBack} backButton={<ConfirmButton label={<><GameIcon name="back" /> Zurück</>} ariaLabel="Zurück" confirmLabel="Verwerfen?" onConfirm={onBack} skipConfirm={!dirty} />} right={<span className={`pill ${valid ? 'ok' : 'warn'}`}>{deck.length}/{DECK_SIZE}</span>} />
       {runes && (
         <div className="segmented deck-tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={tab === 'cards'} className={`seg ${tab === 'cards' ? 'active' : ''}`} onClick={() => setTab('cards')}>🃏 Karten {deck.length}/{DECK_SIZE}</button>
+          <button type="button" role="tab" aria-selected={tab === 'cards'} className={`seg ${tab === 'cards' ? 'active' : ''}`} onClick={() => setTab('cards')}><GameIcon name="cards" /> Karten {deck.length}/{DECK_SIZE}</button>
           <button type="button" role="tab" aria-selected={tab === 'rune'} className={`seg ${tab === 'rune' ? 'active' : ''}`} onClick={() => setTab('rune')}>
             {rune ? <RuneBadge rune={rune} className="small" /> : 'ᚱ'} Rune{rune ? '' : ': keine'}
           </button>

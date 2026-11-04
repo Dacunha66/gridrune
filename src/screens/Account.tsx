@@ -1,6 +1,7 @@
 // Account screens of the web version: welcome (sign in / create account / play as guest), forgotten password,
 // the new password after the e-mail link, and the player's own account page.
 import { Coin } from '../components/Coin';
+import { GameIcon } from '../components/GameIcon';
 import { FormEvent, ReactNode, useState } from 'react';
 import logoMark from '../assets/gridrune-mark.png';
 import logoWord from '../assets/gridrune-wordmark.png';
@@ -113,7 +114,7 @@ export function Welcome({ onGuest }: { onGuest: () => void }) {
               {mode === 'login' && <button type="button" className="btn btn-ghost" onClick={() => go('forgot')}>Passwort vergessen?</button>}
             </>
           )}
-          <button type="button" className="btn btn-ghost" onClick={() => go('start')}>◀ Zurück</button>
+          <button type="button" className="btn btn-ghost" onClick={() => go('start')}><GameIcon name="back" /> Zurück</button>
         </form>
       )}
     </main>
@@ -247,8 +248,8 @@ export function CloudGate({ phase, notice, browserSave, onChoose, onRetry }: {
             {notice && <p className="admin-warning">{notice}</p>}
             <p>Möchtest du deinen bisherigen Spielstand aus diesem Browser in dein Konto übernehmen? Das geht nur jetzt, einmal.</p>
             <ul className="plain-list">
-              <li>🃏 {cards} Karten · <Coin /> {browserSave.coins} Münzen</li>
-              <li>⭐ {stars} Kampagnen-Sterne · 🏆 {browserSave.stats.wins} Siege</li>
+              <li>{cards} Karten · <Coin /> {browserSave.coins} Münzen</li>
+              <li>★ {stars} Kampagnen-Sterne · {browserSave.stats.wins} Siege</li>
             </ul>
             <button type="button" className="btn btn-primary btn-big" onClick={() => onChoose(true)}>Spielstand übernehmen</button>
             <button type="button" className="btn" onClick={() => onChoose(false)}>Neu beginnen</button>
@@ -261,7 +262,7 @@ export function CloudGate({ phase, notice, browserSave, onChoose, onRetry }: {
             <button type="button" className="btn btn-primary" onClick={onRetry}>Erneut versuchen</button>
           </>
         ) : (
-          <p className="center">☁️ Dein Spielstand wird geladen …</p>
+          <p className="center">Dein Spielstand wird geladen …</p>
         )}
       </div>
     </main>
