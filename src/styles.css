@@ -1741,3 +1741,15 @@ label.btn.disabled { opacity: .45; }
 .gate-choice-timer { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--gold-faint); }
 .gate-choice-timer span { background: linear-gradient(90deg, var(--gold), var(--glow)); box-shadow: 0 0 10px var(--glow-soft); }
 .lane-controls .btn-lane { font-size: 26px; color: var(--gold); }
+
+/* Brighter weathered stone slabs (no board picture): light from the top left, so the board never reads as a black hole. */
+.board:not(.has-art) { background: linear-gradient(rgba(26, 35, 56, 0.72), rgba(26, 35, 56, 0.72)), url('./assets/stone-wall.webp') center / 260% auto; }
+.board:not(.has-art) .cell { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.18)), #34405c; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -3px 6px rgba(0, 0, 0, 0.3), 0 2px 3px rgba(0, 0, 0, 0.35); }
+.board:not(.has-art) .cell.terrain-wald { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #2a5a40; }
+.board:not(.has-art) .cell.terrain-lava { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #6b3216; }
+.board:not(.has-art) .cell.terrain-eis { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #26506f; }
+.board:not(.has-art) .cell.terrain-schatten { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #3d2a63; }
+.board:not(.has-art) .cell.terrain-runen { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #1d4566; }
+.board:not(.has-art) .cell.terrain-schlacht { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #5c2029; }
+.board:not(.has-art) .cell.rock { background: #222b40; }
+.board:not(.has-art) .cell.droppable { background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.1)), #24506a; box-shadow: inset 0 0 0 2px var(--glow), 0 0 14px var(--glow-soft); }
