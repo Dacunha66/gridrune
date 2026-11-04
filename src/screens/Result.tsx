@@ -1,5 +1,6 @@
 import { CSSProperties } from 'react';
 import { Coin } from '../components/Coin';
+import { GameIcon, GameIconName } from '../components/GameIcon';
 import { Card } from '../components/Card';
 import { Burst, Confetti, useCountUp } from '../components/Effects';
 import { Outcome } from '../game/battle';
@@ -23,7 +24,7 @@ interface Props {
 }
 
 const TITLES: Record<Outcome, string> = { win: 'Sieg!', draw: 'Unentschieden', loss: 'Niederlage' };
-const ICONS: Record<Outcome, string> = { win: '🏆', draw: '🤝', loss: '💀' };
+const ICONS: Record<Outcome, GameIconName> = { win: 'crown', draw: 'handshake', loss: 'skull' };
 
 export const RARITY_COLORS: Record<string, string[]> = {
   common: ['#ffffff', '#c7ccd6'],
@@ -41,7 +42,7 @@ export function Result({ outcome, reward, score, coins, onAgain, onMenu, status,
   return (
     <main className={`screen result result-${outcome}`}>
       {outcome === 'win' && <Confetti count={70} />}
-      <div className="result-icon" aria-hidden="true">{ICONS[outcome]}</div>
+      <div className="result-icon" aria-hidden="true"><GameIcon name={ICONS[outcome]} /></div>
       <h1>{TITLES[outcome]}</h1>
       <p className="result-score"><span className="blue">{score.player}</span> : <span className="red">{score.cpu}</span></p>
 
@@ -49,10 +50,10 @@ export function Result({ outcome, reward, score, coins, onAgain, onMenu, status,
         <p className="reward-coins">+ <Coin className="big" /> {gained}</p>
         {status && (
           <p className={`result-status status-${status}`} role="status">
-            {status === 'checking' ? '☁️ Ergebnis wird vom Server geprüft …'
+            {status === 'checking' ? 'Ergebnis wird vom Server geprüft …'
               : status === 'paid' ? '✓ Geprüft und in deinem Konto gutgeschrieben'
-                : status === 'pending' ? '⏳ Keine Verbindung – die Belohnung wird gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).'
-                  : '⚠️ Das Ergebnis konnte nicht bestätigt werden – es gibt keine Belohnung.'}
+                : status === 'pending' ? 'Keine Verbindung – die Belohnung wird gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).'
+                  : 'Das Ergebnis konnte nicht bestätigt werden – es gibt keine Belohnung.'}
           </p>
         )}
         {newCard && (
@@ -71,8 +72,8 @@ export function Result({ outcome, reward, score, coins, onAgain, onMenu, status,
           <p className="muted">{getCard(reward.duplicateCard).name} hattest du schon – dafür gibt es <Coin /> 50 extra.</p>
         )}
         <p className="muted">Schwierigkeit: {LEVEL_NAME[level]} · Sieg <Coin /> {AI_COINS[level].win}{level !== 'hard' && <> – auf Schwer gibt es <Coin /> {AI_COINS.hard.win}</>}</p>
-        <p className="muted">Neue Karten gibt es für einen Sieg in der 🏆 Rangliste und im 🛒 Shop.</p>
-        <p className="muted">Münzen gesamt: <Coin /> {total} – ausgeben im 🛒 Shop</p>
+        <p className="muted">Neue Karten gibt es für einen Sieg in der Rangliste und im Shop.</p>
+        <p className="muted">Münzen gesamt: <Coin /> {total} – ausgeben im Shop</p>
       </div>
 
       <div className="menu-buttons">

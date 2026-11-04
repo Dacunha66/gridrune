@@ -2,7 +2,7 @@
 // same Grimoire style. Colour comes from `currentColor`; `.gi` in styles.css sets size and the rune glow.
 export type GameIconName =
   | 'play' | 'shop' | 'book' | 'deck' | 'scroll' | 'gear' | 'map' | 'swords' | 'draft' | 'trophy' | 'raid' | 'back'
-  | 'cards' | 'crown' | 'handshake' | 'skull' | 'user' | 'leaf' | 'sword' | 'flame' | 'run' | 'gift' | 'lock' | 'check' | 'close';
+  | 'cards' | 'crown' | 'handshake' | 'skull' | 'user' | 'leaf' | 'sword' | 'flame' | 'run' | 'gift' | 'lock' | 'check' | 'close' | 'fast' | 'skip' | 'next';
 
 const PATHS: Record<GameIconName, string> = {
   play: 'M14.5 3.5h6v6L9.5 20.5l-6-6zM5 13l6 6M3 21l3-3',
@@ -30,6 +30,9 @@ const PATHS: Record<GameIconName, string> = {
   lock: 'M6 11h12v9.5H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3',
   check: 'M4.5 12.5l5 5 10-11',
   close: 'M6 6l12 12M18 6L6 18',
+  fast: 'M4 6l7 6-7 6zM13 6l7 6-7 6z',
+  skip: 'M4 6l7 6-7 6zM12 6l7 6-7 6zM20.5 5.5v13',
+  next: 'M9 5l7 7-7 7',
 };
 
 export function GameIcon({ name, className = '', label }: { name: GameIconName; className?: string; label?: string }) {

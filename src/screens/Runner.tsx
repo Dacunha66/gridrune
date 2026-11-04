@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
+import { GameIcon } from '../components/GameIcon';
 import { Burst } from '../components/Effects';
 import { RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
@@ -256,14 +257,14 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
   return (
     <main className="screen runner">
       <header className="runner-hud">
-        <ConfirmButton label="✕" ariaLabel="Lauf abbrechen" confirmLabel="Abbrechen?" onConfirm={onQuit} />
-        <span className={`pill ${stumbled ? 'pill-warn' : ''}`}>{stumbled ? `⚠ ${STUMBLE_PENALTY}` : `Tor ${Math.min(picks.length + 1, GATE_COUNT)}/${GATE_COUNT}`}</span>
+        <ConfirmButton label={<GameIcon name="close" />} ariaLabel="Lauf abbrechen"confirmLabel="Abbrechen?" onConfirm={onQuit} />
+        <span className={`pill ${stumbled ? 'pill-warn' : ''}`}>{stumbled ? `Stein ${STUMBLE_PENALTY}` : `Tor ${Math.min(picks.length + 1, GATE_COUNT)}/${GATE_COUNT}`}</span>
         {layout ? <span className="pill ranked-pill">Liga · Echtzeit</span> : (
           <>
             <button type="button" className={`btn btn-small ${fast ? 'active' : ''}`} onClick={() => setFast(!fast)} aria-pressed={fast}>
-              ⏩ {fast ? '3×' : '1×'}
+              <GameIcon name="fast" /> {fast ? '3×' : '1×'}
             </button>
-            <button type="button" className="btn btn-small" onClick={skip} disabled={phase === 'done'}>⏭ Überspringen</button>
+            <button type="button" className="btn btn-small" onClick={skip} disabled={phase === 'done'}><GameIcon name="skip" /> Überspringen</button>
           </>
         )}
       </header>
@@ -431,12 +432,12 @@ function draw(
   // Sky.
   const horizon = h * 0.26;
   const sky = ctx.createLinearGradient(0, 0, 0, horizon);
-  sky.addColorStop(0, '#1b1442');
-  sky.addColorStop(1, '#6a3e8f');
+  sky.addColorStop(0, '#070b16');
+  sky.addColorStop(1, '#22304d');
   ctx.fillStyle = sky;
   ctx.fillRect(-20, 0, w + 40, horizon + 1);
   // Distant mountains.
-  ctx.fillStyle = '#2b1f55';
+  ctx.fillStyle = '#121a2e';
   ctx.beginPath();
   ctx.moveTo(-20, horizon);
   for (let i = 0; i <= 8; i++) ctx.lineTo((i / 8) * (w + 40) - 20, horizon - (i % 2 ? 26 : 10) - (i % 3) * 8);
@@ -449,7 +450,7 @@ function draw(
   ctx.fill();
 
   // Ground.
-  ctx.fillStyle = '#18233a';
+  ctx.fillStyle = '#0e1524';
   ctx.fillRect(-20, horizon, w + 40, h - horizon);
 
   // Road with moving bands.
@@ -462,11 +463,11 @@ function draw(
       const b = project(zz - step, 1);
       const band = Math.floor((zz + sim.distance) / step) % 2 === 0;
       if (layer === 'grass') {
-        ctx.fillStyle = band ? '#1f3a35' : '#1a312d';
+        ctx.fillStyle = band ? '#16261f' : '#13211b';
         ctx.fillRect(-20, a.y, w + 40, b.y - a.y + 1);
         continue;
       }
-      ctx.fillStyle = band ? '#3a3360' : '#332c55';
+      ctx.fillStyle = band ? '#2b3349' : '#252c40';
       ctx.beginPath();
       ctx.moveTo(w / 2 - a.half, a.y);
       ctx.lineTo(w / 2 + a.half, a.y);
@@ -476,7 +477,7 @@ function draw(
     }
   }
   // Lane dividers (dashed).
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.strokeStyle = 'rgba(212,166,74,0.4)';
   for (const edge of [-1 / 6, 1 / 6]) {
     for (let z = VIEW_DISTANCE; z > -4; z -= step * 2) {
       const zz = z - offset;
@@ -520,7 +521,11 @@ function draw(
         const mid = project(z, 1);
         // Arch.
         const archH = mid.half * 1.25;
-        ctx.strokeStyle = 'rgba(180,160,255,0.7)';
+        // Rune gate: gold frame with a cyan glow.
+        ctx.save();
+        ctx.shadowColor = 'rgba(69,227,207,0.75)';
+        ctx.shadowBlur = 14 * mid.p;
+        ctx.strokeStyle = 'rgba(227,183,90,0.9)';
         ctx.lineWidth = Math.max(1.5, 5 * mid.p);
         ctx.beginPath();
         ctx.moveTo(w / 2 - mid.half, mid.y);
@@ -528,9 +533,10 @@ function draw(
         ctx.lineTo(w / 2 + mid.half, mid.y - archH);
         ctx.lineTo(w / 2 + mid.half, mid.y);
         ctx.stroke();
+        ctx.restore();
         if (mid.p > 0.25) {
-          ctx.fillStyle = 'rgba(230,220,255,0.95)';
-          ctx.font = `700 ${Math.round(13 * Math.min(1.4, mid.p * 1.6))}px system-ui, sans-serif`;
+          ctx.fillStyle = 'rgba(243,214,142,0.95)';
+          ctx.font = `700 ${Math.round(13 * Math.min(1.4, mid.p * 1.6))}px Cinzel, Georgia, serif`;
           ctx.textAlign = 'center';
           ctx.fillText(g.index === FINAL_GATE ? '★ FINALE ★' : `TOR ${g.index + 1}`, w / 2, mid.y - archH - 6 * mid.p);
         }

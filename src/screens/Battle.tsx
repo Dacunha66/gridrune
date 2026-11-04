@@ -2,6 +2,7 @@ import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from
 import { Coin, coinLargeImg } from '../components/Coin';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
+import { GameIcon } from '../components/GameIcon';
 import { Burst } from '../components/Effects';
 import {
   BOARD_SIZE, BattleState, Breakdown, HandCard, Move, Outcome, Side, Values, applyMove, blickTargets, cardValue, cellBreakdown, coinToss, cpuChoosesFirst,
@@ -398,7 +399,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     <main className="screen battle">
       {/* One compact bar: give up, score, move counter, whose turn – leaves the height for board and hand. */}
       <header className="battle-top">
-        <ConfirmButton label="✕" ariaLabel="Duell abbrechen (keine Belohnung)" confirmLabel="Aufgeben?" onConfirm={onQuit} skipConfirm={over} />
+        <ConfirmButton label={<GameIcon name="close" />} ariaLabel="Duell abbrechen (keine Belohnung)" confirmLabel="Aufgeben?" onConfirm={onQuit} skipConfirm={over} />
         <div className="scorebar" aria-live="polite">
           <span key={`p${sc.player}`} className="score blue pop">Du {sc.player}</span>
           <span className="moves" aria-label={`Zug ${Math.min(state.moveCount + 1, totalMoves(state))} von ${totalMoves(state)}, Gegner hat noch ${state.hands.cpu.length} Karten`}>
@@ -425,7 +426,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           ) : <span className="rune-chip-space" />}
           <p className="arena-label">
             {terrainsUsed.length > 0 && <>{arena.name}: {terrainsUsed.map((t) => <span key={t} className={`terrain-chip terrain-${t}`}>{TERRAIN_INFO[t].icon} {TERRAIN_INFO[t].label}</span>)}</>}
-            {state.log.length > 0 && <button type="button" className="log-btn" onClick={() => setShowLog(true)} aria-label="Spielprotokoll">📜</button>}
+            {state.log.length > 0 && <button type="button" className="log-btn" onClick={() => setShowLog(true)} aria-label="Spielprotokoll"><GameIcon name="scroll" /></button>}
           </p>
           {enemyRune ? (
             <button type="button" className={`rune-chip theirs ${state.runes.cpu!.used ? 'used' : ''}`} onClick={() => setRuneSheet('cpu')}
@@ -445,7 +446,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           <BoardArt design={boardDesign} />
           {state.board.map((cell, i) => {
             if (state.rocks.includes(i)) {
-              return <div key={i} role="gridcell" className="cell rock" aria-label="Fels – hier kann niemand legen">🪨</div>;
+              return <div key={i} role="gridcell" className="cell rock" aria-label="Fels – hier kann niemand legen"><span className="rock-stone" aria-hidden="true" /></div>;
             }
             const pending = pendingFlips.includes(i);
             const owner = cell ? (pending ? other(cell.owner) : cell.owner) : null;
@@ -533,7 +534,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           {banner && <div className="board-banner">{banner}</div>}
           {result && (
             <div className={`board-banner end ${result}`}>
-              <p>{result === 'win' ? '🏆 Sieg!' : result === 'draw' ? '🤝 Unentschieden' : '💀 Niederlage'}</p>
+              <p><GameIcon name={result === 'win' ? 'crown' : result === 'draw' ? 'handshake' : 'skull'} /> {result === 'win' ? 'Sieg!' : result === 'draw' ? 'Unentschieden' : 'Niederlage'}</p>
               <button type="button" className="btn btn-primary" onClick={finish}>{setup?.finishLabel ?? 'Weiter zur Belohnung'}</button>
             </div>
           )}
@@ -615,7 +616,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       {showLog && (
         <div className="inspect-backdrop" role="dialog" aria-modal="true" aria-label="Spielprotokoll" onClick={() => setShowLog(false)}>
           <div className="inspect log-sheet" onClick={(e) => e.stopPropagation()}>
-            <h2>📜 Spielprotokoll</h2>
+            <h2><GameIcon name="scroll" /> Spielprotokoll</h2>
             <ol className="duel-log">
               {state.log.map((l, k) => <li key={k} className={l.side}><b>{l.side === 'player' ? 'Du' : 'Gegner'}:</b> {l.kind === 'rune' ? 'ᚱ ' : ''}{l.text}</li>)}
             </ol>
