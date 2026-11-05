@@ -139,28 +139,94 @@ describe('Magische Barriere', () => {
   });
 });
 
-describe('Gelände-Effekte', () => {
-  // Every terrain effect belongs to the class whose element is that terrain: there only the element +1 counts (never more).
-  it('Wurzelkraft: auf Wald insgesamt nur +1 (Element), sonst nichts', () => {
-    expect(values(applyMove(setup({}, ['t05'], { 5: 'wald' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
-    expect(values(applyMove(setup({}, ['t05'], { 5: 'lava' }), { handIndex: 0, cell: 5 }), 5)).toEqual([4, 4, 4, 4]);
+describe('Flammenherz und Frostpanzer', () => {
+  it('Flammenherz greift mit +1 an: 4+1 schlägt 4', () => {
+    const s = applyMove(setup({ 6: at('p04', 'cpu') }, ['t07']), { handIndex: 0, cell: 5 });
+    expect(s.lastClashes[0]).toMatchObject({ attack: 5, defense: 4, captured: true });
+    expect(s.lastEvents.some((e) => e.effect === 'flammenherz' && e.by === 'player')).toBe(true);
   });
-  it('Flammenherz: auf Lava insgesamt nur +1 (Element)', () => {
-    expect(values(applyMove(setup({}, ['t07'], { 5: 'lava' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
+  it('Flammenherz verteidigt mit dem normalen Wert', () => {
+    const s = applyMove(setup({ 6: at('t07', 'cpu') }, ['p05']), { handIndex: 0, cell: 5 });
+    expect(s.lastClashes[0]).toMatchObject({ attack: 5, defense: 4, captured: true });
   });
-  it('Frostpanzer: auf Eis insgesamt nur +1 (Element)', () => {
-    expect(values(applyMove(setup({}, ['t08'], { 5: 'eis' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
+  it('Frostpanzer verteidigt mit +1: 5 gegen 4+1 erobert nicht', () => {
+    const s = applyMove(setup({ 6: at('t08', 'cpu') }, ['p05']), { handIndex: 0, cell: 5 });
+    expect(s.lastClashes[0]).toMatchObject({ attack: 5, defense: 5, captured: false });
+    expect(s.lastEvents.some((e) => e.effect === 'frostpanzer' && e.by === 'cpu')).toBe(true);
   });
-  it('Schattenmantel: auf Schatten insgesamt nur +1 (Element)', () => {
-    expect(values(applyMove(setup({}, ['t09'], { 5: 'schatten' }), { handIndex: 0, cell: 5 }), 5)).toEqual([7, 4, 6, 4]);
+  it('Frostpanzer greift mit dem normalen Wert an', () => {
+    const s = applyMove(setup({ 6: at('p04', 'cpu') }, ['t08']), { handIndex: 0, cell: 5 });
+    expect(s.lastClashes[0]).toMatchObject({ attack: 4, defense: 4, captured: false });
   });
-  it('Gelände ohne passenden Effekt ändert nichts', () => {
-    expect(values(applyMove(setup({}, ['p05'], { 5: 'wald' }), { handIndex: 0, cell: 5 }), 5)).toEqual([5, 5, 5, 5]);
+  it('Flammenherz gegen Frostpanzer: die +1 heben sich auf; nie über 10', () => {
+    const s = applyMove(setup({ 6: at('t08', 'cpu') }, ['t07']), { handIndex: 0, cell: 5 });
+    expect(s.lastClashes[0]).toMatchObject({ attack: 5, defense: 5, captured: false });
+    const t = applyMove(setup({ 6: at('x10', 'cpu') }, ['t07']), { handIndex: 0, cell: 5 });
+    expect(t.lastClashes).toHaveLength(1);
+    expect(t.lastClashes[0].attack).toBeLessThanOrEqual(10);
   });
-  it('Gelände-Bonus zählt bei der Verteidigung', () => {
-    // Enemy Flammenherz on lava defends with 4+1=5 at the top (element only): our 5 from below does not capture (tie).
-    const s = applyMove(setup({ 5: at('t07', 'cpu') }, ['p05'], { 5: 'lava' }), { handIndex: 0, cell: 1 });
-    expect(s.board[5]!.owner).toBe('cpu');
+  it('die Kartenwerte selbst ändern sich nicht', () => {
+    expect(values(applyMove(setup({}, ['t07']), { handIndex: 0, cell: 5 }), 5)).toEqual([4, 4, 4, 4]);
+    expect(values(applyMove(setup({}, ['t08']), { handIndex: 0, cell: 5 }), 5)).toEqual([4, 4, 4, 4]);
+  });
+});
+
+describe('Schattenmantel', () => {
+  it('wer die Karte erobert, verliert −1 auf alle Werte', () => {
+    // t09 [6,3,5,3] at 6: its left side 3 faces our card at 5.
+    const s = applyMove(setup({ 6: at('t09', 'cpu') }, ['p05']), { handIndex: 0, cell: 5 });
+    expect(s.board[6]!.owner).toBe('player');
+    expect(values(s, 5)).toEqual([4, 4, 4, 4]);
+    expect(s.lastEvents.some((e) => e.effect === 'schattenmantel' && e.by === 'cpu' && e.cell === 5)).toBe(true);
+  });
+  it('ohne Eroberung passiert nichts', () => {
+    const s = applyMove(setup({ 6: at('t09', 'cpu') }, ['p01']), { handIndex: 0, cell: 5 });
+    expect(s.board[6]!.owner).toBe('cpu');
+    expect(values(s, 5)).toEqual([1, 1, 1, 1]);
+  });
+  it('die Magische Barriere blockt den Fluch', () => {
+    // t04 [3,5,3,6] with barrier: right 5 (lowest 3s +1 → 4) beats the left 3 of t09.
+    const s = applyMove(setup({ 6: at('t09', 'cpu') }, ['t04']), { handIndex: 0, cell: 5 });
+    expect(s.board[6]!.owner).toBe('player');
+    expect(s.board[5]!.barrier).toBe(false);
+    expect(values(s, 5)).toEqual([4, 5, 4, 6]);
+  });
+  it('trifft in der Kettenübernahme die Karte, die erobert hat', () => {
+    // k01 at 0 captures l66 at 1; l66 (right 6) captures t09 at 2 (left 3) → the l66 at 1 is cursed.
+    const s = applyMove(setup({ 1: at('l66', 'cpu'), 2: at('t09', 'cpu') }, ['k01']), { handIndex: 0, cell: 0 });
+    expect(s.board[2]!.owner).toBe('player');
+    expect(values(s, 1)).toEqual([1, 5, 5, 1]);
+    expect(values(s, 0)).toEqual([6, 6, 6, 6]);
+  });
+});
+
+describe('Wurzelkraft', () => {
+  const ownMove = (s: BattleState, cell: number, card = 'p01') => applyMove({ ...s, turn: 'player', hands: { ...s.hands, player: toHand([card]) } }, { handIndex: 0, cell });
+  it('wächst nach jedem eigenen Zug +1 auf den niedrigsten Wert – nicht im Zug, in dem sie gelegt wird', () => {
+    const s0 = applyMove(setup({}, ['t05']), { handIndex: 0, cell: 5 });
+    expect(values(s0, 5)).toEqual([4, 4, 4, 4]);
+    const s1 = ownMove(s0, 12);
+    expect(values(s1, 5)).toEqual([5, 4, 4, 4]);
+    expect(s1.lastEvents.some((e) => e.effect === 'wurzelkraft' && e.by === 'player' && e.cell === 5)).toBe(true);
+    const s2 = ownMove(s1, 13);
+    expect(values(s2, 5)).toEqual([5, 5, 4, 4]);
+  });
+  it('höchstens zweimal', () => {
+    let s = applyMove(setup({}, ['t05']), { handIndex: 0, cell: 5 });
+    for (const cell of [12, 13, 14, 15]) s = ownMove(s, cell);
+    expect(values(s, 5)).toEqual([5, 5, 4, 4]);
+  });
+  it('wächst nicht in den Zügen des Gegners', () => {
+    const s0 = applyMove(setup({}, ['t05']), { handIndex: 0, cell: 5 });
+    const s1 = applyMove({ ...s0, turn: 'cpu', hands: { ...s0.hands, cpu: toHand(['p01']) } }, { handIndex: 0, cell: 15 });
+    expect(values(s1, 5)).toEqual([4, 4, 4, 4]);
+  });
+  it('eine eroberte Wurzelkraft-Karte wächst nicht mehr – auch nicht für ihren neuen Besitzer', () => {
+    const s0 = applyMove(setup({ 6: at('t05', 'cpu') }, ['p05']), { handIndex: 0, cell: 5 });
+    expect(s0.board[6]!.owner).toBe('player');
+    expect(values(s0, 6)).toEqual([4, 4, 4, 4]);
+    const s1 = applyMove({ ...s0, turn: 'cpu', hands: { ...s0.hands, cpu: toHand(['p01']) } }, { handIndex: 0, cell: 15 });
+    expect(values(s1, 6)).toEqual([4, 4, 4, 4]);
   });
 });
 
@@ -254,12 +320,19 @@ describe('Allgemeine Regeln', () => {
 
 describe('Vorschau im Admin-Editor', () => {
   it('stimmt mit dem Duell überein', () => {
-    const terrainFor: Partial<Record<EffectId, Terrain>> = { wurzelkraft: 'wald', flammenherz: 'lava', frostpanzer: 'eis', schattenmantel: 'schatten' };
+    const terrainFor: Partial<Record<EffectId, Terrain>> = {};
     for (const c of TEST_CARDS.filter((x) => x.effect)) {
       const e = c.effect!;
       const friend: Record<number, BoardCell> = e === 'naturbund' ? { 4: at('n05', 'player') } : e === 'schildwall' ? { 4: at('p05', 'player') } : {};
-      const s = applyMove(setup(friend, [c.id], terrainFor[e] ? { 5: terrainFor[e] } : {}), { handIndex: 0, cell: 5 });
-      expect(effectPreview([c.top, c.right, c.bottom, c.left], e).values, e).toEqual(values(s, 5));
+      let s = applyMove(setup(friend, [c.id], terrainFor[e] ? { 5: terrainFor[e] } : {}), { handIndex: 0, cell: 5 });
+      // Wurzelkraft: the preview shows the card after two more own moves.
+      if (e === 'wurzelkraft') {
+        for (const cell of [12, 13]) s = applyMove({ ...s, turn: 'player', hands: { ...s.hands, player: toHand(['p01']) } }, { handIndex: 0, cell });
+      }
+      // Flammenherz / Frostpanzer: the preview shows the value in a comparison.
+      const v = values(s, 5);
+      const expected = e === 'flammenherz' || e === 'frostpanzer' ? v.map((x) => Math.min(10, x + 1)) : v;
+      expect(effectPreview([c.top, c.right, c.bottom, c.left], e).values, e).toEqual(expected);
     }
   });
 });
@@ -342,31 +415,43 @@ describe('Wirbelwind (Ausrichtung beim Legen)', () => {
 describe('Kettenübernahme', () => {
   // Row 0: [k01 placed at 0] [enemy l66 at 1] [enemy l66 at 2] [enemy l66 at 3]
   const line = () => setup({ 1: at('l66', 'cpu'), 2: at('l66', 'cpu'), 3: at('l66', 'cpu') }, ['k01', 'k02']);
-  it('eroberte Karten greifen weiter an – Welle für Welle', () => {
+  it('Standard: eine weitere Stufe', () => {
     const s = applyMove(line(), { handIndex: 0, cell: 0 });
-    expect([1, 2, 3].map((c) => s.board[c]!.owner)).toEqual(['player', 'player', 'player']);
-    expect(s.lastChain).toEqual([{ from: 1, cell: 2, level: 1 }, { from: 2, cell: 3, level: 2 }]);
-    expect(s.lastFlips).toEqual([1, 2, 3]);
-    expect(s.lastEvents.some((e) => /Kette ×2/.test(e.text))).toBe(true);
+    expect([1, 2, 3].map((c) => s.board[c]!.owner)).toEqual(['player', 'player', 'cpu']);
+    expect(s.lastChain).toEqual([{ from: 1, cell: 2, level: 1 }]);
+    expect(s.lastFlips).toEqual([1, 2]);
+    expect(s.lastEvents.some((e) => /Kette ×1/.test(e.text))).toBe(true);
+  });
+  it('eroberte Karten greifen weiter an – Welle für Welle (zwei Stufen eingestellt)', () => {
+    const before = SETTINGS.chainDepth;
+    try {
+      SETTINGS.chainDepth = 2;
+      const s = applyMove(line(), { handIndex: 0, cell: 0 });
+      expect([1, 2, 3].map((c) => s.board[c]!.owner)).toEqual(['player', 'player', 'player']);
+      expect(s.lastChain).toEqual([{ from: 1, cell: 2, level: 1 }, { from: 2, cell: 3, level: 2 }]);
+      expect(s.lastFlips).toEqual([1, 2, 3]);
+    } finally {
+      SETTINGS.chainDepth = before;
+    }
   });
   it('ohne die Fähigkeit keine Kette (normale Übernahme)', () => {
     const s = applyMove(line(), { handIndex: 1, cell: 0 });
     expect([1, 2, 3].map((c) => s.board[c]!.owner)).toEqual(['player', 'cpu', 'cpu']);
     expect(s.lastChain).toEqual([]);
   });
-  it('höchstens so viele Stufen wie eingestellt (Standard 2, 0 = unbegrenzt)', () => {
+  it('höchstens so viele Stufen wie eingestellt (Standard 1, 0 = unbegrenzt)', () => {
     // 5 in a snake: 0 → 1 → 2 → 3 → 7 → 11
     const snake = () => setup({ 1: at('l66', 'cpu'), 2: at('l66', 'cpu'), 3: at('l66', 'cpu'), 7: at('l66', 'cpu'), 11: at('l66', 'cpu') }, ['k01']);
-    const two = applyMove(snake(), { handIndex: 0, cell: 0 });
-    expect(two.lastChain.map((c) => c.cell)).toEqual([2, 3]);
-    expect(two.board[7]!.owner).toBe('cpu');
+    const one = applyMove(snake(), { handIndex: 0, cell: 0 });
+    expect(one.lastChain.map((c) => c.cell)).toEqual([2]);
+    expect(one.board[3]!.owner).toBe('cpu');
     const before = SETTINGS.chainDepth;
     try {
       SETTINGS.chainDepth = 0;
       const all = applyMove(snake(), { handIndex: 0, cell: 0 });
       expect(all.lastChain.map((c) => c.cell)).toEqual([2, 3, 7, 11]);
-      SETTINGS.chainDepth = 1;
-      expect(applyMove(snake(), { handIndex: 0, cell: 0 }).lastChain.map((c) => c.cell)).toEqual([2]);
+      SETTINGS.chainDepth = 2;
+      expect(applyMove(snake(), { handIndex: 0, cell: 0 }).lastChain.map((c) => c.cell)).toEqual([2, 3]);
     } finally {
       SETTINGS.chainDepth = before;
     }
@@ -415,14 +500,14 @@ describe('Dominanz und Standhaft', () => {
     const s = applyMove(setup({ 6: at('d05', 'cpu') }, ['p05']), { handIndex: 0, cell: 5 });
     expect(s.board[6]!.owner).toBe('cpu');
   });
-  it('in der Kettenübernahme greift eine eroberte Karte mit Dominanz auch bei Gleichstand weiter an', () => {
-    // 5: Kette (5) erobert 6: Dominanz-Karte (geschwächt auf 4); die greift 7 (4) an – Gleichstand, Dominanz gewinnt.
+  it('in der Kettenübernahme erobert nur ein höherer Wert – Gleichstand nie, auch nicht mit Dominanz', () => {
+    // 5: Kette (5) erobert 6: Dominanz-Karte (geschwächt auf 4); die greift 7 (4) an – Gleichstand, keine Übernahme.
     const s = applyMove(setup({ 6: at('d05', 'cpu', { mod: -1 }), 7: at('p04', 'cpu') }, ['kd5']), { handIndex: 0, cell: 5 });
     expect(s.board[6]!.owner).toBe('player');
-    expect(s.board[7]!.owner).toBe('player');
-    // gegen Standhaft hält auch die Kette nicht
-    const t = applyMove(setup({ 6: at('d05', 'cpu', { mod: -1 }), 7: at('s05', 'cpu', { mod: -1 }) }, ['kd5']), { handIndex: 0, cell: 5 });
-    expect(t.board[7]!.owner).toBe('cpu');
+    expect(s.board[7]!.owner).toBe('cpu');
+    // ein höherer Wert erobert weiter
+    const t = applyMove(setup({ 6: at('d05', 'cpu', { mod: -1 }), 7: at('p04', 'cpu', { mod: -1 }) }, ['kd5']), { handIndex: 0, cell: 5 });
+    expect(t.board[7]!.owner).toBe('player');
   });
   it('die KI erkennt Gleichstands-Übernahmen mit Dominanz', () => {
     const s = setup({ 6: at('p05', 'cpu') }, ['d05', 'p01'], undefined, 'cpu');

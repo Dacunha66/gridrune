@@ -402,6 +402,15 @@ Sicherung vor dem Umbau: Stand v1.3 = Commit `2ab6b82` (auf GitHub) und Version 
 - Deck-Prüfung: genau 20 verschiedene, freigeschaltete Karten
 - Sieg schaltet höchstens eine (die seltenste) neue Entdeckung frei; eine bereits vorhandene Entdeckung gibt stattdessen Münzen; Unentschieden und Niederlage geben weniger Münzen und keine Karte
 
+## Neue Effekte Flammenherz, Frostpanzer, Schattenmantel, Wurzelkraft; Kettenübernahme Variante A (v1.31)
+
+- Automatisch (tests/effects.test.ts): Flammenherz +1 nur beim Angreifen, Frostpanzer +1 nur beim Verteidigen, beide
+  heben sich auf, nie über 10; Schattenmantel verflucht die erobernde Karte (auch in der Kette), Barriere blockt;
+  Wurzelkraft wächst nach eigenen Zügen, nicht im Zug des Legens, höchstens zweimal, nicht für einen Eroberer;
+  Kette: Standard eine Stufe, kein Gleichstand (auch nicht mit Dominanz); Admin-Vorschau stimmt mit dem Duell überein.
+- Simulation: siehe BALANCING.md (Effektstärken, Verteilung auf 250 Karten).
+- Nicht im Browser geprüft: Anzeige der neuen Effekt-Popups im Duell.
+
 ## Browser-Durchlauf (automatisiert mit Playwright/Chromium, nicht im Repo)
 In iPhone-Größe (390×844 und 375×667) und iPad-Größe (820×1180) mit Touch-Emulation:
 Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Überspringen) → vollständiges Duell mit 16 Zügen → Ergebnisbildschirm → Neuladen der Seite (Münzen und Statistik bleiben erhalten) → Aufgeben im Duell. Keine JavaScript-Fehler.

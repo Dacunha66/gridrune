@@ -58,7 +58,7 @@ describe('Karten-IDs, Duplizieren, Stärke-Hinweis', () => {
 
   it('Effektstärke zählt mit: Arkane Kraft wie +4', () => {
     expect(powerHint({ rarity: 'common', top: 4, right: 4, bottom: 4, left: 3, effect: 'arkane_kraft' })).toMatchObject({ sum: 15, effect: 4, total: 19, ok: false });
-    expect(cardSum({ top: 4, right: 4, bottom: 4, left: 3, effect: 'kampfgeist' })).toBe(17.1);
+    expect(cardSum({ top: 4, right: 4, bottom: 4, left: 3, effect: 'kampfgeist' })).toBe(16.9);
   });
 
   it('Klasse und Effekt: alte Karten bekommen eine Klasse, unpassende Effekte werden verworfen', () => {

@@ -154,7 +154,7 @@ describe('Rune des Nachhalls: höchstens eine Übernahme, nie eine Kette', () =>
     let s = setup({ 1: at('l66', 'cpu'), 2: at('l66', 'cpu'), 3: at('l66', 'cpu') }, 'rn02');
     s = { ...s, hands: { ...s.hands, player: toHand(['k9']) } };
     const placed = applyMove(s, { handIndex: 0, cell: 0 });
-    expect(placed.lastChain.map((c) => c.cell)).toEqual([2, 3]);
+    expect(placed.lastChain.map((c) => c.cell)).toEqual([2]);
     // Every card is captured once: no double captures.
     expect(new Set(placed.lastFlips).size).toBe(placed.lastFlips.length);
   });

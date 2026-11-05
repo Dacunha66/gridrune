@@ -3,7 +3,7 @@
 // The four effect kinds are rules; name, texts, strength, targets, classes, modes and pictures are data
 // the admin can change. Variants (rarity, artwork) always keep the effect of their base rune.
 import {
-  BattleState, BoardCell, Clash, Move, Side, applyMove, boardValue, cellName, isGameOver, neighbours, beats,
+  BattleState, BoardCell, Clash, Move, Side, applyCurses, applyMove, attackValue, cellName, comparisonEvents, defenseValue, isGameOver, neighbours, beats,
 } from './battle';
 import { Rarity, getCard } from './cards';
 import { CLASS_INFO, CLASSES, CardClass, isCardClass } from './effects';
@@ -173,7 +173,7 @@ export function runeOpen(state: BattleState, def: RuneDef): boolean {
 export function echoCapturable(state: BattleState, cell: number, side: Side = state.turn): number[] {
   return neighbours(cell).filter((n) => {
     const o = state.board[n.cell];
-    return !!o && o.owner !== side && boardValue(state.board, state.terrain, cell, n.mine) > boardValue(state.board, state.terrain, n.cell, n.theirs);
+    return !!o && o.owner !== side && beats(attackValue(state.board, state.terrain, cell, n.mine), defenseValue(state.board, state.terrain, n.cell, n.theirs), state.board[cell]!.cardId, o.cardId);
   }).map((n) => n.cell);
 }
 
@@ -247,15 +247,17 @@ export function applyRune(state: BattleState, use: RuneUse): BattleState {
       for (const n of neighbours(use.cell!)) {
         const o = board[n.cell];
         if (!o || o.owner === side) continue;
-        const attack = boardValue(board, state.terrain, use.cell!, n.mine);
-        const defense = boardValue(board, state.terrain, n.cell, n.theirs);
+        const attack = attackValue(board, state.terrain, use.cell!, n.mine);
+        const defense = defenseValue(board, state.terrain, n.cell, n.theirs);
         clashes.push({ cell: n.cell, dir: n.mine, attack, defense, captured: beats(attack, defense, board[use.cell!]!.cardId, o.cardId) });
       }
       // At most `maxTargets` captures (chosen by the player if more were possible); nothing else happens – no chain.
       const can = clashes.filter((c) => c.captured).map((c) => c.cell);
       const take = new Set(can.length > r.maxTargets ? use.capture! : can);
       clashes = clashes.map((c) => ({ ...c, captured: take.has(c.cell) }));
+      events.push(...comparisonEvents(board, use.cell!, clashes.map((c) => c.cell)));
       for (const c of clashes) if (c.captured) board[c.cell] = { ...board[c.cell]!, owner: side };
+      applyCurses(board, [...take].map((cell) => ({ from: use.cell!, cell })), events);
       const n = take.size;
       text = `${getCard(board[use.cell!]!.cardId).name} auf ${cellName(use.cell!)} greift erneut an – erobert ${n}${n ? ` (${[...take].map(cellName).join(', ')})` : ''}`;
       break;

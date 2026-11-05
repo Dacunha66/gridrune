@@ -78,17 +78,48 @@ Folgerungen: Stärke-Werte für die Balancing-Hinweise im Karteneditor: Wirbelwi
 
 **v1.22:** Nachhall erst ab 8 Karten auf dem Feld (Spielmitte). Simulation (400 Duelle): ohne Rune 41 % / 35 %, Nachhall 65 % / 19 %, Fluch 55 % / 25 %, Verdrehung 41 % / 34 %, Nachhall gegen Fluch 52 % / 26 %. Die Schwelle ändert die Stärke kaum, weil Nachhall in der zweiten Hälfte ohnehin am meisten bringt.
 
-## Effekte für alle 250 Karten (v1.30, Simulation)
+## Neue Effekte und Effektstärken (v1.31, Simulation)
 
-Grundsatz: „Summe der Werte + Effektstärke“ liegt höchstens 1 über der Obergrenze der Seltenheit. Karten, die schon an
-der Obergrenze liegen, bekommen keinen Effekt (81 Karten); die anderen einen Effekt ihrer Klasse oder einen
-klassenübergreifenden (Wirbelwind, Dominanz, Standhaft). Nicht vergeben: Kettenübernahme (Stärke ≈ 7, passt in keine
-Seltenheit) und die Gelände-Effekte (wirken seit v1.14 nicht zusätzlich zum Element-Bonus).
+Neue Regeln: **Flammenherz** greift mit +1 an, **Frostpanzer** verteidigt mit +1 (je höchstens 10), **Schattenmantel**
+verflucht die Karte, die ihn erobert (−1 auf alle Werte, Barriere blockt), **Wurzelkraft** wächst nach jedem eigenen Zug
++1 auf den niedrigsten Wert (nicht im Zug des Legens, höchstens zweimal, nur für den Spieler, der sie gelegt hat).
+**Kettenübernahme** (Variante A): Standard eine weitere Stufe, in der Kette erobert nur ein höherer Wert.
 
-Verteilung: Wirbelwind 47 · Dominanz 41 · Standhaft 36 · Naturbund 11 · Kampfgeist 10 · Magische Barriere 10 ·
-Arkane Kraft 6 · Schildwall 5 · Schwächender Blick 3 · ohne 81.
+Messung: gepaarte Duelle (je 12 000, mittlere KI auf beiden Seiten, zufällige Hände aus allen 250 Karten ohne Effekte);
+zwei Karten der Spielerhand bekommen den Effekt. Eichung mit +1 / +2 Wertpunkten auf denselben Karten:
++2 Σ = +4,9 Prozentpunkte → 1 Σ ≈ 2,44 Punkte Siegquote.
 
-40 000 Duelle je Variante, mittlere KI auf beiden Seiten, zufällige Hände aus allen 250 Karten. Siegquote je Seltenheit
-ohne → mit Effekten: gewöhnlich 43,0 → 43,7 % · ungewöhnlich 49,2 → 48,7 % · selten 52,5 → 52,9 % · episch 55,2 → 55,0 % ·
-legendär 56,6 → 55,9 % · mystisch 57,8 → 56,9 %. Innerhalb einer Seltenheit liegen Karten mit Effekt höchstens etwa
-3 Prozentpunkte neben den Karten ohne Effekt.
+| Effekt | Siegquote-Plus | Stärke (Σ) | eingetragen |
+|---|---|---|---|
+| Kettenübernahme (Variante A) | +18,0 | 7,4 | 7,4 (alte Regel: 7,6) |
+| Arkane Kraft | +10,8 | 4,4 | 4 (so entschieden) |
+| Flammenherz | +7,4 | 3,0 | 3 |
+| Dominanz | +7,4 | 3,0 | 3 |
+| Schildwall | +6,0 | 2,4 | 2,4 |
+| Wirbelwind | +5,2 | 2,1 | 2 |
+| Schwächender Blick | +5,1 | 2,1 | 2,1 |
+| Kampfgeist | +4,6 | 1,9 | 1,9 |
+| Frostpanzer | +3,9 | 1,6 | 1,6 |
+| Magische Barriere | +2,4 | 1,0 | 1 |
+| Schattenmantel | +1,4 | 0,6 | 0,6 |
+| Naturbund | +1,3 | 0,5 | 0,5 |
+| Wurzelkraft | +0,2 | 0,1 | 0,1 |
+| Standhaft | 0 | 0 (nur gegen Dominanz) | 0,6 |
+
+Weitere Varianten: Kettenübernahme mit −1 auf die Angriffe in der Kette ≈ 3,8 Σ. Wurzelkraft wirkt kaum, weil Karten
+vor allem direkt nach dem Legen angegriffen werden (auch „+1 auf alle Werte nach dem nächsten Zug“ ≈ 0,2 Σ).
+Schattenmantel mit −2 ≈ 0,7 Σ.
+
+## Effekte für alle 250 Karten (v1.31, Simulation)
+
+Grundsatz: „Summe der Werte + Effektstärke“ liegt höchstens 1 über der Obergrenze der Seltenheit. Karten an der
+Obergrenze bekommen höchstens Naturbund oder Schattenmantel. Nicht vergeben: Kettenübernahme (≈ 7,4) und Wurzelkraft
+(wirkt kaum).
+
+Verteilung: Wirbelwind 37 · Dominanz 29 · Standhaft 28 · Schattenmantel 17 · Naturbund 16 · Schwächender Blick 12 ·
+Frostpanzer 12 · Schildwall 9 · Magische Barriere 9 · Flammenherz 9 · Kampfgeist 8 · Arkane Kraft 6 · ohne 58.
+
+50 000 Duelle je Variante, mittlere KI, zufällige Hände aus allen 250 Karten. Siegquote je Seltenheit ohne → mit
+Effekten: gewöhnlich 43,2 → 43,8 % · ungewöhnlich 49,2 → 49,1 % · selten 52,6 → 52,5 % · episch 55,0 → 54,7 % ·
+legendär 56,7 → 55,9 % · mystisch 57,3 → 56,3 %. Innerhalb einer Seltenheit liegen die Effekt-Gruppen meist höchstens
+etwa 3 Prozentpunkte neben den Karten ohne Effekt; am schwächsten sind Karten mit Standhaft.

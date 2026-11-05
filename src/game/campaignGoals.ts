@@ -69,9 +69,20 @@ export interface DuelStats {
 /** Did the effect of the card just placed on `cell` work? (on-play: it did something; condition: its bonus is active). */
 function effectWorked(after: BattleState, cell: number, effect: EffectId): boolean {
   const def = EFFECTS[effect];
-  // Only the placed card's own effect creates events in a move.
-  if (def.trigger === 'play') return after.lastEvents.length > 0;
+  if (def.trigger === 'play') return after.lastEvents.some((e) => e.effect === effect && e.cell !== undefined);
+  // Flammenherz works when the placed card attacks; the other reacting effects are counted when they happen.
+  if (effect === 'flammenherz') return after.lastEvents.some((e) => e.effect === effect && e.cell === cell);
+  if (REACTIVE.has(effect)) return false;
   return cellBreakdown(after.board, after.terrain, cell).parts.some((p) => p.kind === 'aura' && p.source === def.name);
+}
+
+/** Effects that work later in the duel (not when their card is placed) – counted each time they work for the player. */
+const REACTIVE = new Set<EffectId>(['frostpanzer', 'schattenmantel', 'wurzelkraft']);
+
+function countReactive(stats: DuelStats, after: BattleState): void {
+  for (const e of after.lastEvents) {
+    if (e.by === 'player' && e.effect && REACTIVE.has(e.effect)) stats.effects[e.effect] = (stats.effects[e.effect] ?? 0) + 1;
+  }
 }
 
 /** Replays a duel from its start position and collects everything the goals can ask for. */
@@ -84,6 +95,7 @@ export function duelStats(start: BattleState, moves: readonly Action[], stumbles
       // Captures by a rune (Nachhall) count for the player.
       const next = applyAction(state, move);
       if (side === 'player') stats.captures += next.lastFlips.length;
+      countReactive(stats, next);
       state = next;
       continue;
     }
@@ -98,6 +110,7 @@ export function duelStats(start: BattleState, moves: readonly Action[], stumbles
       const element = cellBreakdown(next.board, next.terrain, move.cell).parts.some((p) => p.kind === 'element');
       if (element || (worked && def.effect && EFFECTS[def.effect].terrain)) stats.terrainBonus++;
     }
+    countReactive(stats, next);
     state = next;
   }
   const s = score(state);

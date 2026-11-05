@@ -15,7 +15,7 @@ export interface GameSettings {
   features: { runes: Release; abilities: Release };
 }
 
-export const DEFAULT_CHAIN_DEPTH = 2;
+export const DEFAULT_CHAIN_DEPTH = 1;
 export const CHAIN_DEPTH_MAX = 15;
 
 export const DEFAULT_DISCOVERY_SHARES: Readonly<Record<Rarity, number>> = { common: 28, uncommon: 30, rare: 24, epic: 12, legendary: 5, mythic: 1 };

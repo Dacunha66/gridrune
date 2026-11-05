@@ -1,4 +1,4 @@
-// Card classes, terrain types and the ten special effects – defined once, here.
+// Card classes, terrain types and the special effects – defined once, here.
 // Cards only store a class id and an effect id; all behaviour lives in the duel engine (battle.ts).
 
 export type CardClass = 'krieger' | 'magier' | 'natur' | 'feuer' | 'frost' | 'schatten';
@@ -59,11 +59,11 @@ export interface EffectDef {
 
 export const EFFECTS: Record<EffectId, EffectDef> = {
   kampfgeist: {
-    id: 'kampfgeist', short: 'Höchster Wert +1', name: 'Kampfgeist', cls: 'krieger', trigger: 'play', value: 2.1,
+    id: 'kampfgeist', short: 'Höchster Wert +1', name: 'Kampfgeist', cls: 'krieger', trigger: 'play', value: 1.9,
     text: 'Beim Ausspielen: Der höchste Wert erhält +1 (bei Gleichstand oben, rechts, unten, links).',
   },
   schildwall: {
-    id: 'schildwall', short: '+1 neben eigener Karte', name: 'Schildwall', cls: 'krieger', trigger: 'condition', value: 3.5,
+    id: 'schildwall', short: '+1 neben eigener Karte', name: 'Schildwall', cls: 'krieger', trigger: 'condition', value: 2.4,
     text: 'Solange eine eigene Karte direkt angrenzt: +1 auf alle Seiten, die nicht zu einer eigenen Karte zeigen.',
   },
   arkane_kraft: {
@@ -75,27 +75,27 @@ export const EFFECTS: Record<EffectId, EffectDef> = {
     text: 'Beim Ausspielen: Der niedrigste Wert erhält +1 (bei Gleichstand alle niedrigsten). Ein Schild 🛡 verhindert die nächste Schwächung durch einen gegnerischen Effekt.',
   },
   wurzelkraft: {
-    id: 'wurzelkraft', short: 'Auf Wald alle Werte +1', name: 'Wurzelkraft', cls: 'natur', trigger: 'condition', terrain: 'wald', value: 0.9,
-    text: 'Solange die Karte auf einem Waldfeld liegt: Alle vier Werte +1. Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
+    id: 'wurzelkraft', short: 'Wächst nach jedem eigenen Zug', name: 'Wurzelkraft', cls: 'natur', trigger: 'condition', value: 0.1,
+    text: 'Gehört die Karte nach deinem Zug noch dir, wächst ihr niedrigster Wert um +1 – nicht im Zug, in dem du sie legst, höchstens zweimal (bei Gleichstand oben, rechts, unten, links). Für einen Gegner, der sie erobert, wächst sie nicht.',
   },
   naturbund: {
-    id: 'naturbund', short: '+1 neben eigener Naturkarte', name: 'Naturbund', cls: 'natur', trigger: 'condition', value: 0.9,
+    id: 'naturbund', short: '+1 neben eigener Naturkarte', name: 'Naturbund', cls: 'natur', trigger: 'condition', value: 0.5,
     text: 'Solange eine eigene Naturkarte direkt angrenzt: +1 auf alle Seiten, die nicht zu einer eigenen Karte zeigen.',
   },
   flammenherz: {
-    id: 'flammenherz', short: 'Auf Lava oben +2', name: 'Flammenherz', cls: 'feuer', trigger: 'condition', terrain: 'lava', value: 0.3,
-    text: 'Solange die Karte auf einem Lavafeld liegt: Der obere Wert erhält +2. Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
+    id: 'flammenherz', short: 'Greift mit +1 an', name: 'Flammenherz', cls: 'feuer', trigger: 'condition', value: 3,
+    text: 'Greift diese Karte an, zählen ihre Werte im Vergleich +1 (höchstens 10). Beim Verteidigen gilt der normale Wert.',
   },
   frostpanzer: {
-    id: 'frostpanzer', short: 'Auf Eis links und rechts +1', name: 'Frostpanzer', cls: 'frost', trigger: 'condition', terrain: 'eis', value: 0.3,
-    text: 'Solange die Karte auf einem Eisfeld liegt: Linker und rechter Wert erhalten je +1. Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
+    id: 'frostpanzer', short: 'Verteidigt mit +1', name: 'Frostpanzer', cls: 'frost', trigger: 'condition', value: 1.6,
+    text: 'Wird diese Karte angegriffen, zählen ihre Werte im Vergleich +1 (höchstens 10). Beim Angreifen gilt der normale Wert.',
   },
   schattenmantel: {
-    id: 'schattenmantel', short: 'Auf Schatten niedrigster Wert +2', name: 'Schattenmantel', cls: 'schatten', trigger: 'condition', terrain: 'schatten', value: 0.3,
-    text: 'Solange die Karte auf einem Schattenfeld liegt: Der niedrigste Wert erhält +2 (bei Gleichstand oben, rechts, unten, links). Gilt nicht zusätzlich zum Element-Bonus (+1) – Gelände gibt höchstens +1.',
+    id: 'schattenmantel', short: 'Wer sie erobert, bekommt −1', name: 'Schattenmantel', cls: 'schatten', trigger: 'condition', value: 0.6,
+    text: 'Wird diese Karte erobert, verliert die Karte, die sie erobert hat, −1 auf alle Werte (bis Duellende). Eine Magische Barriere blockt das.',
   },
   schwaechender_blick: {
-    id: 'schwaechender_blick', short: 'Gegner daneben −1 auf alle Werte', name: 'Schwächender Blick', cls: 'schatten', trigger: 'play', value: 3.1,
+    id: 'schwaechender_blick', short: 'Gegner daneben −1 auf alle Werte', name: 'Schwächender Blick', cls: 'schatten', trigger: 'play', value: 2.1,
     text: 'Beim Ausspielen: Eine angrenzende gegnerische Karte verliert −1 auf alle Werte (bis Duellende). Bei mehreren Gegnern wählst du das Ziel.',
   },
   wirbelwind: {
@@ -103,11 +103,11 @@ export const EFFECTS: Record<EffectId, EffectDef> = {
     text: 'Beim Legen wählst du die Ausrichtung: Die vier Werte drehen sich in 90°-Schritten mit (das Bild bleibt aufrecht). Die Ausrichtung bleibt bis Duellende.',
   },
   kettenuebernahme: {
-    id: 'kettenuebernahme', short: 'Eroberte Karten greifen weiter an', name: 'Kettenübernahme', cls: null, trigger: 'play', value: 7,
-    text: 'Erobert diese Karte beim Legen eine Gegnerkarte, greift die eroberte Karte ihrerseits angrenzende Gegner an – nach den normalen Regeln, höchstens zwei weitere Stufen.',
+    id: 'kettenuebernahme', short: 'Eroberte Karten greifen weiter an', name: 'Kettenübernahme', cls: null, trigger: 'play', value: 7.4,
+    text: 'Erobert diese Karte beim Legen eine Gegnerkarte, greift die eroberte Karte ihrerseits angrenzende Gegner an (eine weitere Stufe). Dabei erobert nur ein höherer Wert – Gleichstand nie, auch nicht mit Dominanz.',
   },
   dominanz: {
-    id: 'dominanz', short: 'Gewinnt auch bei Gleichstand', name: 'Dominanz', cls: null, trigger: 'condition', value: 1.5,
+    id: 'dominanz', short: 'Gewinnt auch bei Gleichstand', name: 'Dominanz', cls: null, trigger: 'condition', value: 3,
     text: 'Greift diese Karte an, setzt sie sich auch bei Gleichstand durch und übernimmt die Gegnerkarte – außer gegen Karten mit Standhaft.',
   },
   standhaft: {
@@ -174,15 +174,18 @@ export function effectPreview(base: Four, effect: EffectId): { situation: string
     case 'naturbund':
       [0, 1, 2].forEach((i) => add(i, 1));
       return { situation: effect === 'schildwall' ? 'Eigene Karte links daneben' : 'Eigene Naturkarte links daneben', values: v };
-    // Terrain effects: on their terrain the element bonus (+1 on all values) applies instead – never both.
-    case 'wurzelkraft':
-    case 'flammenherz':
-    case 'frostpanzer':
-    case 'schattenmantel': {
-      const t = EFFECTS[effect].terrain!;
-      [0, 1, 2, 3].forEach((i) => add(i, ELEMENT_BONUS));
-      return { situation: `Auf ${TERRAIN_INFO[t].label}`, values: v, note: 'Nur der Element-Bonus +1 – der Effekt wirkt nicht zusätzlich.' };
+    case 'wurzelkraft': {
+      [0, 1].forEach(() => add(pickIndex(v, 'min'), 1));
+      return { situation: 'Nach zwei eigenen Zügen', values: v, note: 'Wächst nach jedem eigenen Zug +1 auf den niedrigsten Wert – höchstens zweimal.' };
     }
+    case 'flammenherz':
+      [0, 1, 2, 3].forEach((i) => add(i, 1));
+      return { situation: 'Beim Angreifen', values: v, note: 'Beim Verteidigen gelten die normalen Werte.' };
+    case 'frostpanzer':
+      [0, 1, 2, 3].forEach((i) => add(i, 1));
+      return { situation: 'Beim Verteidigen', values: v, note: 'Beim Angreifen gelten die normalen Werte.' };
+    case 'schattenmantel':
+      return { situation: 'Wenn sie erobert wird', values: v, note: 'Die eigenen Werte bleiben gleich – die Karte, die sie erobert, bekommt −1 auf alle Werte.' };
     case 'schwaechender_blick':
       return { situation: 'Beim Ausspielen', values: v, note: 'Die eigenen Werte bleiben gleich – eine Gegnerkarte daneben bekommt −1 auf alle Werte.' };
     case 'wirbelwind':

@@ -259,7 +259,8 @@ describe('Kampagne: Karten des Spielers', () => {
     const hand7 = suggestHand(m7, missionPool(m7, STARTER_DECK));
     expect(hand7.some((c) => getCard(c.cardId).cls === 'schatten')).toBe(false);
     const m3 = BUILTIN_MISSIONS[2];
-    expect(suggestHand(m3, missionPool(m3, STARTER_DECK)).some((c) => c.cardId === 'c06')).toBe(true);
+    // Geländebonus-Ziel im Wald: Naturkarten bekommen dort den Element-Bonus.
+    expect(suggestHand(m3, missionPool(m3, STARTER_DECK)).filter((c) => getCard(c.cardId).cls === 'natur').length).toBeGreaterThanOrEqual(2);
   });
 });
 

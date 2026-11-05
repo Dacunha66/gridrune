@@ -1,7 +1,7 @@
 // Pure duel rules: 4×4 board, 8 cards per side, orthogonal captures, no chains.
 // Special effects (effects.ts) only change values for the current duel; printed values never change.
 import { getCard } from './cards';
-import { CLASS_TERRAIN, EFFECTS, ELEMENT_BONUS, TERRAIN_INFO, Terrain } from './effects';
+import { CLASS_TERRAIN, EFFECTS, ELEMENT_BONUS, EffectId, TERRAIN_INFO, Terrain } from './effects';
 import { SETTINGS } from './settings';
 
 export type Side = 'player' | 'cpu';
@@ -61,6 +61,9 @@ export interface EffectEvent {
   cell: number;
   text: string;
   kind: 'buff' | 'debuff' | 'shield';
+  /** Effect that caused it and the side owning that effect's card (for campaign goals). */
+  effect?: EffectId;
+  by?: Side;
 }
 
 export interface BattleState {
@@ -273,20 +276,16 @@ function auraParts(board: readonly (BoardCell | null)[], terrain: readonly Terra
   const element: Part[] = def.cls && here !== 'normal' && CLASS_TERRAIN[def.cls] === here
     ? [{ source: `Element ${TERRAIN_INFO[here].label}`, d: [ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS, ELEMENT_BONUS], kind: 'element' }]
     : [];
-  // Terrain gives at most +1: a terrain effect (Wurzelkraft, …) never adds to the element bonus.
-  const effect = def.effect ? EFFECTS[def.effect] : null;
-  const effectParts = element.length > 0 && effect?.terrain ? [] : effectAura(board, terrain, cell);
-  return [...element, ...effectParts];
+  return [...element, ...effectAura(board, cell)];
 }
 
 /** Conditional bonus from the card's own effect. */
-function effectAura(board: readonly (BoardCell | null)[], terrain: readonly Terrain[], cell: number): Part[] {
+function effectAura(board: readonly (BoardCell | null)[], cell: number): Part[] {
   const card = board[cell];
   if (!card) return [];
   const effect = getCard(card.cardId).effect;
   if (!effect) return [];
   const def = EFFECTS[effect];
-  const here = terrain[cell] ?? 'normal';
   switch (effect) {
     case 'schildwall':
     case 'naturbund': {
@@ -297,14 +296,6 @@ function effectAura(board: readonly (BoardCell | null)[], terrain: readonly Terr
       const facingFriend = new Set(friends.map((n) => DIR_ORDER.indexOf(n.mine)));
       return [{ source: def.name, d: onlyAt([0, 1, 2, 3].filter((i) => !facingFriend.has(i)), 1), kind: 'aura' }];
     }
-    case 'wurzelkraft':
-      return here === 'wald' ? [{ source: def.name, d: [1, 1, 1, 1], kind: 'aura' }] : [];
-    case 'flammenherz':
-      return here === 'lava' ? [{ source: def.name, d: [2, 0, 0, 0], kind: 'aura' }] : [];
-    case 'frostpanzer':
-      return here === 'eis' ? [{ source: def.name, d: [0, 1, 0, 1], kind: 'aura' }] : [];
-    case 'schattenmantel':
-      return here === 'schatten' ? [{ source: def.name, d: onlyAt([extremeIndex(orientedLasting(card), 'min')], 2), kind: 'aura' }] : [];
     default:
       return [];
   }
@@ -329,6 +320,77 @@ export function boardValue(board: readonly (BoardCell | null)[], terrain: readon
   return cellBreakdown(board, terrain, cell).values[DIR_ORDER.indexOf(dir)];
 }
 
+/** Bonus in a comparison: Flammenherz +1 when this card attacks, Frostpanzer +1 when it is attacked. */
+export const ATTACK_BONUS = 1;
+export const DEFENSE_BONUS = 1;
+
+/** Value of the card on `cell` when it attacks in direction `dir` (Flammenherz included, 1–10). */
+export function attackValue(board: readonly (BoardCell | null)[], terrain: readonly Terrain[], cell: number, dir: Dir): number {
+  const v = boardValue(board, terrain, cell, dir);
+  return getCard(board[cell]!.cardId).effect === 'flammenherz' ? clampValue(v + ATTACK_BONUS) : v;
+}
+
+/** Value of the card on `cell` when it is attacked from direction `dir` (Frostpanzer included, 1–10). */
+export function defenseValue(board: readonly (BoardCell | null)[], terrain: readonly Terrain[], cell: number, dir: Dir): number {
+  const v = boardValue(board, terrain, cell, dir);
+  return getCard(board[cell]!.cardId).effect === 'frostpanzer' ? clampValue(v + DEFENSE_BONUS) : v;
+}
+
+/** Popups for Flammenherz / Frostpanzer when they took part in comparisons (once per card). */
+export function comparisonEvents(board: readonly (BoardCell | null)[], attacker: number, defenders: readonly number[]): EffectEvent[] {
+  const out: EffectEvent[] = [];
+  if (defenders.length === 0) return out;
+  const a = board[attacker]!;
+  if (getCard(a.cardId).effect === 'flammenherz') out.push({ cell: attacker, text: 'Flammenherz +1', kind: 'buff', effect: 'flammenherz', by: a.owner });
+  for (const d of defenders) {
+    const c = board[d]!;
+    if (getCard(c.cardId).effect === 'frostpanzer') out.push({ cell: d, text: 'Frostpanzer +1', kind: 'buff', effect: 'frostpanzer', by: c.owner });
+  }
+  return out;
+}
+
+/**
+ * Schattenmantel: every captured card with it curses the card that captured it (−1 on all values until the end
+ * of the duel; a Magische Barriere blocks it). Changes `board` in place, after all captures of one step.
+ */
+export function applyCurses(board: (BoardCell | null)[], captures: readonly { from: number; cell: number }[], events: EffectEvent[]): void {
+  for (const c of captures) {
+    const victim = board[c.cell]!;
+    if (getCard(victim.cardId).effect !== 'schattenmantel') continue;
+    const capturer = { ...board[c.from]! };
+    const by = capturer.owner === 'player' ? 'cpu' : 'player';
+    if (capturer.barrier) {
+      capturer.barrier = false;
+      events.push({ cell: c.from, text: '🛡 geblockt', kind: 'shield', effect: 'schattenmantel', by });
+    } else {
+      capturer.changes = [...(capturer.changes ?? []), { source: EFFECTS.schattenmantel.name, d: [-1, -1, -1, -1] }];
+      events.push({ cell: c.from, text: 'Schattenmantel −1', kind: 'debuff', effect: 'schattenmantel', by });
+    }
+    board[c.from] = capturer;
+  }
+}
+
+/** Wurzelkraft: growth steps at most per card. */
+export const ROOT_GROWTH_MAX = 2;
+
+/**
+ * Wurzelkraft: after a move of `side`, each Wurzelkraft card it played and still owns (except the one just placed)
+ * grows +1 on its lowest value, at most ROOT_GROWTH_MAX times per card. A captured card does not grow for its new
+ * owner. Changes `board` in place.
+ */
+export function growRoots(board: (BoardCell | null)[], side: Side, placedAt: number, events: EffectEvent[]): void {
+  const name = EFFECTS.wurzelkraft.name;
+  board.forEach((c, i) => {
+    if (!c || i === placedAt || c.owner !== side || c.placedBy !== side || getCard(c.cardId).effect !== 'wurzelkraft') return;
+    const grown = (c.changes ?? []).filter((ch) => ch.source === name).length;
+    if (grown >= ROOT_GROWTH_MAX) return;
+    const v = lastingValues(c);
+    if (v[extremeIndex(v, 'min')] >= MAX_VALUE) return;
+    board[i] = { ...c, changes: [...(c.changes ?? []), { source: name, d: onlyAt([extremeIndex(v, 'min')], 1) }] };
+    events.push({ cell: i, text: 'Wurzelkraft +1', kind: 'buff', effect: 'wurzelkraft', by: side });
+  });
+}
+
 /** Enemy cards "Schwächender Blick" could target if `card` were placed on `cell` (empty for other effects). */
 export function blickTargets(board: readonly (BoardCell | null)[], cell: number, card: HandCard, side: Side): number[] {
   if (getCard(card.cardId).effect !== 'schwaechender_blick') return [];
@@ -346,7 +408,7 @@ export interface Placement {
 /**
  * Places a card: on-play effects first (own effect, then "Schwächender Blick" on its target),
  * then every comparison against the board at that moment, then all captures at once.
- * Captures never trigger anything else (no chains, nothing retroactive).
+ * Captures trigger nothing else – except Kettenübernahme (further waves) and Schattenmantel (curses the capturer).
  */
 export function resolvePlacement(
   board: readonly (BoardCell | null)[], terrain: readonly Terrain[], cell: number, card: HandCard, side: Side, target?: number, rot = 0,
@@ -356,7 +418,7 @@ export function resolvePlacement(
   const placed: BoardCell = { cardId: card.cardId, mod: card.mod, owner: side, placedBy: side };
   if (rot % 4 !== 0) {
     placed.rot = ((rot % 4) + 4) % 4;
-    events.push({ cell, text: `↻ ${placed.rot * 90}°`, kind: 'buff' });
+    events.push({ cell, text: `↻ ${placed.rot * 90}°`, kind: 'buff', effect: 'wirbelwind', by: side });
   }
   const effect = getCard(card.cardId).effect;
   if (effect && EFFECTS[effect].trigger === 'play') {
@@ -364,15 +426,15 @@ export function resolvePlacement(
     const v = lastingValues(placed);
     if (effect === 'kampfgeist') {
       placed.changes = [{ source: name, d: onlyAt([extremeIndex(v, 'max')], 1) }];
-      events.push({ cell, text: `${name} +1`, kind: 'buff' });
+      events.push({ cell, text: `${name} +1`, kind: 'buff', effect, by: side });
     } else if (effect === 'arkane_kraft') {
       placed.changes = [{ source: name, d: [1, 1, 1, 1] }];
-      events.push({ cell, text: `${name} +1`, kind: 'buff' });
+      events.push({ cell, text: `${name} +1`, kind: 'buff', effect, by: side });
     } else if (effect === 'magische_barriere') {
       const low = Math.min(...v);
       placed.changes = [{ source: name, d: onlyAt([0, 1, 2, 3].filter((i) => v[i] === low), 1) }];
       placed.barrier = true;
-      events.push({ cell, text: '🛡 Barriere', kind: 'shield' });
+      events.push({ cell, text: '🛡 Barriere', kind: 'shield', effect, by: side });
     } else if (effect === 'schwaechender_blick') {
       const targets = blickTargets(board, cell, card, side);
       const t = target ?? (targets.length === 1 ? targets[0] : undefined);
@@ -380,10 +442,10 @@ export function resolvePlacement(
         const victim = { ...next[t]! };
         if (victim.barrier) {
           victim.barrier = false;
-          events.push({ cell: t, text: '🛡 geblockt', kind: 'shield' });
+          events.push({ cell: t, text: '🛡 geblockt', kind: 'shield', effect, by: side });
         } else {
           victim.changes = [...(victim.changes ?? []), { source: name, d: [-1, -1, -1, -1] }];
-          events.push({ cell: t, text: `${name} −1`, kind: 'debuff' });
+          events.push({ cell: t, text: `${name} −1`, kind: 'debuff', effect, by: side });
         }
         next[t] = victim;
       }
@@ -394,23 +456,29 @@ export function resolvePlacement(
   for (const n of neighbours(cell)) {
     const other = next[n.cell];
     if (!other || other.owner === side) continue;
-    const attack = boardValue(next, terrain, cell, n.mine);
-    const defense = boardValue(next, terrain, n.cell, n.theirs);
+    const attack = attackValue(next, terrain, cell, n.mine);
+    const defense = defenseValue(next, terrain, n.cell, n.theirs);
     clashes.push({ cell: n.cell, dir: n.mine, attack, defense, captured: beats(attack, defense, placed.cardId, other.cardId) });
   }
-  for (const c of clashes) if (c.captured) next[c.cell] = { ...next[c.cell]!, owner: side };
-  const chain = effect === 'kettenuebernahme' ? runChain(next, terrain, clashes.filter((c) => c.captured).map((c) => c.cell), side, cell) : [];
-  if (chain.length > 0) events.push({ cell, text: `⚡ Kette ×${chain.length}`, kind: 'buff' });
+  events.push(...comparisonEvents(next, cell, clashes.map((c) => c.cell)));
+  const firstCaptures = clashes.filter((c) => c.captured).map((c) => c.cell);
+  for (const c of firstCaptures) next[c] = { ...next[c]!, owner: side };
+  // Kettenübernahme: the captured cards attack before a Schattenmantel curse lands on the placed card.
+  const chain = effect === 'kettenuebernahme' ? runChain(next, terrain, firstCaptures, side, cell, events) : [];
+  if (chain.length > 0) events.push({ cell, text: `⚡ Kette ×${chain.length}`, kind: 'buff', effect, by: side });
+  applyCurses(next, firstCaptures.map((c) => ({ from: cell, cell: c })), events);
   return { board: next, clashes, events, chain };
 }
 
 /**
- * Kettenübernahme: the freshly captured cards attack their enemy neighbours (normal comparison, current
- * values), wave by wave, at most SETTINGS.chainDepth waves (0 = unlimited). Every card attacks at most once;
- * order is fixed (wave, then cell number, then top/right/bottom/left), so the result is always the same.
- * Changes `board` in place.
+ * Kettenübernahme: the freshly captured cards attack their enemy neighbours (current values), wave by wave, at most
+ * SETTINGS.chainDepth waves (0 = unlimited). In the chain only a higher value captures – a tie never does, not even
+ * with Dominanz. Every card attacks at most once; order is fixed (wave, then cell number, then
+ * top/right/bottom/left), so the result is always the same. Changes `board` in place.
  */
-function runChain(board: (BoardCell | null)[], terrain: readonly Terrain[], firstCaptures: number[], side: Side, placedAt: number): ChainStep[] {
+function runChain(
+  board: (BoardCell | null)[], terrain: readonly Terrain[], firstCaptures: number[], side: Side, placedAt: number, events: EffectEvent[],
+): ChainStep[] {
   const steps: ChainStep[] = [];
   const attacked = new Set<number>([placedAt]);
   let wave = [...firstCaptures].sort((a, b) => a - b);
@@ -423,11 +491,12 @@ function runChain(board: (BoardCell | null)[], terrain: readonly Terrain[], firs
       for (const n of neighbours(from)) {
         const other = board[n.cell];
         if (!other || other.owner === side || captured.some((c) => c.cell === n.cell)) continue;
-        if (beats(boardValue(board, terrain, from, n.mine), boardValue(board, terrain, n.cell, n.theirs), board[from]!.cardId, other.cardId)) captured.push({ from, cell: n.cell });
+        if (attackValue(board, terrain, from, n.mine) > defenseValue(board, terrain, n.cell, n.theirs)) captured.push({ from, cell: n.cell });
       }
     }
     // All captures of a wave happen together (like the normal capture), then the next wave starts.
     for (const c of captured) board[c.cell] = { ...board[c.cell]!, owner: side };
+    applyCurses(board, captured, events);
     steps.push(...captured.map((c) => ({ ...c, level })));
     wave = captured.map((c) => c.cell).sort((a, b) => a - b);
   }
@@ -505,6 +574,7 @@ export function applyMove(state: BattleState, move: Move): BattleState {
   const hand = [...state.hands[side]];
   const [card] = hand.splice(move.handIndex, 1);
   const { board, clashes, events, chain } = resolvePlacement(state.board, state.terrain, move.cell, card, side, move.target, move.rot ?? 0);
+  growRoots(board, side, move.cell, events);
   const flips = [...clashes.filter((c) => c.captured).map((c) => c.cell), ...chain.map((c) => c.cell)];
   const name = getCard(card.cardId).name;
   const text = `${name} auf ${cellName(move.cell)}${move.rot ? ` (↻ ${move.rot * 90}°)` : ''}${flips.length ? ` – erobert ${flips.length}` : ''}${chain.length ? ` (Kette ×${chain.length})` : ''}`;
