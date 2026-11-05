@@ -106,20 +106,24 @@ zwei Karten der Spielerhand bekommen den Effekt. Eichung mit +1 / +2 Wertpunkten
 | Wurzelkraft | +0,2 | 0,1 | 0,1 |
 | Standhaft | 0 | 0 (nur gegen Dominanz) | 0,6 |
 
-Weitere Varianten: Kettenübernahme mit −1 auf die Angriffe in der Kette ≈ 3,8 Σ. Wurzelkraft wirkt kaum, weil Karten
+**Nachtrag v1.32 (so entschieden):** Kettenübernahme greift in der Kette mit −1 an → gemessen +9,4 Punkte ≈ **3,9 Σ**
+(eingetragen 3,9). Wurzelkraft „Wachstum ab sofort“ (beim Legen +1 auf den niedrigsten Wert, nach dem nächsten eigenen
+Zug noch einmal) → +1,7 Punkte ≈ **0,7 Σ** (eingetragen 0,7).
+
+Weitere Varianten (v1.31): Kettenübernahme mit −1 auf die Angriffe in der Kette ≈ 3,8 Σ. Wurzelkraft wirkt kaum, weil Karten
 vor allem direkt nach dem Legen angegriffen werden (auch „+1 auf alle Werte nach dem nächsten Zug“ ≈ 0,2 Σ).
 Schattenmantel mit −2 ≈ 0,7 Σ.
 
-## Effekte für alle 250 Karten (v1.31, Simulation)
+## Effekte für alle 250 Karten (v1.32, Simulation)
 
 Grundsatz: „Summe der Werte + Effektstärke“ liegt höchstens 1 über der Obergrenze der Seltenheit. Karten an der
-Obergrenze bekommen höchstens Naturbund oder Schattenmantel. Nicht vergeben: Kettenübernahme (≈ 7,4) und Wurzelkraft
-(wirkt kaum).
+Obergrenze bekommen höchstens Naturbund, Wurzelkraft oder Schattenmantel.
 
-Verteilung: Wirbelwind 37 · Dominanz 29 · Standhaft 28 · Schattenmantel 17 · Naturbund 16 · Schwächender Blick 12 ·
-Frostpanzer 12 · Schildwall 9 · Magische Barriere 9 · Flammenherz 9 · Kampfgeist 8 · Arkane Kraft 6 · ohne 58.
+Verteilung: Wirbelwind 33 · Standhaft 24 · Dominanz 23 · Schattenmantel 17 · Kettenübernahme 14 · Naturbund 11 ·
+Schwächender Blick 11 · Frostpanzer 11 · Wurzelkraft 10 · Magische Barriere 9 · Flammenherz 9 · Schildwall 8 ·
+Kampfgeist 7 · Arkane Kraft 5 · ohne 58.
 
 50 000 Duelle je Variante, mittlere KI, zufällige Hände aus allen 250 Karten. Siegquote je Seltenheit ohne → mit
-Effekten: gewöhnlich 43,2 → 43,8 % · ungewöhnlich 49,2 → 49,1 % · selten 52,6 → 52,5 % · episch 55,0 → 54,7 % ·
-legendär 56,7 → 55,9 % · mystisch 57,3 → 56,3 %. Innerhalb einer Seltenheit liegen die Effekt-Gruppen meist höchstens
+Effekten: gewöhnlich 43,2 → 43,8 % · ungewöhnlich 49,2 → 48,7 % · selten 52,6 → 52,6 % · episch 55,0 → 54,8 % ·
+legendär 56,7 → 56,0 % · mystisch 57,3 → 57,3 %. Innerhalb einer Seltenheit liegen die Effekt-Gruppen meist höchstens
 etwa 3 Prozentpunkte neben den Karten ohne Effekt; am schwächsten sind Karten mit Standhaft.

@@ -87,6 +87,8 @@ export interface BattleState {
   lastEvents: EffectEvent[];
   /** Kettenübernahme of the most recent move: each further capture, wave by wave. */
   lastChain: ChainStep[];
+  /** Every comparison of that Kettenübernahme (also those that failed) – for the display. */
+  lastChainClashes?: ChainClash[];
   /** Equipped rune of each side and whether it was used (null = no rune). */
   runes: Record<Side, RuneSlot | null>;
   /** Everything that happened, in order (public duel log). */
@@ -111,6 +113,22 @@ export interface ChainStep {
   from: number;
   cell: number;
   level: number;
+}
+
+/** In the chain a card attacks with this much less on every value (Kettenübernahme). */
+export const CHAIN_PENALTY = 1;
+
+/** One comparison in a Kettenübernahme wave (captured or not), shown to the player: base value − penalty vs. defense. */
+export interface ChainClash {
+  from: number;
+  cell: number;
+  level: number;
+  /** Attack value before the chain penalty. */
+  base: number;
+  /** Attack value used (base − CHAIN_PENALTY, at least 1). */
+  attack: number;
+  defense: number;
+  captured: boolean;
 }
 
 export interface RuneSlot {
@@ -403,6 +421,7 @@ export interface Placement {
   events: EffectEvent[];
   /** Further captures of a Kettenübernahme. */
   chain: ChainStep[];
+  chainClashes: ChainClash[];
 }
 
 /**
@@ -435,6 +454,9 @@ export function resolvePlacement(
       placed.changes = [{ source: name, d: onlyAt([0, 1, 2, 3].filter((i) => v[i] === low), 1) }];
       placed.barrier = true;
       events.push({ cell, text: '🛡 Barriere', kind: 'shield', effect, by: side });
+    } else if (effect === 'wurzelkraft') {
+      placed.changes = [{ source: name, d: onlyAt([extremeIndex(v, 'min')], 1) }];
+      events.push({ cell, text: `${name} +1`, kind: 'buff', effect, by: side });
     } else if (effect === 'schwaechender_blick') {
       const targets = blickTargets(board, cell, card, side);
       const t = target ?? (targets.length === 1 ? targets[0] : undefined);
@@ -464,20 +486,22 @@ export function resolvePlacement(
   const firstCaptures = clashes.filter((c) => c.captured).map((c) => c.cell);
   for (const c of firstCaptures) next[c] = { ...next[c]!, owner: side };
   // Kettenübernahme: the captured cards attack before a Schattenmantel curse lands on the placed card.
-  const chain = effect === 'kettenuebernahme' ? runChain(next, terrain, firstCaptures, side, cell, events) : [];
+  const chainClashes: ChainClash[] = [];
+  const chain = effect === 'kettenuebernahme' ? runChain(next, terrain, firstCaptures, side, cell, events, chainClashes) : [];
   if (chain.length > 0) events.push({ cell, text: `⚡ Kette ×${chain.length}`, kind: 'buff', effect, by: side });
   applyCurses(next, firstCaptures.map((c) => ({ from: cell, cell: c })), events);
-  return { board: next, clashes, events, chain };
+  return { board: next, clashes, events, chain, chainClashes };
 }
 
 /**
- * Kettenübernahme: the freshly captured cards attack their enemy neighbours (current values), wave by wave, at most
- * SETTINGS.chainDepth waves (0 = unlimited). In the chain only a higher value captures – a tie never does, not even
- * with Dominanz. Every card attacks at most once; order is fixed (wave, then cell number, then
+ * Kettenübernahme: the freshly captured cards attack their enemy neighbours (current values − CHAIN_PENALTY), wave by
+ * wave, at most SETTINGS.chainDepth waves (0 = unlimited). In the chain only a higher value captures – a tie never does,
+ * not even with Dominanz. Every card attacks at most once; order is fixed (wave, then cell number, then
  * top/right/bottom/left), so the result is always the same. Changes `board` in place.
  */
 function runChain(
   board: (BoardCell | null)[], terrain: readonly Terrain[], firstCaptures: number[], side: Side, placedAt: number, events: EffectEvent[],
+  tries: ChainClash[] = [],
 ): ChainStep[] {
   const steps: ChainStep[] = [];
   const attacked = new Set<number>([placedAt]);
@@ -491,7 +515,12 @@ function runChain(
       for (const n of neighbours(from)) {
         const other = board[n.cell];
         if (!other || other.owner === side || captured.some((c) => c.cell === n.cell)) continue;
-        if (attackValue(board, terrain, from, n.mine) > defenseValue(board, terrain, n.cell, n.theirs)) captured.push({ from, cell: n.cell });
+        const base = attackValue(board, terrain, from, n.mine);
+        const attack = clampValue(base - CHAIN_PENALTY);
+        const defense = defenseValue(board, terrain, n.cell, n.theirs);
+        const won = attack > defense;
+        tries.push({ from, cell: n.cell, level, base, attack, defense, captured: won });
+        if (won) captured.push({ from, cell: n.cell });
       }
     }
     // All captures of a wave happen together (like the normal capture), then the next wave starts.
@@ -573,7 +602,7 @@ export function applyMove(state: BattleState, move: Move): BattleState {
   const side = state.turn;
   const hand = [...state.hands[side]];
   const [card] = hand.splice(move.handIndex, 1);
-  const { board, clashes, events, chain } = resolvePlacement(state.board, state.terrain, move.cell, card, side, move.target, move.rot ?? 0);
+  const { board, clashes, events, chain, chainClashes } = resolvePlacement(state.board, state.terrain, move.cell, card, side, move.target, move.rot ?? 0);
   growRoots(board, side, move.cell, events);
   const flips = [...clashes.filter((c) => c.captured).map((c) => c.cell), ...chain.map((c) => c.cell)];
   const name = getCard(card.cardId).name;
@@ -589,6 +618,7 @@ export function applyMove(state: BattleState, move: Move): BattleState {
     lastPlaced: move.cell,
     lastEvents: events,
     lastChain: chain,
+    lastChainClashes: chainClashes,
     lastOrigin: move.cell,
     lastRune: null,
     log: [...state.log, { side, kind: 'place', text }],

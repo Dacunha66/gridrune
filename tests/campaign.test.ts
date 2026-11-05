@@ -148,8 +148,8 @@ describe('Kampagne: Sterne-Ziele', () => {
     expect(forest[0]).toBe('wald');
     const onForest = duelStats(start, [{ handIndex: 0, cell: 0 }]);
     expect(onForest.terrainBonus).toBe(1);
-    // Terrain gives at most +1: Wurzelkraft does not work on top of the element bonus.
-    expect(onForest.effects.wurzelkraft ?? 0).toBe(0);
+    // Wurzelkraft works when played (+1 on the lowest value), independent of the terrain.
+    expect(onForest.effects.wurzelkraft).toBe(1);
     const onNormal = duelStats(start, [{ handIndex: 0, cell: 1 }]);
     expect(onNormal.terrainBonus).toBe(0);
   });

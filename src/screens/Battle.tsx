@@ -229,12 +229,14 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     setPendingFlips(state.lastFlips);
     setShowClashes(state.lastClashes.length > 0 || state.lastEvents.length > 0);
     const timers = [setTimeout(() => setPendingFlips((p) => p.filter((c) => chainCells.has(c))), 550 * fxTime)];
-    const levels = [...new Set(state.lastChain.map((c) => c.level))];
+    const levels = [...new Set([...state.lastChain, ...(state.lastChainClashes ?? [])].map((c) => c.level))];
     for (const level of levels) {
       const cells = new Set(state.lastChain.filter((c) => c.level === level).map((c) => c.cell));
       timers.push(setTimeout(() => setPendingFlips((p) => p.filter((c) => !cells.has(c))), (550 + 380 * level) * fxTime));
     }
-    if (state.lastChain.length > 0) setBanner(`⚡ KETTENÜBERNAHME ×${state.lastFlips.length}`);
+    if ((state.lastChainClashes ?? []).length > 0) {
+      setBanner(state.lastChain.length > 0 ? `⚡ KETTENÜBERNAHME ×${state.lastChain.length} · Kette −1` : '⚡ KETTE −1 · keine weitere Übernahme');
+    }
     if (state.lastRune) {
       const def = findRune(state.lastRune.id);
       if (def) setBanner(`${state.lastRune.side === 'player' ? 'Deine' : 'Gegner:'} ${def.glyph} ${def.name}`);
@@ -518,6 +520,18 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
             const p = cellCenter(e.cell);
             return (
               <div key={`${state.moveCount}-fx-${k}`} className={`fx-pop ${e.kind}`} style={{ left: `${p.x}%`, top: `${p.y - 12}%` }}>{e.text}</div>
+            );
+          })}
+
+          {/* Kettenübernahme: every comparison of the chain, wave by wave – the captured card attacks with −1. */}
+          {showClashes && (state.lastChainClashes ?? []).map((c, k) => {
+            const a = cellCenter(c.from);
+            const b = cellCenter(c.cell);
+            return (
+              <div key={`${state.moveCount}-cc-${k}`} className={`clash chain-clash ${c.captured ? 'won' : 'held'}`}
+                style={{ left: `${(a.x + b.x) / 2}%`, top: `${(a.y + b.y) / 2}%`, animationDelay: `${(0.55 + 0.38 * (c.level - 1)) * fxTime}s` }}>
+                {c.base}<span className="chain-pen">−1</span> {c.captured ? '>' : c.attack === c.defense ? '=' : '<'} {c.defense}
+              </div>
             );
           })}
 

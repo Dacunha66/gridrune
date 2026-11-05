@@ -75,8 +75,8 @@ export const EFFECTS: Record<EffectId, EffectDef> = {
     text: 'Beim Ausspielen: Der niedrigste Wert erhält +1 (bei Gleichstand alle niedrigsten). Ein Schild 🛡 verhindert die nächste Schwächung durch einen gegnerischen Effekt.',
   },
   wurzelkraft: {
-    id: 'wurzelkraft', short: 'Wächst nach jedem eigenen Zug', name: 'Wurzelkraft', cls: 'natur', trigger: 'condition', value: 0.1,
-    text: 'Gehört die Karte nach deinem Zug noch dir, wächst ihr niedrigster Wert um +1 – nicht im Zug, in dem du sie legst, höchstens zweimal (bei Gleichstand oben, rechts, unten, links). Für einen Gegner, der sie erobert, wächst sie nicht.',
+    id: 'wurzelkraft', short: 'Niedrigster Wert +1, wächst noch einmal', name: 'Wurzelkraft', cls: 'natur', trigger: 'play', value: 0.7,
+    text: 'Beim Ausspielen: Der niedrigste Wert erhält +1. Gehört die Karte nach deinem nächsten Zug noch dir, wächst der niedrigste Wert noch einmal um +1 (bei Gleichstand oben, rechts, unten, links). Für einen Gegner, der sie erobert, wächst sie nicht.',
   },
   naturbund: {
     id: 'naturbund', short: '+1 neben eigener Naturkarte', name: 'Naturbund', cls: 'natur', trigger: 'condition', value: 0.5,
@@ -103,8 +103,8 @@ export const EFFECTS: Record<EffectId, EffectDef> = {
     text: 'Beim Legen wählst du die Ausrichtung: Die vier Werte drehen sich in 90°-Schritten mit (das Bild bleibt aufrecht). Die Ausrichtung bleibt bis Duellende.',
   },
   kettenuebernahme: {
-    id: 'kettenuebernahme', short: 'Eroberte Karten greifen weiter an', name: 'Kettenübernahme', cls: null, trigger: 'play', value: 7.4,
-    text: 'Erobert diese Karte beim Legen eine Gegnerkarte, greift die eroberte Karte ihrerseits angrenzende Gegner an (eine weitere Stufe). Dabei erobert nur ein höherer Wert – Gleichstand nie, auch nicht mit Dominanz.',
+    id: 'kettenuebernahme', short: 'Eroberte Karten greifen weiter an', name: 'Kettenübernahme', cls: null, trigger: 'play', value: 3.9,
+    text: 'Erobert diese Karte beim Legen eine Gegnerkarte, greift die eroberte Karte ihrerseits angrenzende Gegner an (eine weitere Stufe) – mit −1 auf ihre Werte. Dabei erobert nur ein höherer Wert, nie ein Gleichstand (auch nicht mit Dominanz).',
   },
   dominanz: {
     id: 'dominanz', short: 'Gewinnt auch bei Gleichstand', name: 'Dominanz', cls: null, trigger: 'condition', value: 3,
@@ -176,7 +176,7 @@ export function effectPreview(base: Four, effect: EffectId): { situation: string
       return { situation: effect === 'schildwall' ? 'Eigene Karte links daneben' : 'Eigene Naturkarte links daneben', values: v };
     case 'wurzelkraft': {
       [0, 1].forEach(() => add(pickIndex(v, 'min'), 1));
-      return { situation: 'Nach zwei eigenen Zügen', values: v, note: 'Wächst nach jedem eigenen Zug +1 auf den niedrigsten Wert – höchstens zweimal.' };
+      return { situation: 'Nach deinem nächsten Zug', values: v, note: 'Beim Ausspielen +1 auf den niedrigsten Wert, nach deinem nächsten Zug noch einmal +1.' };
     }
     case 'flammenherz':
       [0, 1, 2, 3].forEach((i) => add(i, 1));

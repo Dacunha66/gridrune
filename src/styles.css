@@ -1818,3 +1818,12 @@ label.btn.disabled { opacity: .45; }
 .world-tile { flex-shrink: 0; box-shadow: none; border: 1px solid var(--gold-line); }
 .world-tile-art { border-bottom: 1px solid var(--gold-faint); }
 .world-meta { color: var(--gold-light); }
+
+/* Kettenübernahme: comparisons of the chain show the −1 of the captured attacker (appear wave by wave). */
+.clash.chain-clash { animation-fill-mode: both; border-style: dashed; }
+.clash.chain-clash .chain-pen {
+  display: inline-block; margin: 0 2px 0 1px; padding: 0 4px; border-radius: 6px; font-size: 0.72em; vertical-align: 0.15em;
+  color: #fff; background: #c2413a; box-shadow: 0 0 8px rgba(255, 90, 80, 0.75); animation: chain-pen-pulse 0.9s ease-in-out 2;
+}
+@keyframes chain-pen-pulse { 50% { transform: scale(1.3); } }
+.reduced-motion .clash.chain-clash, .reduced-motion .clash.chain-clash .chain-pen { animation: none; }

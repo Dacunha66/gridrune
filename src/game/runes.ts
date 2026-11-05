@@ -291,6 +291,7 @@ export function applyRune(state: BattleState, use: RuneUse): BattleState {
     lastClashes: clashes,
     lastEvents: events,
     lastChain: [],
+    lastChainClashes: [],
     lastOrigin: r.effect === 'echo' ? use.cell! : null,
     lastRune: { side, id: def.id },
     log: [...state.log, { side, kind: 'rune', text: `${def.name}: ${text}` }],

@@ -202,14 +202,13 @@ describe('Schattenmantel', () => {
 
 describe('Wurzelkraft', () => {
   const ownMove = (s: BattleState, cell: number, card = 'p01') => applyMove({ ...s, turn: 'player', hands: { ...s.hands, player: toHand([card]) } }, { handIndex: 0, cell });
-  it('wächst nach jedem eigenen Zug +1 auf den niedrigsten Wert – nicht im Zug, in dem sie gelegt wird', () => {
-    const s0 = applyMove(setup({}, ['t05']), { handIndex: 0, cell: 5 });
-    expect(values(s0, 5)).toEqual([4, 4, 4, 4]);
+  it('beim Legen +1 auf den niedrigsten Wert (wirkt schon im Vergleich), nach dem nächsten eigenen Zug noch einmal', () => {
+    const s0 = applyMove(setup({ 1: at('p04', 'cpu') }, ['t05']), { handIndex: 0, cell: 5 });
+    expect(values(s0, 5)).toEqual([5, 4, 4, 4]);
+    expect(s0.board[1]!.owner).toBe('player');
+    expect(s0.lastEvents.some((e) => e.effect === 'wurzelkraft' && e.by === 'player' && e.cell === 5)).toBe(true);
     const s1 = ownMove(s0, 12);
-    expect(values(s1, 5)).toEqual([5, 4, 4, 4]);
-    expect(s1.lastEvents.some((e) => e.effect === 'wurzelkraft' && e.by === 'player' && e.cell === 5)).toBe(true);
-    const s2 = ownMove(s1, 13);
-    expect(values(s2, 5)).toEqual([5, 5, 4, 4]);
+    expect(values(s1, 5)).toEqual([5, 5, 4, 4]);
   });
   it('höchstens zweimal', () => {
     let s = applyMove(setup({}, ['t05']), { handIndex: 0, cell: 5 });
@@ -219,7 +218,7 @@ describe('Wurzelkraft', () => {
   it('wächst nicht in den Zügen des Gegners', () => {
     const s0 = applyMove(setup({}, ['t05']), { handIndex: 0, cell: 5 });
     const s1 = applyMove({ ...s0, turn: 'cpu', hands: { ...s0.hands, cpu: toHand(['p01']) } }, { handIndex: 0, cell: 15 });
-    expect(values(s1, 5)).toEqual([4, 4, 4, 4]);
+    expect(values(s1, 5)).toEqual([5, 4, 4, 4]);
   });
   it('eine eroberte Wurzelkraft-Karte wächst nicht mehr – auch nicht für ihren neuen Besitzer', () => {
     const s0 = applyMove(setup({ 6: at('t05', 'cpu') }, ['p05']), { handIndex: 0, cell: 5 });
@@ -434,6 +433,18 @@ describe('Kettenübernahme', () => {
       SETTINGS.chainDepth = before;
     }
   });
+  it('in der Kette greift die eroberte Karte mit −1 an – sichtbar in lastChainClashes', () => {
+    // l66 at 1 attacks p05 at 2 with right 6 − 1 = 5 against left 5: tie, no capture.
+    const s = applyMove(setup({ 1: at('l66', 'cpu'), 2: at('p05', 'cpu') }, ['k01']), { handIndex: 0, cell: 0 });
+    expect(s.board[1]!.owner).toBe('player');
+    expect(s.board[2]!.owner).toBe('cpu');
+    expect(s.lastChain).toEqual([]);
+    expect(s.lastChainClashes).toEqual([{ from: 1, cell: 2, level: 1, base: 6, attack: 5, defense: 5, captured: false }]);
+    // against 4 it captures: 5 > 4
+    const t = applyMove(setup({ 1: at('l66', 'cpu'), 2: at('p04', 'cpu') }, ['k01']), { handIndex: 0, cell: 0 });
+    expect(t.board[2]!.owner).toBe('player');
+    expect(t.lastChainClashes![0]).toMatchObject({ base: 6, attack: 5, defense: 4, captured: true });
+  });
   it('ohne die Fähigkeit keine Kette (normale Übernahme)', () => {
     const s = applyMove(line(), { handIndex: 1, cell: 0 });
     expect([1, 2, 3].map((c) => s.board[c]!.owner)).toEqual(['player', 'cpu', 'cpu']);
@@ -506,7 +517,7 @@ describe('Dominanz und Standhaft', () => {
     expect(s.board[6]!.owner).toBe('player');
     expect(s.board[7]!.owner).toBe('cpu');
     // ein höherer Wert erobert weiter
-    const t = applyMove(setup({ 6: at('d05', 'cpu', { mod: -1 }), 7: at('p04', 'cpu', { mod: -1 }) }, ['kd5']), { handIndex: 0, cell: 5 });
+    const t = applyMove(setup({ 6: at('d05', 'cpu', { mod: -1 }), 7: at('p01', 'cpu') }, ['kd5']), { handIndex: 0, cell: 5 });
     expect(t.board[7]!.owner).toBe('player');
   });
   it('die KI erkennt Gleichstands-Übernahmen mit Dominanz', () => {

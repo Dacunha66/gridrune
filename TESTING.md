@@ -411,6 +411,14 @@ Sicherung vor dem Umbau: Stand v1.3 = Commit `2ab6b82` (auf GitHub) und Version 
 - Simulation: siehe BALANCING.md (Effektstärken, Verteilung auf 250 Karten).
 - Nicht im Browser geprüft: Anzeige der neuen Effekt-Popups im Duell.
 
+## Kettenübernahme mit −1, Wurzelkraft ab sofort (v1.32)
+
+- Automatisch (tests/effects.test.ts): in der Kette greift die eroberte Karte mit −1 an (Gleichstand nach Abzug
+  erobert nicht), jeder Kettenvergleich steht in lastChainClashes; Wurzelkraft +1 beim Legen (wirkt schon im Vergleich)
+  und nach dem nächsten eigenen Zug noch einmal, höchstens zweimal.
+- Duell-Anzeige: Kettenvergleiche erscheinen Welle für Welle als gestrichelte Blasen „6 −1 > 4“ mit pulsierendem roten
+  „−1“, dazu das Banner „KETTENÜBERNAHME ×n · Kette −1“.
+
 ## Browser-Durchlauf (automatisiert mit Playwright/Chromium, nicht im Repo)
 In iPhone-Größe (390×844 und 375×667) und iPad-Größe (820×1180) mit Touch-Emulation:
 Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Überspringen) → vollständiges Duell mit 16 Zügen → Ergebnisbildschirm → Neuladen der Seite (Münzen und Statistik bleiben erhalten) → Aufgeben im Duell. Keine JavaScript-Fehler.

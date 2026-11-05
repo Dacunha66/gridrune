@@ -77,7 +77,7 @@ function effectWorked(after: BattleState, cell: number, effect: EffectId): boole
 }
 
 /** Effects that work later in the duel (not when their card is placed) – counted each time they work for the player. */
-const REACTIVE = new Set<EffectId>(['frostpanzer', 'schattenmantel', 'wurzelkraft']);
+const REACTIVE = new Set<EffectId>(['frostpanzer', 'schattenmantel']);
 
 function countReactive(stats: DuelStats, after: BattleState): void {
   for (const e of after.lastEvents) {
