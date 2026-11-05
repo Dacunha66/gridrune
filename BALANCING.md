@@ -77,3 +77,18 @@ Folgerungen: Stärke-Werte für die Balancing-Hinweise im Karteneditor: Wirbelwi
 **v1.21:** Nachhall auf höchstens 1 Übernahme begrenzt (Spieler wählt, keine Kette, im Admin 1–3). Neue Simulation (400 Duelle, Karten des Spiels): ohne Rune 41 % / 35 %, Nachhall 63 % / 20 % – gleich mit Höchstzahl 3, da Mehrfach-Übernahmen selten sind (6 von 400 Duellen); Fluch 55 % / 25 %. Der Vorteil von Nachhall kommt vom zusätzlichen Angriff selbst.
 
 **v1.22:** Nachhall erst ab 8 Karten auf dem Feld (Spielmitte). Simulation (400 Duelle): ohne Rune 41 % / 35 %, Nachhall 65 % / 19 %, Fluch 55 % / 25 %, Verdrehung 41 % / 34 %, Nachhall gegen Fluch 52 % / 26 %. Die Schwelle ändert die Stärke kaum, weil Nachhall in der zweiten Hälfte ohnehin am meisten bringt.
+
+## Effekte für alle 250 Karten (v1.30, Simulation)
+
+Grundsatz: „Summe der Werte + Effektstärke“ liegt höchstens 1 über der Obergrenze der Seltenheit. Karten, die schon an
+der Obergrenze liegen, bekommen keinen Effekt (81 Karten); die anderen einen Effekt ihrer Klasse oder einen
+klassenübergreifenden (Wirbelwind, Dominanz, Standhaft). Nicht vergeben: Kettenübernahme (Stärke ≈ 7, passt in keine
+Seltenheit) und die Gelände-Effekte (wirken seit v1.14 nicht zusätzlich zum Element-Bonus).
+
+Verteilung: Wirbelwind 47 · Dominanz 41 · Standhaft 36 · Naturbund 11 · Kampfgeist 10 · Magische Barriere 10 ·
+Arkane Kraft 6 · Schildwall 5 · Schwächender Blick 3 · ohne 81.
+
+40 000 Duelle je Variante, mittlere KI auf beiden Seiten, zufällige Hände aus allen 250 Karten. Siegquote je Seltenheit
+ohne → mit Effekten: gewöhnlich 43,0 → 43,7 % · ungewöhnlich 49,2 → 48,7 % · selten 52,5 → 52,9 % · episch 55,2 → 55,0 % ·
+legendär 56,6 → 55,9 % · mystisch 57,8 → 56,9 %. Innerhalb einer Seltenheit liegen Karten mit Effekt höchstens etwa
+3 Prozentpunkte neben den Karten ohne Effekt.
