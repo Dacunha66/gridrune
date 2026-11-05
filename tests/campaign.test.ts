@@ -136,7 +136,7 @@ describe('Kampagne: Sterne-Ziele', () => {
 
   it('Geländebonus: Naturkarte auf Wald zählt (Element), Krieger auf Wald nicht', () => {
     const forest = ARENAS.find((a) => a.id === 'a07')!.cells;
-    const start = createBattle(toHand(['c09', 'c03', 'c02', 'c05', 'c07', 'c08', 'c10', 'c11']), toHand(BUILTIN_OPPONENTS[0].deck), 'player', [], forest);
+    const start = createBattle(toHand(['c12', 'c03', 'c02', 'c05', 'c07', 'c08', 'c10', 'c11']), toHand(BUILTIN_OPPONENTS[0].deck), 'player', [], forest);
     expect(duelStats(start, [{ handIndex: 0, cell: 0 }]).terrainBonus).toBe(1);
     expect(duelStats(start, [{ handIndex: 1, cell: 0 }]).terrainBonus).toBe(0);
   });
@@ -155,7 +155,7 @@ describe('Kampagne: Sterne-Ziele', () => {
   });
 
   it('Naturbund zählt nur, wenn eine eigene Naturkarte angrenzt', () => {
-    const start = createBattle(toHand(['c09', 'c01', 'c02', 'c03', 'c05', 'c07', 'c08', 'c10']), toHand(BUILTIN_OPPONENTS[1].deck));
+    const start = createBattle(toHand(['c12', 'c01', 'c02', 'c03', 'c05', 'c07', 'c08', 'c10']), toHand(BUILTIN_OPPONENTS[1].deck));
     const cpuMove = (s: ReturnType<typeof createBattle>) => legalMoves(s).find((m) => m.cell === 15)!;
     const s1 = applyMove(start, { handIndex: 0, cell: 0 });
     const s2 = applyMove(s1, cpuMove(s1));
