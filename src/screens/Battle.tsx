@@ -11,6 +11,8 @@ import {
 } from '../game/battle';
 import { Arena, pickArena } from '../game/arenas';
 import { CLASS_INFO, CLASS_TERRAIN, EFFECTS, TERRAIN_INFO, Terrain } from '../game/effects';
+import { AbilityMedallion } from '../components/cardIcons';
+import { activations } from '../game/activations';
 import { getCard } from '../game/cards';
 import { CardInspect } from '../components/CardInspect';
 import { BoardArt } from '../components/DesignArt';
@@ -234,9 +236,6 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       const cells = new Set(state.lastChain.filter((c) => c.level === level).map((c) => c.cell));
       timers.push(setTimeout(() => setPendingFlips((p) => p.filter((c) => !cells.has(c))), (550 + 380 * level) * fxTime));
     }
-    if ((state.lastChainClashes ?? []).length > 0) {
-      setBanner(state.lastChain.length > 0 ? `⚡ KETTENÜBERNAHME ×${state.lastChain.length} · Kette −1` : '⚡ KETTE −1 · keine weitere Übernahme');
-    }
     if (state.lastRune) {
       const def = findRune(state.lastRune.id);
       if (def) setBanner(`${state.lastRune.side === 'player' ? 'Deine' : 'Gegner:'} ${def.glyph} ${def.name}`);
@@ -392,6 +391,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 ? <><ClassGlyph cls={selectedDef!.cls!} /> {CLASS_INFO[selectedDef!.cls!].label}: auf <TerrainGlyph terrain={selectedElement} /> {TERRAIN_INFO[selectedElement].label} +1 auf alle Werte</>
                 : 'Tippe auf ein freies Feld.';
   const placedAt = state.lastOrigin !== null ? cellCenter(state.lastOrigin) : null;
+  const activated = useMemo(() => activations(state), [state]);
   const enemyRune: RuneDef | null = state.runes.cpu ? findRune(state.runes.cpu.id) : null;
   const placingCard = placing ? state.hands.player[placing.hand] : null;
   const placingValues = placingCard
@@ -490,12 +490,13 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                     owner={owner}
                     size="sm"
                     className={[
-                      flipped ? 'anim-flip' : placed ? 'anim-drop' : '',
+                      flipped ? 'anim-flip' : placed ? `anim-drop ${activated.some((a) => a.effect === getCard(cell.cardId).effect) ? 'anim-drop-fx' : ''}` : '',
                       pending ? 'under-attack' : '',
                       winner && owner === winner ? 'winner-glow' : '',
                     ].join(' ')}
                   />
                 )}
+                {cell && placed && !flipped && !reducedMotion && <span key={`land-${state.moveCount}`} className={`land-ring ${cell.placedBy}`} aria-hidden="true" />}
               </button>
             );
           })}
@@ -543,6 +544,21 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 return <line key={`${state.moveCount}-ch-${k}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} style={{ animationDelay: `${(0.55 + 0.38 * (c.level - 1)) * fxTime}s` }} />;
               })}
             </svg>
+          )}
+
+          {/* Effect title cards: which effect just worked, with its symbol and name (yours blue, the opponent's red). */}
+          {showClashes && activated.length > 0 && (
+            <div className="effect-callouts" aria-live="polite">
+              {activated.map((a, k) => (
+                <div key={`${state.moveCount}-${a.effect}-${a.by}`} className={`effect-callout ${a.by}`} style={{ animationDelay: `${(0.25 + 0.3 * k) * fxTime}s` }}>
+                  <AbilityMedallion effect={a.effect} className="effect-callout-icon" />
+                  <span className="effect-callout-text">
+                    <b>{EFFECTS[a.effect].name}</b>
+                    <small>{a.by === 'player' ? 'Dein Effekt' : 'Gegner'} · {a.detail}</small>
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
 
           {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={setup?.tossRng ?? seeded?.rngs.toss ?? rng} onDecide={start} />}

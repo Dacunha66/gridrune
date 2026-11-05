@@ -7,6 +7,7 @@ import { BUILTIN_CARDS, CardDef, getCard, setCardCatalog } from '../src/game/car
 import { CardClass, EFFECTS, EffectId, Terrain, effectPreview, effectsForClass } from '../src/game/effects';
 import { createRng } from '../src/game/rng';
 import { SETTINGS } from '../src/game/settings';
+import { activations } from '../src/game/activations';
 
 // Test cards with exactly known values. [top, right, bottom, left]
 function card(id: string, v: [number, number, number, number], cls: CardClass = 'krieger', effect?: EffectId): CardDef {
@@ -525,5 +526,24 @@ describe('Dominanz und Standhaft', () => {
     const m = chooseCpuMove(s, createRng(1), { level: 'medium' });
     expect(m.handIndex).toBe(0);
     expect([5, 7, 2, 10]).toContain(m.cell);
+  });
+});
+
+describe('Effekt-Einblendung (welcher Effekt hat gewirkt)', () => {
+  it('der Effekt der gelegten Karte zuerst, dann Reaktionen anderer Karten', () => {
+    // Flammenherz erobert den Schattenmantel – der verflucht die gelegte Karte.
+    const s = applyMove(setup({ 6: at('t09', 'cpu') }, ['t07']), { handIndex: 0, cell: 5 });
+    expect(activations(s).map((a) => [a.effect, a.by])).toEqual([['flammenherz', 'player'], ['schattenmantel', 'cpu']]);
+  });
+  it('Dominanz nur, wenn ein Gleichstand dadurch erobert wurde; Standhaft, wenn er standhält', () => {
+    expect(activations(applyMove(setup({ 6: at('p05', 'cpu') }, ['d05']), { handIndex: 0, cell: 5 })).map((a) => a.effect)).toEqual(['dominanz']);
+    expect(activations(applyMove(setup({ 6: at('p04', 'cpu') }, ['d05']), { handIndex: 0, cell: 5 }))).toEqual([]);
+    expect(activations(applyMove(setup({ 6: at('s05', 'cpu') }, ['d05']), { handIndex: 0, cell: 5 })).map((a) => [a.effect, a.by])).toEqual([['standhaft', 'cpu']]);
+  });
+  it('Kettenübernahme mit Hinweis auf das −1; ohne Gegner daneben nichts', () => {
+    const s = applyMove(setup({ 1: at('l66', 'cpu'), 2: at('p04', 'cpu') }, ['k01']), { handIndex: 0, cell: 0 });
+    expect(activations(s)[0]).toMatchObject({ effect: 'kettenuebernahme', by: 'player' });
+    expect(activations(s)[0].detail).toMatch(/−1/);
+    expect(activations(applyMove(setup({}, ['k01']), { handIndex: 0, cell: 0 }))).toEqual([]);
   });
 });
