@@ -3,7 +3,7 @@
 // are paid exactly once (quest_claim: claim rows, save and titles in one step). "overview", "claim", "equip-title".
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { loadContent, questClaim, questDay, questEquipTitle, questOverview, questWeek } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@5035104ed979d3afa8a7228021f601134a7d42f5/public/server/engine-6cca3f85a98e.js';
+import { loadContent, questClaim, questDay, questEquipTitle, questOverview, questWeek } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@a2a80e3fb051ec5f29ee8c261215120a66a5c301/public/server/engine-45b768a265c8.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
