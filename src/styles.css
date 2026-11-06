@@ -1967,7 +1967,9 @@ label.btn.disabled { opacity: .45; }
 .admin-quest-fields .admin-input.num { width: 110px; }
 
 /* ---------- Kartendesign „Klar“: picture first, values compact in the top-left disc ---------- */
-.card.cs-klar { --kc: #c9a24a; --kd: #3d2e10; border-radius: 6cqw; overflow: hidden; background: radial-gradient(circle at 50% 40%, var(--kc) 0, var(--kd) 78%); box-shadow: 0 0 0 max(1.5px, 2.4cqw) var(--kc) inset, 0 3px 9px rgba(0, 0, 0, 0.55); }
+/* Note: cqw on the card itself would measure the surrounding container (the whole play area), not the card –
+   so the card's own corner and frame use % / px; only its children use cqw. */
+.card.cs-klar { --kc: #c9a24a; --kd: #3d2e10; border-radius: 6% / 4.5%; overflow: hidden; background: radial-gradient(circle at 50% 40%, var(--kc) 0, var(--kd) 78%); box-shadow: 0 3px 9px rgba(0, 0, 0, 0.55); }
 .card.cs-klar.kcls-natur { --kc: #3fae5a; --kd: #173d22; }
 .card.cs-klar.kcls-feuer { --kc: #e8693a; --kd: #4a1a0e; }
 .card.cs-klar.kcls-krieger { --kc: #c9a24a; --kd: #3d2e10; }
