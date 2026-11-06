@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { CARDS, RARITY_ORDER, getCard } from '../src/game/cards';
 import { createRng } from '../src/game/rng';
-import { DUPLICATE_REFUND, PACKS, buyPack, buySkin, equipSkin, rollPack } from '../src/game/shop';
+import { DUPLICATE_REFUND, PACKS, buyPack, buySkin, equipSkin, packPrice, parseShopDoc, rollPack, setPackLooks } from '../src/game/shop';
 import { DEFAULT_SKINS } from '../src/game/skins';
 import { KeyValueStore, defaultSave, loadSave, writeSave } from '../src/game/storage';
 
@@ -112,5 +112,24 @@ describe('Kartenshop – Skins', () => {
     const loaded = loadSave(store);
     expect(loaded.coins).toBe(77);
     expect(loaded.skins).toEqual(defaultSave().skins);
+  });
+});
+
+describe('Booster-Preis aus dem Admin', () => {
+  afterEach(() => setPackLooks({}));
+  it('der eingestellte Preis gilt beim Kauf; ohne Einstellung der Standardpreis', () => {
+    const pack = PACKS[0];
+    expect(packPrice(pack)).toBe(pack.price);
+    setPackLooks(parseShopDoc({ packs: { [pack.id]: { name: '', description: '', price: 300 } } }));
+    expect(packPrice(pack)).toBe(300);
+    const save = { ...defaultSave(), coins: 299 };
+    expect(buyPack(save, pack.id, createRng(1)).ok).toBe(false);
+    const r = buyPack({ ...save, coins: 300 }, pack.id, createRng(1));
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.save.coins).toBe(r.cards.reduce((n, c) => n + c.refund, 0));
+  });
+  it('unsinnige Preise werden begrenzt', () => {
+    expect(parseShopDoc({ packs: { [PACKS[0].id]: { price: 1 } } })[PACKS[0].id].price).toBe(10);
+    expect(parseShopDoc({ packs: { [PACKS[0].id]: { price: 'teuer' } } })[PACKS[0].id].price).toBeNull();
   });
 });

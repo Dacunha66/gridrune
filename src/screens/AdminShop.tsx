@@ -1,9 +1,9 @@
-// Admin: look of the booster packs in the shop – picture, name and text. Price, size and odds are game rules
-// and are not changed here.
+// Admin: the booster packs in the shop – picture, name, text and price. Size and odds are game rules and are not
+// changed here. The server reads the same document, so a new price is what buying really costs.
 import { Coin } from '../components/Coin';
 import { useEffect, useState } from 'react';
 import { Assets, Db, describeError, loadShopLooks, saveShopLooks } from '../game/cardStore';
-import { PACKS, PACK_NAME_MAX, PACK_TEXT_MAX, PackLook, packLooks, packView, setPackLooks } from '../game/shop';
+import { PACKS, PACK_NAME_MAX, PACK_PRICE_MAX, PACK_PRICE_MIN, PACK_TEXT_MAX, PackLook, packLooks, packPrice, packView, setPackLooks } from '../game/shop';
 import { RARITY_LABEL } from '../game/cards';
 import { ImageField, TextField } from './AdminCampaign';
 import { PackArt } from './Shop';
@@ -49,8 +49,9 @@ export function ShopAdminView({ db, assets, onToast }: { db: Db; assets: Assets 
   return (
     <div className="scroll shop-admin">
       <p className="muted small">
-        Hier legst du fest, wie die Booster im Shop aussehen: Bild, Name und Beschreibung. Preis, Kartenzahl und Chancen sind Spielregeln
-        und bleiben unverändert. Ohne Bild zeigt der Shop den gezeichneten Standard-Booster.
+        Hier legst du fest, wie die Booster im Shop aussehen und was sie kosten: Bild, Name, Beschreibung und Preis. Kartenzahl und Chancen
+        sind Spielregeln und bleiben unverändert. Ohne Bild zeigt der Shop den gezeichneten Standard-Booster. Der neue Preis gilt sofort – auch der
+        Server rechnet damit.
       </p>
       {PACKS.map((pack) => {
         const look = looks[pack.id] ?? EMPTY;
@@ -63,10 +64,19 @@ export function ShopAdminView({ db, assets, onToast }: { db: Db; assets: Assets 
               <div>
                 <h3>{view.name}</h3>
                 <p className="small">{view.description}</p>
-                <p className="muted small"><Coin /> {pack.price} · {pack.size} Karten{pack.guaranteed ? ` · letzte Karte mind. ${RARITY_LABEL.epic}` : ''}</p>
+                <p className="muted small"><Coin /> {packPrice(pack, look)} · {pack.size} Karten{pack.guaranteed ? ` · letzte Karte mind. ${RARITY_LABEL.epic}` : ''}</p>
               </div>
             </div>
             <ImageField kind="packArt" value={look.image} onChange={(image) => set(pack.id, { image })} assets={assets} onToast={onToast} />
+            <label className="field">
+              <span>Preis in Münzen (Standard {pack.price})</span>
+              <input className="admin-input num" type="number" inputMode="numeric" min={PACK_PRICE_MIN} max={PACK_PRICE_MAX} value={look.price ?? pack.price}
+                onChange={(e) => {
+                  const n = Math.round(Number(e.target.value));
+                  set(pack.id, { price: Number.isFinite(n) && n > 0 ? Math.min(PACK_PRICE_MAX, n) : null });
+                }} />
+              {(look.price ?? pack.price) < PACK_PRICE_MIN && <small className="warn-text">Mindestens {PACK_PRICE_MIN} Münzen.</small>}
+            </label>
             <TextField label={`Name (leer = „${pack.name}“)`} value={look.name} max={PACK_NAME_MAX} onChange={(name) => set(pack.id, { name })} />
             <TextField label="Beschreibung (leer = Standardtext)" value={look.description} max={PACK_TEXT_MAX} multiline onChange={(description) => set(pack.id, { description })} placeholder={pack.description} />
           </section>

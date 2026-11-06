@@ -56,7 +56,8 @@ export function rollPack(pack: PackDef, rng: Rng): string[] {
 export function buyPack(save: SaveData, packId: string, rng: Rng): ShopResult<{ cards: PackCard[] }> {
   const pack = PACKS.find((p) => p.id === packId);
   if (!pack) return { ok: false, reason: 'Dieses Pack gibt es nicht.' };
-  if (save.coins < pack.price) return { ok: false, reason: `Dir fehlen noch 🪙 ${pack.price - save.coins}.` };
+  const price = packPrice(pack);
+  if (save.coins < price) return { ok: false, reason: `Dir fehlen noch 🪙 ${price - save.coins}.` };
   const owned = new Set(save.unlocked);
   const cards: PackCard[] = rollPack(pack, rng).map((cardId) => {
     const isNew = !owned.has(cardId);
@@ -70,7 +71,7 @@ export function buyPack(save: SaveData, packId: string, rng: Rng): ShopResult<{ 
     cards,
     save: {
       ...save,
-      coins: save.coins - pack.price + refund,
+      coins: save.coins - price + refund,
       unlocked: [...save.unlocked, ...cards.filter((c) => c.isNew).map((c) => c.cardId)],
     },
   };
@@ -93,7 +94,7 @@ export function equipSkin(save: SaveData, skinId: string): SaveData {
 }
 
 // ---------- Look of the packs (admin: tab "Shop") ----------
-// Only the presentation can be changed: picture, name and text. Price, size and odds are game rules and stay in code.
+// Picture, name, text and the price can be changed. Size and odds are game rules and stay in code.
 
 export const SHOP_DOC = 'shop';
 export const PACK_NAME_MAX = 30;
@@ -104,7 +105,12 @@ export interface PackLook {
   /** Empty = the built-in name / text. */
   name: string;
   description: string;
+  /** Price in coins set by the admin; null = the built-in price. */
+  price?: number | null;
 }
+
+export const PACK_PRICE_MIN = 10;
+export const PACK_PRICE_MAX = 100000;
 
 let LOOKS: Record<string, PackLook> = {};
 
@@ -114,6 +120,12 @@ export function setPackLooks(looks: Record<string, PackLook>): void {
 
 export function packLooks(): Record<string, PackLook> {
   return LOOKS;
+}
+
+/** What a pack costs: the admin's price, otherwise the built-in one (the server uses the same document). */
+export function packPrice(pack: PackDef, look: PackLook | undefined = LOOKS[pack.id]): number {
+  const p = look?.price;
+  return typeof p === 'number' && Number.isFinite(p) ? Math.min(PACK_PRICE_MAX, Math.max(PACK_PRICE_MIN, Math.round(p))) : pack.price;
 }
 
 /** How a pack appears in the shop: the admin's picture and texts, otherwise the built-in ones. */
@@ -134,6 +146,7 @@ export function parseShopDoc(raw: unknown): Record<string, PackLook> {
       image: parseImage(x.image),
       name: typeof x.name === 'string' ? x.name.trim().slice(0, PACK_NAME_MAX) : '',
       description: typeof x.description === 'string' ? x.description.trim().slice(0, PACK_TEXT_MAX) : '',
+      price: typeof x.price === 'number' && Number.isFinite(x.price) ? Math.min(PACK_PRICE_MAX, Math.max(PACK_PRICE_MIN, Math.round(x.price))) : null,
     };
   }
   return out;

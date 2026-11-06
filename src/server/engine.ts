@@ -12,7 +12,7 @@ import { CampaignProgress, missionUnlocked, recordResult, runeUnlocked, sanitize
 import { GrantedReward, grantRewards, isPayable, owedRewards, payRewards } from '../game/campaignRewards';
 import { RaidConfig, raidOwed } from '../game/raid';
 import { deriveRng } from '../game/league';
-import { PackCard, buyPack, buySkin } from '../game/shop';
+import { PackCard, SHOP_DOC, buyPack, buySkin, parseShopDoc, setPackLooks } from '../game/shop';
 import { SaveData, sanitize } from '../game/storage';
 import { validPvpHand } from '../game/pvp';
 import {
@@ -54,6 +54,9 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
     opponents: of<Opponent>('campaign_opponents', parseOpponent),
   }));
   setRunes(of<RuneDef>('runes', parseRune));
+  // Booster prices set by the admin (settings/shop) – buying costs the same as the shop shows.
+  const shopRow = rows.find((r) => r.collection === 'settings' && r.id === SHOP_DOC);
+  setPackLooks(shopRow ? parseShopDoc(shopRow.data) : {});
   const questsRow = rows.find((r) => r.collection === QUESTS_COLLECTION && r.id === QUESTS_DOC);
   QUEST_CONFIG = questsRow ? parseQuestConfig(questsRow.data) : structuredClone(DEFAULT_QUESTS);
   setArenas(of<Arena>('arenas', parseArena));

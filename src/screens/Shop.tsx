@@ -8,7 +8,7 @@ import { CARDS, ownedActiveIds, RARITIES, RARITY_LABEL, RARITY_ORDER, Rarity, ge
 import { createRng } from '../game/rng';
 import { buyPackRemote, buySkinRemote } from '../game/adventureApi';
 import type { CloudSave } from '../game/cloudSave';
-import { DUPLICATE_REFUND, PACKS, PackCard, PackDef, PackLook, buyPack, buySkin, equipSkin, packView } from '../game/shop';
+import { DUPLICATE_REFUND, PACKS, PackCard, PackDef, PackLook, buyPack, buySkin, equipSkin, packPrice, packView } from '../game/shop';
 import { CampaignImage } from './Campaign';
 import { SKINS, SkinDef } from '../game/skins';
 import { SaveData } from '../game/storage';
@@ -87,7 +87,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
   async function openPack(pack: PackDef) {
     if (server) {
       if (busy) return;
-      if (save.coins < pack.price) return setMessage(`Dir fehlen noch 🪙 ${pack.price - save.coins}.`);
+      if (save.coins < packPrice(pack)) return setMessage(`Dir fehlen noch 🪙 ${packPrice(pack) - save.coins}.`);
       setBusy(true);
       setMessage('Kauf wird bestätigt …');
       const r = await buyPackRemote(pack.id);
@@ -146,7 +146,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
             <div className="pack-grid">
               {PACKS.map((pack) => {
                 const view = packView(pack);
-                const missing = pack.price - save.coins;
+                const missing = packPrice(pack) - save.coins;
                 return (
                   <article key={pack.id} className={`pack-tile pack-${pack.id}`}>
                     {pack.guaranteed && <span className="pack-ribbon">Episch+ garantiert</span>}
@@ -157,7 +157,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
                     <p className="pack-size">{pack.size} Karten</p>
                     <p className="pack-desc">{view.description}</p>
                     <button type="button" className="btn btn-primary pack-buy" disabled={missing > 0 || busy} onClick={() => openPack(pack)}>
-                      {missing > 0 ? <>Noch <Coin /> {missing}</> : <><Coin /> {pack.price}</>}
+                      {missing > 0 ? <>Noch <Coin /> {missing}</> : <><Coin /> {packPrice(pack)}</>}
                     </button>
                     <details className="pack-odds">
                       <summary>Chancen pro Karte</summary>
@@ -253,8 +253,8 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
             )}
             <p className="muted small" style={{ visibility: opened.stage === 'open' ? 'visible' : 'hidden' }}>{opened.cards.filter((c) => c.isNew).map((c) => getCard(c.cardId).name).join(', ') || 'Keine neuen Karten – dafür Münzen.'}</p>
             <div className="modal-actions" style={{ visibility: opened.stage === 'open' ? 'visible' : 'hidden' }}>
-              {save.coins >= opened.pack.price && (
-                <button type="button" className="btn" onClick={() => openPack(opened.pack)}>Noch eins (<Coin /> {opened.pack.price})</button>
+              {save.coins >= packPrice(opened.pack) && (
+                <button type="button" className="btn" onClick={() => openPack(opened.pack)}>Noch eins (<Coin /> {packPrice(opened.pack)})</button>
               )}
               <button type="button" className="btn btn-primary" onClick={() => setOpened(null)}>Super!</button>
             </div>
