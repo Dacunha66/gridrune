@@ -6,8 +6,8 @@ import { ClassGlyph } from '../components/GlyphIcons';
 import { GameIcon } from '../components/GameIcon';
 import { ResultIcon } from '../components/ResultIcon';
 import { Header } from './Header';
+import { CardPicker } from '../components/CardPicker';
 import { Battle, BattleSetup, DuelRecord } from './Battle';
-import { Card } from '../components/Card';
 import { Coin, CoinText } from '../components/Coin';
 import { Confetti } from '../components/Effects';
 import { DesignImage } from '../components/DesignArt';
@@ -203,26 +203,12 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
 
   // ---------- Choosing the 8 cards ----------
   if (view.k === 'hand' && raid) {
-    const toggle = (id: string) => {
-      if (hand.includes(id)) setHand(hand.filter((h) => h !== id));
-      else if (hand.length < HAND_SIZE) setHand([...hand, id]);
-    };
-    const sorted = [...owned].sort((a, b) => cardPower(getCard(b)) - cardPower(getCard(a)) || a.localeCompare(b));
     const runeDef = findRune(rune);
     return (
       <main className="screen raid">
         <Header title="Deine 8 Karten" onBack={() => setView({ k: 'overview' })} right={<span className={`pill ${hand.length === HAND_SIZE ? 'ok' : 'warn'}`}>{hand.length}/{HAND_SIZE}</span>} />
-        <p className="hint">Wähle 8 Karten aus deiner Sammlung.</p>
         <p className="pick-rune">{runeDef ? <>Deine Rune: <RuneBadge rune={runeDef} className="small" /> <b>{runeDef.name}</b></> : 'Ohne Rune'}</p>
-        <div className="scroll">
-          <div className="hand-grid pool">
-            {sorted.map((id) => (
-              <div key={id} className="hand-pick">
-                <Card id={id} size="sm" selected={hand.includes(id)} onClick={() => toggle(id)} ariaLabel={`${getCard(id).name}${hand.includes(id) ? ', gewählt' : ''}`} />
-              </div>
-            ))}
-          </div>
-        </div>
+        <CardPicker pool={owned} picked={hand} size={HAND_SIZE} onChange={setHand} label="Deine Auswahl" ownScroll />
         {error && <p className="hint warn-text" role="alert">{error}</p>}
         <div className="row-buttons">
           <button type="button" className="btn btn-primary btn-wide" disabled={hand.length !== HAND_SIZE || busy} onClick={() => void challenge()}>

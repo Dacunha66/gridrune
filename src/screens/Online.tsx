@@ -8,6 +8,7 @@ import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
 import { RuneBadge } from '../components/RuneBadge';
 import { Header } from './Header';
+import { CardPicker } from '../components/CardPicker';
 import { Battle, BattleSetup } from './Battle';
 import { CLASSIC_ARENA } from '../game/arenas';
 import { BattleState, HAND_SIZE } from '../game/battle';
@@ -226,10 +227,6 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
   }
 
   // ---------- Lobby ----------
-  const toggle = (id: string) => {
-    if (hand.includes(id)) setHand(hand.filter((h) => h !== id));
-    else if (hand.length < HAND_SIZE) setHand([...hand, id]);
-  };
   const submitCode = (e: FormEvent) => {
     e.preventDefault();
     start('join');
@@ -259,17 +256,17 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
 
         {!draftMode && <section className="brief-hand">
           <h2>Deine 8 Karten <span className="muted small">{hand.length}/{HAND_SIZE}</span></h2>
-          <div className={`hand-grid ${choosing ? 'pool' : ''}`}>
-            {(choosing ? deck : hand).map((id) => (
-              <div key={id} className="hand-pick">
-                <Card id={id} size="sm" selected={choosing && hand.includes(id)} onClick={choosing ? () => toggle(id) : undefined}
-                  ariaLabel={`${getCard(id).name}${hand.includes(id) ? ', gewählt' : ''}`} />
-              </div>
-            ))}
-          </div>
+          {choosing ? (
+            <CardPicker pool={deck} picked={hand} size={HAND_SIZE} onChange={setHand} label="Deine Auswahl" />
+          ) : (
+            <div className="hand-grid">
+              {hand.map((id) => (
+                <div key={id} className="hand-pick"><Card id={id} size="sm" ariaLabel={getCard(id).name} /></div>
+              ))}
+            </div>
+          )}
           {choosing ? (
             <div className="row-buttons">
-              <button type="button" className="btn btn-small" onClick={() => setHand(strongest(deck))}>Vorschlag</button>
               <button type="button" className="btn btn-small" onClick={() => setChoosing(false)} disabled={hand.length !== HAND_SIZE}>Fertig</button>
             </div>
           ) : (

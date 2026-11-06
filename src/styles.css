@@ -1880,3 +1880,8 @@ label.btn.disabled { opacity: .45; }
 }
 .reduced-motion .effect-callout { animation: none; opacity: 1; }
 .reduced-motion .effect-callout-icon, .reduced-motion .anim-drop.anim-drop-fx { animation: none; }
+
+/* Card picker (raid, online duel): all chosen cards fit in one row. */
+.deck-strip.picker-strip { display: grid; gap: 4px; overflow: visible; }
+.picker-strip .deck-slot { flex: none; width: auto; height: auto; aspect-ratio: 3 / 4; min-width: 0; }
+.picker-strip .deck-slot.filled .card { width: 100%; }
