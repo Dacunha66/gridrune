@@ -8,7 +8,8 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  checkRaid, expiredDamage, loadContent, parseRaid, payRaidRewards, phaseIndex, prepareRaid, raidDay, raidOpen, raidProblems, raidSnapshot,
+  checkRaid, expiredDamage, loadContent, parseRaid, payRaidRewards, phaseIndex, prepareRaid, questDelta, questPeriod, raidDay, raidOpen, raidProblems,
+  raidQuestEvent, raidSnapshot,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@0522f94229b5248201cb1b560d48230496b7ca73/public/server/engine-ad452ac42a7e.js';
 
 const CORS = {
@@ -25,6 +26,16 @@ function seed(): string {
 }
 // deno-lint-ignore no-explicit-any
 type Row = Record<string, any>;
+
+/** Erfolge: adds a checked result to the player's quest counters (never fails the request). */
+async function addQuest(db: ReturnType<typeof createClient>, player: string, event: unknown) {
+  try {
+    const p = questPeriod();
+    await db.rpc('quest_add', { p_player: player, p_day: p.day, p_week: p.week, p_delta: questDelta(event as never) });
+  } catch {
+    // Counting quests must never break a game.
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -227,8 +238,9 @@ Deno.serve(async (req) => {
     } else {
       const check = checkRaid({ ...a.ticket, id: a.id }, body.log as never);
       if (!check.ok) return json({ ok: false, error: check.error }, 422);
-      const { error } = await db.rpc('raid_finish', { p_attempt: a.id, p_player: uid, p_outcome: check.outcome, p_fields: check.fields, p_damage: check.damage });
+      const { data: booked, error } = await db.rpc('raid_finish', { p_attempt: a.id, p_player: uid, p_outcome: check.outcome, p_fields: check.fields, p_damage: check.damage });
       if (error) return json({ error: 'database' }, 500);
+      if (booked && booked.already === false) await addQuest(db, uid, raidQuestEvent(check));
     }
     const { data: done } = await db.from('raid_attempts').select('*').eq('id', a.id).single();
     return resultOf(done);

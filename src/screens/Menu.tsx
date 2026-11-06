@@ -44,9 +44,12 @@ interface Props {
   /** The "Spielen" submenu is open (kept by the app, so finishing a game returns there). */
   playOpen?: boolean;
   onPlayOpen?: (open: boolean) => void;
+  /** Erfolge: how many rewards are ready to collect (signed in). */
+  questsReady?: number;
+  onQuests?: () => void;
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests }: Props) {
   const equipped = findRune(equippedRune);
   const [chooseLevel, setChooseLevel] = useState(false);
   const { wins, draws, losses } = save.stats;
@@ -111,6 +114,11 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
             <GameIcon name="deck" /> Deck bearbeiten
             {runes && (equipped ? <span className="btn-sub"><RuneBadge rune={equipped} className="small" /></span> : <span className="btn-sub">ohne Rune</span>)}
           </button>
+          {onQuests && (
+            <button type="button" className="btn btn-quests" onClick={onQuests}>
+              <GameIcon name="trophy" /> Erfolge{questsReady > 0 && <span className="menu-badge" aria-label={`${questsReady} Belohnungen bereit`}>{questsReady}</span>}
+            </button>
+          )}
           <button type="button" className="btn" onClick={() => onNavigate('rules')}><GameIcon name="scroll" /> Regeln</button>
           {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}><GameIcon name="gear" /> Kartenverwaltung</button>}
         </nav>

@@ -80,6 +80,7 @@ export function buySkin(save: SaveData, skinId: string): ShopResult {
   if (!isSkinId(skinId)) return { ok: false, reason: 'Diesen Skin gibt es nicht.' };
   if (save.skins.owned.includes(skinId)) return { ok: false, reason: 'Diesen Skin besitzt du schon.' };
   const skin = getSkin(skinId);
+  if (skin.rewardOnly) return { ok: false, reason: 'Diesen Skin gibt es nur als Belohnung.' };
   if (save.coins < skin.price) return { ok: false, reason: `Dir fehlen noch 🪙 ${skin.price - save.coins}.` };
   const bought: SaveData = { ...save, coins: save.coins - skin.price, skins: { ...save.skins, owned: [...save.skins.owned, skinId] } };
   return { ok: true, save: equipSkin(bought, skinId) };

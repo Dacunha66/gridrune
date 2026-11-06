@@ -116,6 +116,8 @@ describe('Kampagne über den Server (Phase 4c)', () => {
         const mp = missionProgress(r.campaign, id);
         expect(mp.wins + mp.draws + mp.losses).toBe(1);
         expect(mp.wins === 1).toBe(r.outcome === 'win');
+        // Erfolge: the checked result counts one mission and one duel.
+        expect(r.quest).toMatchObject({ games: 1, missions: 1, wins: r.outcome === 'win' ? 1 : 0, stars: r.newStars.length });
         // Tampering: an extra move or a changed one is refused.
         const bad = structuredClone(log);
         bad.duel.moves.push(bad.duel.moves[0]);

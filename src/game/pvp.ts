@@ -133,6 +133,8 @@ export interface PvpView {
   };
   code: string | null;
   opponentName: string | null;
+  /** Title the opponent shows (Erfolge), or null. */
+  opponentTitle?: string | null;
   state: BattleState | null;
   /** Arena name (the cells are in the state). */
   arenaName: string | null;

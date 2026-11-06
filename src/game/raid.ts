@@ -13,7 +13,7 @@ import { ImageRef, Reward, findArena, parseImage, parseReward } from './campaign
 import { CARDS } from './cards';
 import { CardClass, Terrain, isCardClass } from './effects';
 import { deriveRng } from './league';
-import { DuelLog, replayDuel } from './verify';
+import { DuelLog, PlayedDuel, replayDuel } from './verify';
 import { Rng } from './rng';
 
 export const RAIDS_COLLECTION = 'raids';
@@ -261,7 +261,7 @@ export function raidStart(ticket: Pick<RaidTicket, 'hand' | 'playerRune' | 'snap
 export const raidAi = (s: RaidSnapshot) => ({ level: s.level, prefer: s.prefer });
 
 export type RaidCheck =
-  | { ok: true; outcome: Outcome; score: Record<Side, number>; fields: number; damage: number }
+  | { ok: true; outcome: Outcome; score: Record<Side, number>; fields: number; damage: number; duel: PlayedDuel }
   | { ok: false; error: string };
 
 /** Replays the fight (coin toss and every boss move follow from the seed) and computes the damage. */
@@ -277,7 +277,7 @@ export function checkRaid(ticket: RaidTicket, log: RaidLog): RaidCheck {
   if (!duel.ok) return duel;
   const res = outcome(duel.end);
   const sc = score(duel.end);
-  return { ok: true, outcome: res, score: sc, fields: sc.player, damage: raidDamage(ticket.snapshot.damage, res, sc.player) };
+  return { ok: true, outcome: res, score: sc, fields: sc.player, damage: raidDamage(ticket.snapshot.damage, res, sc.player), duel: { begin: duel.begin, moves: log.duel.moves } };
 }
 
 /** A fight that was not finished in time counts as a defeat. */

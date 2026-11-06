@@ -50,7 +50,7 @@ export interface AdventureLog {
 }
 
 export type AdventureCheck =
-  | { ok: true; picks: Pick[]; outcome: Outcome; score: Record<Side, number> }
+  | { ok: true; picks: Pick[]; outcome: Outcome; score: Record<Side, number>; duel: PlayedDuel }
   | { ok: false; error: string };
 
 /** The random sources of one run, each derived from the seed (independent of the order they are used in). */
@@ -96,6 +96,12 @@ export function replayAdventureRun(ticket: RunTicket, log: AdventureLog['run']):
     sim.skipToEnd();
   } else sim.advanceTo(FINISH_DISTANCE);
   return { picks: sim.picks.slice(), error: null };
+}
+
+/** A replayed duel: the position after the coin toss and all moves (for the quest counters). */
+export interface PlayedDuel {
+  begin: BattleState;
+  moves: Action[];
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -166,7 +172,7 @@ export function checkAdventure(ticket: AdventureTicket, log: AdventureLog, arena
   }
   const duel = replayDuel(start, log.duel, rngs, { level: ticket.level ?? 'medium' });
   if (!duel.ok) return duel;
-  return { ok: true, picks: run.picks, outcome: outcome(duel.end), score: score(duel.end) };
+  return { ok: true, picks: run.picks, outcome: outcome(duel.end), score: score(duel.end), duel: { begin: duel.begin, moves: log.duel.moves } };
 }
 
 // ---------- Collection League against the computer (checked, card reward) ----------
@@ -208,7 +214,7 @@ export function leagueRound(seed: string, round: number, arenas: readonly Arena[
 const MAX_LEAGUE_ROUNDS = 7;
 
 export type LeagueCheck =
-  | { ok: true; picks: Pick[]; winner: Side; rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[] }
+  | { ok: true; picks: Pick[]; winner: Side; rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[]; duels: PlayedDuel[] }
   | { ok: false; error: string };
 
 /** Checks a whole league match: the run gives the hand, then every round is replayed until the match is decided. */
@@ -221,11 +227,12 @@ export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readon
   const cpuHand = leagueCpuHand(ticket.seed);
   let match = emptyMatch();
   const rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[] = [];
+  const duels: PlayedDuel[] = [];
   for (let i = 0; ; i++) {
     const step = nextStep(match);
     if (step.kind === 'done') {
       if (i !== log.rounds.length) return { ok: false, error: 'Zusätzliche Runden nach Matchende' };
-      return { ok: true, picks: run.picks, winner: step.winner, rounds };
+      return { ok: true, picks: run.picks, winner: step.winner, rounds, duels };
     }
     if (i >= MAX_LEAGUE_ROUNDS) return { ok: false, error: 'Match zu lang' };
     const duelLog = log.rounds[i];
@@ -242,6 +249,7 @@ export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readon
     const res = outcome(duel.end);
     const winner: Side | 'draw' = res === 'win' ? 'player' : res === 'loss' ? 'cpu' : 'draw';
     rounds.push({ first: duel.begin.turn, winner, score: score(duel.end) });
+    duels.push({ begin: duel.begin, moves: duelLog.moves });
     match = recordRound(match, duel.begin.turn, winner);
   }
 }

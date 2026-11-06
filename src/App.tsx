@@ -37,6 +37,9 @@ import { CampaignProgress, loadProgress, writeProgress } from './game/campaignPr
 import { AccountState, isGuest, watchAccount } from './game/account';
 import { AccountPage, CloudGate, NewPassword, Welcome } from './screens/Account';
 import { useCloudSync } from './game/useCloudSync';
+import { Quests } from './screens/Quests';
+import { questOverview } from './game/questApi';
+import { claimable } from './game/quests';
 import {
   claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, readPending, startAdventure, writePending,
 } from './game/adventureApi';
@@ -45,7 +48,7 @@ import { AdventureLog, AdventureTicket } from './game/verify';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' | 'raid' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' | 'raid' | 'quests' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
   /** Admin: raid test fight with the raid as it is in the editor (nothing stored). */
@@ -132,6 +135,19 @@ export function App() {
     if (!accountModeRef.current) writeProgress(campaignProgress);
   }, [campaignProgress]);
   const cloud = useCloudSync({ account, save, setSave, progress: campaignProgress, setProgress: setCampaignProgress });
+  // Erfolge: how many rewards are ready (badge on the menu button), looked up when the menu opens.
+  const [questsReady, setQuestsReady] = useState(0);
+  useEffect(() => {
+    if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
+    let alive = true;
+    questOverview().then((r) => {
+      if (alive && r !== 'offline') setQuestsReady(claimable(r.board).length);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [screen.name, cloud.uid, cloud.phase]);
+
   accountModeRef.current = cloud.accountMode;
 
   // Published designs (board picture, page background). A running duel keeps the board it started with.
@@ -322,6 +338,8 @@ export function App() {
           onOnline={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'online' }) : undefined}
           onDraft={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'draftPractice' })}
           onRaid={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'raid' }) : undefined}
+          onQuests={account ? () => setScreen({ name: 'quests' }) : undefined}
+          questsReady={questsReady}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}
@@ -362,6 +380,11 @@ export function App() {
           onFinished={cloud.retry}
           onExit={toMenu}
         />
+      )}
+      {screen.name === 'quests' && (
+        <Quests signedIn={!!cloud.uid && cloud.phase === 'ready'} reducedMotion={reducedMotion}
+          onAccount={account?.kind === 'signedOut' ? () => { setGuestState(false); toMenu(); } : undefined}
+          onAdopt={cloud.adoptServer} onBack={toMenu} />
       )}
       {screen.name === 'raid' && cloud.uid && (
         <Raid unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck} rune={duelRune('raid')} reducedMotion={reducedMotion}

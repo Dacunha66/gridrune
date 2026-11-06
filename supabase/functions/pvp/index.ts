@@ -9,7 +9,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS, PVP_ABSENT_SECONDS, PVP_DAILY_PAID_WINS, PVP_MIN_MOVES_FOR_COINS, PVP_TURN_SECONDS, PVP_WIN_COINS,
   completeDraftDeck, draftLayout, draftPool, inviteCode, isGameOver, loadContent, normalizeCode, otherSeat, picksToHand, preparePvp, pvpAction,
-  pvpScore, pvpWinner, replayDraftRun, seatSide, startPvp, timeoutMove, validDraftDeck, viewState,
+  onlineQuestEvent, pvpScore, pvpWinner, questDelta, questPeriod, replayDraftRun, seatSide, startPvp, timeoutMove, validDraftDeck, viewState,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@0522f94229b5248201cb1b560d48230496b7ca73/public/server/engine-ad452ac42a7e.js';
 
 const CORS = {
@@ -64,12 +64,23 @@ function viewOf(m: Match, seat: Seat) {
   return {
     matchId: m.id, status: m.status, seat, kind: m.kind, code: m.code, mode: m.mode ?? 'duel', draft,
     opponentName: m[`name_${opp}`] ?? null,
+    opponentTitle: m[`title_${opp}`] ?? null,
     state: m.state ? viewState(m.state, seat) : null,
     arenaName: m.arena_name ?? null,
     turnDeadline: m.status === 'playing' && m.turn_started_at ? new Date(new Date(m.turn_started_at).getTime() + PVP_TURN_SECONDS * 1000).toISOString() : null,
     result,
     updatedAt: new Date().toISOString(),
   };
+}
+
+/** Erfolge: adds a checked result to the player's quest counters (never fails the request). */
+async function addQuest(db: ReturnType<typeof createClient>, player: string, event: unknown) {
+  try {
+    const p = questPeriod();
+    await db.rpc('quest_add', { p_player: player, p_day: p.day, p_week: p.week, p_delta: questDelta(event as never) });
+  } catch {
+    // Counting quests must never break a game.
+  }
 }
 
 Deno.serve(async (req) => {
@@ -117,6 +128,10 @@ Deno.serve(async (req) => {
     }
     const { data: done, error } = await db.rpc('pvp_finish', { p_match: m.id, p_state: state, p_winner: winner, p_reason: reason, p_pay: pay, p_coins: coins });
     if (error) throw error;
+    // Erfolge: a played duel counts for both, a win for the winner (not for matches left right at the start).
+    if (done && (reason === 'normal' || moves >= PVP_MIN_MOVES_FOR_COINS)) {
+      for (const s of ['a', 'b'] as Seat[]) if (m[`player_${s}`]) await addQuest(db, m[`player_${s}`], onlineQuestEvent(winner === s));
+    }
     const { data: fresh } = await db.from('pvp_matches').select('*').eq('id', m.id).single();
     if (done || fresh) await writeViews(fresh);
     return fresh as Match;
@@ -136,6 +151,13 @@ Deno.serve(async (req) => {
     return data?.display_name ?? 'Spieler';
   }
 
+  /** The title the player shows (Erfolge), or null. */
+  async function myTitle(): Promise<string | null> {
+    const { data } = await db.from('quest_progress').select('titles').eq('player_id', uid).maybeSingle();
+    const t = data?.titles?.equipped;
+    return typeof t === 'string' && t.length <= 24 ? t : null;
+  }
+
   // Card values, arenas and runes as players see them (the same for both players – no admin previews in duels).
   const { data: contentRows } = await db.from('content_docs').select('collection, id, data');
   loadContent(contentRows ?? [], false);
@@ -148,7 +170,7 @@ Deno.serve(async (req) => {
   /** Second player takes a waiting match: the duel starts (a draft starts with the preparation). */
   async function claim(m: Match, hand: string[] | null, rune: string | null): Promise<Match | null> {
     const now = new Date().toISOString();
-    const common = { player_b: uid, name_b: await myName(), rune_b: rune, seen_b: now, seen_a: now, updated_at: now };
+    const common = { player_b: uid, name_b: await myName(), title_b: await myTitle(), rune_b: rune, seen_b: now, seen_a: now, updated_at: now };
     const patch = m.mode === 'draft'
       ? { ...common, status: 'drafting', pool: draftPool(m.seed), prepare_deadline: new Date(Date.now() + DRAFT_PREPARE_SECONDS * 1000).toISOString() }
       : (() => {
@@ -186,9 +208,10 @@ Deno.serve(async (req) => {
 
   async function create(kind: 'invite' | 'random', mode: 'duel' | 'draft', hand: string[] | null, rune: string | null): Promise<Match | null> {
     const name = await myName();
+    const title = await myTitle();
     for (let i = 0; i < 5; i++) {
       const { data, error } = await db.from('pvp_matches').insert({
-        kind, mode, code: kind === 'invite' ? inviteCode(cryptoRandom) : null, player_a: uid, name_a: name, seed: seed(), hand_a: hand, rune_a: rune,
+        kind, mode, code: kind === 'invite' ? inviteCode(cryptoRandom) : null, player_a: uid, name_a: name, title_a: title, seed: seed(), hand_a: hand, rune_a: rune,
       }).select('*').single();
       if (!error) {
         await writeViews(data);

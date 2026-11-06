@@ -9,6 +9,8 @@ export interface SkinDef {
   price: number;
   /** Main, dark and light colour of the skin. */
   colors: [main: string, dark: string, light: string];
+  /** Only won as a reward (Erfolge) – never sold in the shop. */
+  rewardOnly?: boolean;
 }
 
 export const SKINS: SkinDef[] = [
@@ -16,6 +18,7 @@ export const SKINS: SkinDef[] = [
   { id: 'card-smaragd', kind: 'card', name: 'Smaragd', description: 'Deine Karten im Duell in tiefem Grün.', price: 250, colors: ['#22c55e', '#14532d', '#9af0b8'] },
   { id: 'card-amethyst', kind: 'card', name: 'Amethyst', description: 'Deine Karten im Duell in leuchtendem Violett.', price: 250, colors: ['#a855f7', '#4c1d95', '#dab4ff'] },
   { id: 'card-gletscher', kind: 'card', name: 'Gletscher', description: 'Eisiges Türkis mit hellem Rand.', price: 400, colors: ['#22d3ee', '#155e75', '#e0fbff'] },
+  { id: 'card-runengold', kind: 'card', name: 'Runengold', description: 'Belohnung für 1000 Siege – Gold mit leuchtenden Runen.', price: 0, colors: ['#f2c75c', '#7a5212', '#fff1c2'], rewardOnly: true },
   { id: 'runner-blau', kind: 'runner', name: 'Blauer Umhang', description: 'Die Standardfigur im Lauf.', price: 0, colors: ['#7cc4ff', '#2563eb', '#ffffff'] },
   { id: 'runner-glut', kind: 'runner', name: 'Glutläufer', description: 'Ein feuriger Umhang für den Lauf.', price: 200, colors: ['#fdba74', '#ea580c', '#fff1e0'] },
   { id: 'runner-wald', kind: 'runner', name: 'Waldläufer', description: 'Ein Umhang aus Moos und Blättern.', price: 200, colors: ['#86efac', '#15803d', '#f0fff4'] },

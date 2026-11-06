@@ -171,7 +171,7 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
         <div className="scroll result-body">
           <ResultIcon outcome={r.outcome} />
           <h1>{title}</h1>
-          <p className="muted">gegen {view.opponentName ?? 'Gegner'}</p>
+          <p className="muted">gegen {view.opponentName ?? 'Gegner'}{view.opponentTitle && <span className="opponent-title"> · {view.opponentTitle}</span>}</p>
           <p className="result-score"><span className="blue">{r.score.me}</span> : <span className="red">{r.score.opponent}</span></p>
           {why && <p className="small">{why}</p>}
           {r.outcome === 'win' && (
@@ -316,8 +316,8 @@ function OnlineDuel({ view, reducedMotion, onView, onDone, onQuit }: {
       onView(r.view);
     });
   }, [view.matchId, onView]);
-  const online = useMemo(() => ({ state, deadline: view.status === 'playing' ? view.turnDeadline : null, opponentName: view.opponentName ?? 'Gegner', onAction: send }),
-    [state, view.status, view.turnDeadline, view.opponentName, send]);
+  const online = useMemo(() => ({ state, deadline: view.status === 'playing' ? view.turnDeadline : null, opponentName: `${view.opponentName ?? 'Gegner'}${view.opponentTitle ? ` (${view.opponentTitle})` : ''}`, onAction: send }),
+    [state, view.status, view.turnDeadline, view.opponentName, view.opponentTitle, send]);
   return <Battle picks={picks} unlocked={[]} reducedMotion={reducedMotion} setup={setup} online={online} onEnd={onDone} onQuit={onQuit} />;
 }
 

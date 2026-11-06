@@ -22,6 +22,14 @@ import { Reward, applyReward, computeReward, grant, isAiLevel, leagueReward } fr
 import { COLLECTION_LEAGUE_RULES, validateDeck } from '../game/rules';
 import { ownedActiveIds } from '../game/cards';
 import { Outcome, Side } from '../game/battle';
+import { PlayedDuel } from '../game/verify';
+import { duelStats } from '../game/campaignGoals';
+import { RaidCheck } from '../game/raid';
+import {
+  QUESTS_COLLECTION, QUESTS_DOC, QuestConfig, QuestEvent, QuestState, Titles, claimQuests, eventDelta, parseQuestConfig, parseQuestState, questBoard,
+  questContext, questDay, questWeek, DEFAULT_QUESTS,
+} from '../game/quests';
+import { EffectId } from '../game/effects';
 
 export interface ContentRow {
   collection: string;
@@ -46,6 +54,8 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
     opponents: of<Opponent>('campaign_opponents', parseOpponent),
   }));
   setRunes(of<RuneDef>('runes', parseRune));
+  const questsRow = rows.find((r) => r.collection === QUESTS_COLLECTION && r.id === QUESTS_DOC);
+  QUEST_CONFIG = questsRow ? parseQuestConfig(questsRow.data) : structuredClone(DEFAULT_QUESTS);
   setArenas(of<Arena>('arenas', parseArena));
   const records = of<CardRecord>('cards', parseCardRecord);
   if (records.length > 0) {
@@ -53,6 +63,64 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
     setCardCatalog(catalog.active, catalog.known);
   }
 }
+
+// ---------- Erfolge (quests) ----------
+
+let QUEST_CONFIG: QuestConfig = structuredClone(DEFAULT_QUESTS);
+
+/** Captures and effects of the player in replayed duels. */
+function duelTally(duels: readonly PlayedDuel[]): { captures: number; effects: Partial<Record<EffectId, number>> } {
+  let captures = 0;
+  const effects: Partial<Record<EffectId, number>> = {};
+  for (const d of duels) {
+    const st = duelStats(d.begin, d.moves);
+    captures += st.captures;
+    for (const [id, n] of Object.entries(st.effects)) effects[id as EffectId] = (effects[id as EffectId] ?? 0) + (n ?? 0);
+  }
+  return { captures, effects };
+}
+
+/** Day and week keys the counters belong to (German time). */
+export function questPeriod(now: Date = new Date()): { day: string; week: string } {
+  return { day: questDay(now), week: questWeek(now) };
+}
+
+/** What a checked result adds to the quest counters (the database adds it atomically: quest_add). */
+export function questDelta(e: QuestEvent): Record<string, number> {
+  return eventDelta(e) as Record<string, number>;
+}
+
+export function raidQuestEvent(check: Extract<RaidCheck, { ok: true }>): QuestEvent {
+  return { games: 1, raidAttacks: 1, wins: check.outcome === 'win' ? 1 : 0, ...duelTally([check.duel]) };
+}
+
+export function onlineQuestEvent(won: boolean): QuestEvent {
+  return { games: 1, onlineGames: 1, wins: won ? 1 : 0, onlineWins: won ? 1 : 0 };
+}
+
+/** The player's quest board: what is active, how far, what is ready to collect. */
+export function questOverview(saveRaw: unknown, campaignRaw: unknown, stateRaw: unknown, raidsDefeated: number, now: Date = new Date()) {
+  const state = parseQuestState(stateRaw, now);
+  const ctx = questContext(sanitize(saveRaw), CAMPAIGN, sanitizeProgress(campaignRaw), raidsDefeated);
+  return { board: questBoard(QUEST_CONFIG, state, ctx, now), titles: state.titles };
+}
+
+/** Collects ready rewards (all, or the given keys): new save and titles; null = nothing to collect. */
+export function questClaim(saveRaw: unknown, campaignRaw: unknown, stateRaw: unknown, raidsDefeated: number, keys: unknown, seed: string, now: Date = new Date()) {
+  const state: QuestState = parseQuestState(stateRaw, now);
+  const ctx = questContext(sanitize(saveRaw), CAMPAIGN, sanitizeProgress(campaignRaw), raidsDefeated);
+  const wanted = Array.isArray(keys) ? keys.filter((k): k is string => typeof k === 'string') : null;
+  return claimQuests(sanitize(saveRaw), state, QUEST_CONFIG, ctx, wanted, seed, now);
+}
+
+/** Checks a title the player wants to show (must be owned; null = none). */
+export function questEquipTitle(stateRaw: unknown, title: unknown): Titles | null {
+  const state = parseQuestState(stateRaw);
+  if (title === null) return { ...state.titles, equipped: null };
+  return typeof title === 'string' && state.titles.owned.includes(title) ? { ...state.titles, equipped: title } : null;
+}
+
+export { DEFAULT_QUESTS, parseQuestConfig, questDay, questWeek } from '../game/quests';
 
 export function cleanSave(raw: unknown): SaveData {
   return sanitize(raw);
@@ -84,12 +152,15 @@ export function prepareAdventure(saveRaw: unknown, campaignRaw: unknown, deck: u
 
 /** Replays the run and the duel; on success returns the reward and the new save. */
 export function finishAdventure(ticket: AdventureTicket, log: AdventureLog, saveRaw: unknown):
-  { ok: true; outcome: Outcome; score: Record<Side, number>; reward: Reward; save: SaveData } | { ok: false; error: string } {
+  { ok: true; outcome: Outcome; score: Record<Side, number>; reward: Reward; save: SaveData; quest: QuestEvent } | { ok: false; error: string } {
   const check = checkAdventure(ticket, log);
   if (!check.ok) return check;
   const save = sanitize(saveRaw);
-  const reward = computeReward(check.outcome, ticket.level ?? 'medium');
-  return { ok: true, outcome: check.outcome, score: check.score, reward, save: applyReward(save, check.outcome, reward) };
+  const level = ticket.level ?? 'medium';
+  const reward = computeReward(check.outcome, level);
+  const won = check.outcome === 'win';
+  const quest: QuestEvent = { games: 1, wins: won ? 1 : 0, winsStrong: won && level !== 'easy' ? 1 : 0, ...duelTally([check.duel]) };
+  return { ok: true, outcome: check.outcome, score: check.score, reward, save: applyReward(save, check.outcome, reward), quest };
 }
 
 // ---------- Collection League against the computer ----------
@@ -113,13 +184,14 @@ export function prepareLeague(saveRaw: unknown, campaignRaw: unknown, deck: unkn
 
 /** Replays the match; a won match unlocks the rarest new discovery of the run (else coins). */
 export function finishLeague(ticket: LeagueTicket, log: LeagueLog, saveRaw: unknown):
-  { ok: true; won: boolean; rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[]; reward: Reward; save: SaveData } | { ok: false; error: string } {
+  { ok: true; won: boolean; rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[]; reward: Reward; save: SaveData; quest: QuestEvent } | { ok: false; error: string } {
   const check = checkLeague(ticket, log);
   if (!check.ok) return check;
   const save = sanitize(saveRaw);
   const won = check.winner === 'player';
   const reward = leagueReward(won, check.picks, save.unlocked);
-  return { ok: true, won, rounds: check.rounds, reward, save: grant(save, reward) };
+  const quest: QuestEvent = { games: check.rounds.length, wins: won ? 1 : 0, leagueWins: won ? 1 : 0, ...duelTally(check.duels) };
+  return { ok: true, won, rounds: check.rounds, reward, save: grant(save, reward), quest };
 }
 
 // ---------- Campaign (phase 4c) ----------
@@ -176,7 +248,7 @@ export interface CampaignPayout {
 
 /** Replays the mission, stores the result (stars) and pays every reward now owed (including older ones). */
 export function finishMission(ticket: StoredMissionTicket, log: MissionLog, saveRaw: unknown, campaignRaw: unknown, now = new Date().toISOString()):
-  ({ ok: true; outcome: Outcome; score: Record<Side, number>; met: boolean[]; newStars: number[]; firstWin: boolean } & CampaignPayout) | { ok: false; error: string } {
+  ({ ok: true; outcome: Outcome; score: Record<Side, number>; met: boolean[]; newStars: number[]; firstWin: boolean; quest: QuestEvent } & CampaignPayout) | { ok: false; error: string } {
   const current = CAMPAIGN.missions.find((m) => m.id === ticket.missionId);
   const opp = current && CAMPAIGN.opponents.find((o) => o.id === current.opponentId);
   if (!current || !opp) return { ok: false, error: 'Mission gibt es nicht mehr' };
@@ -191,6 +263,10 @@ export function finishMission(ticket: StoredMissionTicket, log: MissionLog, save
   return {
     ok: true, outcome: check.outcome, score: check.score, met: result.met, newStars: result.newStars, firstWin: result.firstWin,
     save: paid.save, campaign: paid.progress, granted: paid.granted,
+    quest: {
+      games: 1, missions: 1, wins: check.outcome === 'win' ? 1 : 0, stars: result.newStars.length,
+      captures: check.stats.captures, effects: check.stats.effects,
+    },
   };
 }
 

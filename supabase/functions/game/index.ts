@@ -8,7 +8,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyPackServer, buySkinServer, claimCampaign, finishLeague, finishMission, loadContent, prepareLeague, prepareMission,
+  buyPackServer, buySkinServer, claimCampaign, finishLeague, finishMission, loadContent, prepareLeague, prepareMission, questDelta, questPeriod,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@0522f94229b5248201cb1b560d48230496b7ca73/public/server/engine-ad452ac42a7e.js';
 
 const CORS = {
@@ -26,6 +26,16 @@ function seed(): string {
 }
 
 type Row = { save: unknown; campaign: unknown; version: number };
+
+/** Erfolge: adds a checked result to the player's quest counters (never fails the request). */
+async function addQuest(db: ReturnType<typeof createClient>, player: string, event: unknown) {
+  try {
+    const p = questPeriod();
+    await db.rpc('quest_add', { p_player: player, p_day: p.day, p_week: p.week, p_delta: questDelta(event as never) });
+  } catch {
+    // Counting quests must never break a game.
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -107,6 +117,7 @@ Deno.serve(async (req) => {
         return json({ ...(done?.result ?? {}), repeated: true, ...(await readSave()) });
       }
       if (!res.ok) return json({ ...result, ...cur }, 422);
+      await addQuest(db, uid, res.quest);
       return json({ ...result, save: res.save, campaign: res.campaign, version: cur.version + 1 });
     }
     return json({ error: 'busy' }, 503);
@@ -140,6 +151,7 @@ Deno.serve(async (req) => {
         return json({ ...(done?.result ?? {}), repeated: true, ...(await readSave()) });
       }
       if (!res.ok) return json({ ...result, ...cur }, 422);
+      await addQuest(db, uid, res.quest);
       return json({ ...result, save: res.save, campaign: cur.campaign, version: cur.version + 1 });
     }
     return json({ error: 'busy' }, 503);
