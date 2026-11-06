@@ -1,6 +1,6 @@
 // Arenas: templates of 16 cells with terrain. In the league both players duel in the same arena,
 // picked from the match seed, so the choice is recomputable and cannot be manipulated.
-import { CELL_COUNT } from './battle';
+import { CELL_COUNT, KRISTALL_CELLS, boardHoles, isBoardCount } from './battle';
 import { TERRAINS, TERRAIN_INFO, Terrain, isTerrain } from './effects';
 import { Rng } from './rng';
 import { deriveRng } from './league';
@@ -12,7 +12,10 @@ export const ARENA_STATUSES: ArenaStatus[] = ['draft', 'active', 'campaign', 'di
 export interface Arena {
   id: string;
   name: string;
-  /** Terrain of the 16 cells, row by row from the top left. */
+  /**
+   * Terrain of the cells, row by row from the top left: 16 cells = classic 4×4, 20 cells = Kristall shape
+   * (4 columns × 5 rows without the 4 corners; the corner entries are ignored).
+   */
   cells: Terrain[];
   status: ArenaStatus;
   /** May be used in ranked league matches (must pass `rankedProblems`). */
@@ -26,8 +29,8 @@ export const ARENA_NAME_MAX = 30;
 /** At most half of the board may have terrain in ranked arenas. */
 export const RANKED_MAX_TERRAIN = 8;
 
-function layout(spec: Partial<Record<Terrain, number[]>>): Terrain[] {
-  const cells = Array<Terrain>(CELL_COUNT).fill('normal');
+function layout(spec: Partial<Record<Terrain, number[]>>, count: number = CELL_COUNT): Terrain[] {
+  const cells = Array<Terrain>(count).fill('normal');
   for (const [t, list] of Object.entries(spec)) for (const i of list!) cells[i] = t as Terrain;
   return cells;
 }
@@ -45,7 +48,15 @@ export const BUILTIN_ARENAS: readonly Arena[] = [
   { id: 'a08', name: 'Herz des Waldes', cells: layout({ wald: [1, 2, 5, 6, 9, 10, 13, 14] }), status: 'campaign', ranked: false, updatedAt: '' },
   { id: 'a16', name: 'Aschetal', cells: layout({ lava: [0, 3, 6, 9, 12, 15] }), status: 'campaign', ranked: false, updatedAt: '' },
   { id: 'a17', name: 'Herz des Vulkans', cells: layout({ lava: [1, 2, 4, 7, 8, 11, 13, 14] }), status: 'campaign', ranked: false, updatedAt: '' },
+  // Kristall shape: 4 columns × 5 rows without the corners – 16 fields like the classic board.
+  { id: 'a18', name: 'Die Kristall-Arena', cells: layout({}, KRISTALL_CELLS), status: 'active', ranked: false, updatedAt: '' },
 ];
+
+export type ArenaShape = 'square' | 'kristall';
+export const SHAPE_LABEL: Record<ArenaShape, string> = { square: 'Quadrat 4×4', kristall: 'Kristall (4×5 ohne Ecken)' };
+export const arenaShape = (cells: readonly Terrain[]): ArenaShape => (cells.length === KRISTALL_CELLS ? 'kristall' : 'square');
+/** Cells of a shape, all normal. */
+export const emptyCells = (shape: ArenaShape): Terrain[] => Array<Terrain>(shape === 'kristall' ? KRISTALL_CELLS : CELL_COUNT).fill('normal');
 
 export const CLASSIC_ARENA = BUILTIN_ARENAS[0];
 
@@ -54,8 +65,10 @@ export function parseArena(id: string, raw: unknown): Arena | null {
   if (!ARENA_ID_RE.test(id) || !raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
   const name = typeof r.name === 'string' ? r.name.trim().slice(0, ARENA_NAME_MAX) : '';
-  if (!name || !Array.isArray(r.cells) || r.cells.length !== CELL_COUNT || !r.cells.every(isTerrain)) return null;
-  const cells = [...r.cells] as Terrain[];
+  if (!name || !Array.isArray(r.cells) || !isBoardCount(r.cells.length) || !r.cells.every(isTerrain)) return null;
+  // Holes of the shape never carry terrain.
+  const holes = boardHoles(r.cells.length);
+  const cells = (r.cells as Terrain[]).map((t, i) => (holes.includes(i) ? 'normal' : t));
   if (!cells.includes('normal')) return null;
   const status = ARENA_STATUSES.includes(r.status as ArenaStatus) ? (r.status as ArenaStatus) : 'draft';
   return { id, name, cells, status, ranked: r.ranked === true && rankedProblems(cells).length === 0, updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : '' };
@@ -74,7 +87,7 @@ export function rankedProblems(cells: readonly Terrain[]): string[] {
     const n = cells.filter((c) => c === t).length;
     if (t !== 'normal' && n === 1) problems.push(`${TERRAIN_INFO[t].label} kommt nur einmal vor – jedes Gelände 0-mal oder mindestens 2-mal.`);
   }
-  if (cells.some((t, i) => t !== cells[CELL_COUNT - 1 - i])) {
+  if (cells.some((t, i) => t !== cells[cells.length - 1 - i])) {
     problems.push('Nicht spiegelgleich: Jedes Feld braucht dasselbe Gelände wie das gegenüberliegende Feld (um die Mitte gedreht).');
   }
   return problems;

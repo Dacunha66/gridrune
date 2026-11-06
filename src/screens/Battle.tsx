@@ -6,7 +6,7 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { GameIcon } from '../components/GameIcon';
 import { Burst } from '../components/Effects';
 import {
-  BOARD_SIZE, BattleState, Breakdown, HandCard, Move, Outcome, Side, Values, applyMove, blickTargets, cardValue, cellBreakdown, coinToss, cpuChoosesFirst,
+  BOARD_SIZE, BattleState, boardHoles, boardRows, Breakdown, HandCard, Move, Outcome, Side, Values, applyMove, blickTargets, cardValue, cellBreakdown, coinToss, cpuChoosesFirst,
   createBattle, isGameOver, other, outcome, rotateValues, score, totalMoves,
 } from '../game/battle';
 import { Arena, pickArena } from '../game/arenas';
@@ -102,8 +102,8 @@ function previewText(cardId: string) {
 }
 
 /** Centre of a board cell in % of the board (the board padding is small enough to ignore). */
-function cellCenter(cell: number): { x: number; y: number } {
-  return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE) };
+function cellCenterOn(cell: number, rows: number): { x: number; y: number } {
+  return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / rows) };
 }
 
 export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket, online, ai, resume, onProgress }: Props) {
@@ -390,6 +390,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
               : selectedElement
                 ? <><ClassGlyph cls={selectedDef!.cls!} /> {CLASS_INFO[selectedDef!.cls!].label}: auf <TerrainGlyph terrain={selectedElement} /> {TERRAIN_INFO[selectedElement].label} +1 auf alle Werte</>
                 : 'Tippe auf ein freies Feld.';
+  const rows = boardRows(state.board.length);
+  const holes = boardHoles(state.board.length);
+  const cellCenter = (cell: number) => cellCenterOn(cell, rows);
   const placedAt = state.lastOrigin !== null ? cellCenter(state.lastOrigin) : null;
   const activated = useMemo(() => activations(state), [state]);
   const enemyRune: RuneDef | null = state.runes.cpu ? findRune(state.runes.cpu.id) : null;
@@ -441,13 +444,15 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       )}
       <div className="play-area">
         <div
-          className={`board ${boardDesign ? 'has-art' : ''} ${boardDesign?.layout.cellBorders ? 'cell-borders' : ''} ${result ? `ended ${result}` : ''}`}
+          className={`board ${rows !== 4 ? `board-rows-${rows} shape-kristall` : ''} ${boardDesign ? 'has-art' : ''} ${boardDesign?.layout.cellBorders ? 'cell-borders' : ''} ${result ? `ended ${result}` : ''}`}
           style={boardDesign ? (layoutVars(boardDesign.layout) as CSSProperties) : undefined}
           role="grid"
-          aria-label="Spielfeld 4 mal 4"
+          aria-label={rows === 4 ? "Spielfeld 4 mal 4" : "Kristall-Spielfeld mit 16 Feldern"}
         >
           <BoardArt design={boardDesign} />
           {state.board.map((cell, i) => {
+            // A corner the Kristall shape does not have: keeps the grid, shows nothing.
+            if (holes.includes(i)) return <div key={i} className="cell hole" aria-hidden="true" />;
             if (state.rocks.includes(i)) {
               return <div key={i} role="gridcell" className="cell rock" aria-label="Fels – hier kann niemand legen"><span className="rock-stone" aria-hidden="true" /></div>;
             }

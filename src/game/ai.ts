@@ -66,7 +66,7 @@ function mediumScore(state: BattleState, move: Move): number {
   const v = handValues(card, move.rot ?? 0);
   // Defensive bonus: strong values facing empty cells, small penalty for weak exposed sides.
   let defense = 0;
-  for (const n of neighbours(move.cell)) {
+  for (const n of neighbours(move.cell, state.board.length)) {
     if (state.board[n.cell] === null && !state.rocks.includes(n.cell)) defense += v[DIR_ORDER.indexOf(n.mine)] - 5;
   }
   // Keep strong cards for later when nothing can be captured.
@@ -129,7 +129,7 @@ function hardScore(state: BattleState, move: Move, prefer: ReadonlySet<CardClass
   const flips = next.lastFlips.length;
   const info = cellBreakdown(next.board, next.terrain, move.cell);
   let open = 0;
-  for (const n of neighbours(move.cell)) {
+  for (const n of neighbours(move.cell, state.board.length)) {
     if (next.board[n.cell] === null && !next.rocks.includes(n.cell)) open += info.values[DIR_ORDER.indexOf(n.mine)] - 5;
   }
   // The player's likely answer with the stand-in cards (how many cards they could take back).
@@ -154,7 +154,7 @@ function positionValue(state: BattleState, side: Side): number {
   state.board.forEach((c, i) => {
     if (!c || c.owner !== side) return;
     const v = cellBreakdown(state.board, state.terrain, i).values;
-    for (const n of neighbours(i)) if (state.board[n.cell] === null && !state.rocks.includes(n.cell)) guard += v[DIR_ORDER.indexOf(n.mine)] - 5;
+    for (const n of neighbours(i, state.board.length)) if (state.board[n.cell] === null && !state.rocks.includes(n.cell)) guard += v[DIR_ORDER.indexOf(n.mine)] - 5;
   });
   const material = (side === 'player' ? s.player - s.cpu : s.cpu - s.player) * 100 + guard * 8;
   if (isGameOver(state) || state.turn !== side) return material;

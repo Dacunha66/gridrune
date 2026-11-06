@@ -451,6 +451,15 @@ Sicherung vor dem Umbau: Stand v1.3 = Commit `2ab6b82` (auf GitHub) und Version 
 - Browser (iPhone 390×844 und SE 375×667, Gast): Startseite, Reiter Karten/Mehr, Sammlung, Duell mit Fächer-Hand,
   Karte wählen und legen – keine Fehler. Nicht geprüft: angemeldet mit Tagesquest-Zeile, echte Geräte.
 
+## Spielfeld-Form „Kristall“ (v1.36)
+
+- Neue Form: 4 Spalten × 5 Reihen ohne die 4 Ecken (16 Felder, mit Fels 15 Züge). Die Form folgt aus der Zellenzahl der
+  Arena (16 = Quadrat, 20 = Kristall). Neue Arena a18 „Die Kristall-Arena“ (aktiv, nicht Rangliste); Admin → Arenen:
+  Form wählbar.
+- Automatisch (tests/kristall.test.ts): Ecken nicht spielbar, Nachbarn über die Ecken hinweg korrekt, Fels nie auf einer
+  Ecke, ganzes KI-Duell läuft bis Zug 15, Arena-Daten (16/20 Zellen, Spiegelgleichheit).
+- Browser (Testseite, iPhone und SE): Kristall-Feld mit Diamant-Optik, Fächer-Hand, Karten legen.
+
 ## Browser-Durchlauf (automatisiert mit Playwright/Chromium, nicht im Repo)
 In iPhone-Größe (390×844 und 375×667) und iPad-Größe (820×1180) mit Touch-Emulation:
 Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Überspringen) → vollständiges Duell mit 16 Zügen → Ergebnisbildschirm → Neuladen der Seite (Münzen und Statistik bleiben erhalten) → Aufgeben im Duell. Keine JavaScript-Fehler.

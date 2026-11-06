@@ -1,6 +1,7 @@
 // Campaign for players: world selection → world map with stations → mission briefing → (run) → duel → stars.
 // Guests keep their progress on this device and see rewards as a preview. Signed-in players get a ticket from the
 // server before each mission; the server replays the duel, stores the stars and pays coins, cards and packs.
+import { boardHoles } from '../game/battle';
 import { CoinText, RewardIcon } from '../components/Coin';
 import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { GameIcon, GameIconName } from '../components/GameIcon';
@@ -238,7 +239,7 @@ export function Stars({ earned, className = '', fresh = [] }: { earned: boolean[
 export function TerrainMini({ cells }: { cells: readonly Terrain[] }) {
   return (
     <span className="terrain-mini" aria-hidden="true">
-      {cells.map((t, i) => <i key={i} className={`tm-${t}`}><TerrainGlyph terrain={t} /></i>)}
+      {cells.map((t, i) => (boardHoles(cells.length).includes(i) ? <i key={i} className="tm-hole" /> : <i key={i} className={`tm-${t}`}><TerrainGlyph terrain={t} /></i>))}
     </span>
   );
 }

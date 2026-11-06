@@ -2074,3 +2074,19 @@ label.btn.disabled { opacity: .45; }
 .menu-tab.on { color: var(--glow); }
 .menu-tab.on .gi { color: var(--glow); filter: drop-shadow(0 0 6px var(--glow)); }
 .menu-tab-badge { position: absolute; top: 0; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--glow); color: #0b1120; font: 900 11px/18px var(--f-body); box-shadow: 0 0 8px var(--glow); }
+
+/* ---------- Board shape „Kristall“: 4 columns × 5 rows without the corners ---------- */
+.play-area .board.board-rows-5 {
+  --bw: calc(min(100cqw, calc((100cqh - var(--hand-h) - 30px) * 0.598)) * var(--board-size, 1));
+  margin-top: max(0px, calc((100cqh - var(--hand-h) - 30px - var(--bw) * 1.6667) * var(--board-offset, 0)));
+}
+.board .cell.hole { visibility: hidden; pointer-events: none; }
+.board.shape-kristall { background: radial-gradient(80% 60% at 50% 45%, rgba(120, 200, 255, 0.12), transparent 70%), var(--panel, #16203a); }
+.board.shape-kristall .cell.terrain-normal:not(.hole) {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23bfe6ff' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round' opacity='0.55'%3E%3Cpath d='M6 4h12l3 5-9 11L3 9z'/%3E%3Cpath d='M3 9h18M9 4l3 16M15 4l-3 16M9 4L7.5 9M15 4l1.5 5'/%3E%3C/svg%3E") center / 34% no-repeat,
+    linear-gradient(160deg, #3c5d7a, #2a4560);
+  box-shadow: inset 0 0 0 1.5px rgba(191, 230, 255, 0.55), inset 0 0 12px rgba(120, 200, 255, 0.18);
+}
+.board.shape-kristall .cell.terrain-normal:not(.hole):has(.card) { background: #1a2238; }
+.mini-cell.hole, .terrain-mini .tm-hole, .arena-grid .cell.hole { visibility: hidden; }

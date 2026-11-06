@@ -8,6 +8,19 @@ export type Side = 'player' | 'cpu';
 
 export const BOARD_SIZE = 4;
 export const CELL_COUNT = BOARD_SIZE * BOARD_SIZE;
+/**
+ * Board shapes: always 4 columns. 16 cells = the classic 4×4 square; 20 cells = the Kristall shape, 5 rows
+ * without its 4 corners (16 playable fields). The shape follows from the number of cells of the arena.
+ */
+export const KRISTALL_CELLS = 20;
+export const BOARD_CELL_COUNTS = [CELL_COUNT, KRISTALL_CELLS] as const;
+const KRISTALL_HOLES = [0, 3, 16, 19];
+/** Cells that are not part of the board (no field there). */
+export function boardHoles(count: number): number[] {
+  return count === KRISTALL_CELLS ? KRISTALL_HOLES : [];
+}
+export const boardRows = (count: number) => Math.round(count / BOARD_SIZE);
+export const isBoardCount = (n: number) => (BOARD_CELL_COUNTS as readonly number[]).includes(n);
 export const HAND_SIZE = 8;
 
 export type Dir = 'top' | 'right' | 'bottom' | 'left';
@@ -174,16 +187,18 @@ export function createBattle(
   if (playerHand.length !== HAND_SIZE || cpuHand.length !== HAND_SIZE) {
     throw new Error(`Each side needs exactly ${HAND_SIZE} cards`);
   }
+  const count = isBoardCount(terrain.length) ? terrain.length : CELL_COUNT;
+  const holes = boardHoles(count);
   return {
-    board: Array<BoardCell | null>(CELL_COUNT).fill(null),
+    board: Array<BoardCell | null>(count).fill(null),
     hands: { player: playerHand.map((c) => ({ ...c })), cpu: cpuHand.map((c) => ({ ...c })) },
     turn: first,
     moveCount: 0,
     lastFlips: [],
     lastClashes: [],
     lastPlaced: null,
-    rocks: [...new Set(rocks)].filter((c) => Number.isInteger(c) && c >= 0 && c < CELL_COUNT),
-    terrain: terrain.length === CELL_COUNT ? [...terrain] : [...NORMAL_TERRAIN],
+    rocks: [...new Set(rocks)].filter((c) => Number.isInteger(c) && c >= 0 && c < count && !holes.includes(c)),
+    terrain: isBoardCount(terrain.length) ? [...terrain] : [...NORMAL_TERRAIN],
     lastEvents: [],
     lastChain: [],
     runes: { player: runes.player ? { id: runes.player, used: false } : null, cpu: runes.cpu ? { id: runes.cpu, used: false } : null },
@@ -200,10 +215,11 @@ export function rotateValues(v: Values, rot = 0): Values {
   return out;
 }
 
-/** A random rock cell for a balanced duel – only on normal (terrain-free) cells. */
+/** A random rock cell for a balanced duel – only on normal (terrain-free) fields of the board. */
 export function randomRock(rng: () => number, terrain: readonly Terrain[] = NORMAL_TERRAIN): number {
-  const free = terrain.flatMap((t, i) => (t === 'normal' ? [i] : []));
-  const cells = free.length > 0 ? free : [...Array(CELL_COUNT).keys()];
+  const holes = boardHoles(terrain.length);
+  const free = terrain.flatMap((t, i) => (t === 'normal' && !holes.includes(i) ? [i] : []));
+  const cells = free.length > 0 ? free : [...Array(terrain.length).keys()].filter((i) => !holes.includes(i));
   return cells[Math.floor(rng() * cells.length)];
 }
 
@@ -215,14 +231,17 @@ const DIRS = [
   { dr: 0, dc: -1, mine: 'left', theirs: 'right' },
 ] as const;
 
-export function neighbours(cell: number): { cell: number; mine: Dir; theirs: Dir }[] {
+/** The fields next to `cell` on a board of `count` cells (holes of the shape are left out). */
+export function neighbours(cell: number, count: number = CELL_COUNT): { cell: number; mine: Dir; theirs: Dir }[] {
+  const rows = boardRows(count);
+  const holes = boardHoles(count);
   const r = Math.floor(cell / BOARD_SIZE);
   const c = cell % BOARD_SIZE;
   const out = [];
   for (const d of DIRS) {
     const nr = r + d.dr;
     const nc = c + d.dc;
-    if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+    if (nr >= 0 && nr < rows && nc >= 0 && nc < BOARD_SIZE && !holes.includes(nr * BOARD_SIZE + nc)) {
       out.push({ cell: nr * BOARD_SIZE + nc, mine: d.mine, theirs: d.theirs });
     }
   }
@@ -307,7 +326,7 @@ function effectAura(board: readonly (BoardCell | null)[], cell: number): Part[] 
   switch (effect) {
     case 'schildwall':
     case 'naturbund': {
-      const near = neighbours(cell);
+      const near = neighbours(cell, board.length);
       const friends = near.filter((n) => board[n.cell]?.owner === card.owner);
       const active = effect === 'schildwall' ? friends.length > 0 : friends.some((n) => getCard(board[n.cell]!.cardId).cls === 'natur');
       if (!active) return [];
@@ -412,7 +431,7 @@ export function growRoots(board: (BoardCell | null)[], side: Side, placedAt: num
 /** Enemy cards "Schwächender Blick" could target if `card` were placed on `cell` (empty for other effects). */
 export function blickTargets(board: readonly (BoardCell | null)[], cell: number, card: HandCard, side: Side): number[] {
   if (getCard(card.cardId).effect !== 'schwaechender_blick') return [];
-  return neighbours(cell).filter((n) => board[n.cell] && board[n.cell]!.owner !== side).map((n) => n.cell);
+  return neighbours(cell, board.length).filter((n) => board[n.cell] && board[n.cell]!.owner !== side).map((n) => n.cell);
 }
 
 export interface Placement {
@@ -475,7 +494,7 @@ export function resolvePlacement(
   }
   next[cell] = placed;
   const clashes: Clash[] = [];
-  for (const n of neighbours(cell)) {
+  for (const n of neighbours(cell, next.length)) {
     const other = next[n.cell];
     if (!other || other.owner === side) continue;
     const attack = attackValue(next, terrain, cell, n.mine);
@@ -512,7 +531,7 @@ function runChain(
     for (const from of wave) {
       if (attacked.has(from)) continue;
       attacked.add(from);
-      for (const n of neighbours(from)) {
+      for (const n of neighbours(from, board.length)) {
         const other = board[n.cell];
         if (!other || other.owner === side || captured.some((c) => c.cell === n.cell)) continue;
         const base = attackValue(board, terrain, from, n.mine);
@@ -563,9 +582,9 @@ export function cpuChoosesFirst(): Side {
 export function isLegalMove(state: BattleState, move: Move): boolean {
   if (
     isGameOver(state) ||
-    !Number.isInteger(move.cell) || move.cell < 0 || move.cell >= CELL_COUNT ||
+    !Number.isInteger(move.cell) || move.cell < 0 || move.cell >= state.board.length ||
     state.board[move.cell] !== null ||
-    state.rocks.includes(move.cell) ||
+    state.rocks.includes(move.cell) || boardHoles(state.board.length).includes(move.cell) ||
     !Number.isInteger(move.handIndex) || move.handIndex < 0 || move.handIndex >= state.hands[state.turn].length
   ) return false;
   // Only Wirbelwind cards may be turned when placed.
@@ -581,8 +600,9 @@ export function isLegalMove(state: BattleState, move: Move): boolean {
 export function legalMoves(state: BattleState): Move[] {
   if (isGameOver(state)) return [];
   const moves: Move[] = [];
+  const holes = boardHoles(state.board.length);
   state.board.forEach((cell, i) => {
-    if (cell || state.rocks.includes(i)) return;
+    if (cell || state.rocks.includes(i) || holes.includes(i)) return;
     state.hands[state.turn].forEach((card, h) => {
       const targets = blickTargets(state.board, i, card, state.turn);
       const rots = getCard(card.cardId).effect === 'wirbelwind' ? [0, 1, 2, 3] : [0];
@@ -630,9 +650,14 @@ export function cellName(cell: number): string {
   return `${'ABCD'[cell % BOARD_SIZE]}${Math.floor(cell / BOARD_SIZE) + 1}`;
 }
 
-/** Number of moves in a duel: one per free field (16, or 15 with a rock). */
-export function totalMoves(state: Pick<BattleState, 'rocks'>): number {
-  return CELL_COUNT - state.rocks.length;
+/** Number of moves in a duel: one per free field (16, or 15 with a rock – on every board shape). */
+export function totalMoves(state: Pick<BattleState, 'rocks' | 'board'>): number {
+  return playableFields(state.board.length) - state.rocks.length;
+}
+
+/** Fields of a board shape without its holes (16 on both shapes). */
+export function playableFields(count: number): number {
+  return count - boardHoles(count).length;
 }
 
 export function isGameOver(state: BattleState): boolean {

@@ -146,7 +146,7 @@ export function runeChoices(state: BattleState, side: Side, def: RuneDef): { cel
     case 'twist':
       return { cells: all.filter(mine), classes: [] };
     case 'echo':
-      return { cells: all.filter((i) => mine(i) && neighbours(i).some((n) => theirs(n.cell))), classes: [] };
+      return { cells: all.filter((i) => mine(i) && neighbours(i, state.board.length).some((n) => theirs(n.cell))), classes: [] };
     case 'empower':
       return { cells: all.filter((i) => mine(i) && (!r.cls || getCard(state.board[i]!.cardId).cls === r.cls)), classes: [] };
     case 'curse': {
@@ -171,7 +171,7 @@ export function runeOpen(state: BattleState, def: RuneDef): boolean {
  * current values). Never a chain – the Kettenübernahme ability of the attacking card plays no part here.
  */
 export function echoCapturable(state: BattleState, cell: number, side: Side = state.turn): number[] {
-  return neighbours(cell).filter((n) => {
+  return neighbours(cell, state.board.length).filter((n) => {
     const o = state.board[n.cell];
     return !!o && o.owner !== side && beats(attackValue(state.board, state.terrain, cell, n.mine), defenseValue(state.board, state.terrain, n.cell, n.theirs), state.board[cell]!.cardId, o.cardId);
   }).map((n) => n.cell);
@@ -244,7 +244,7 @@ export function applyRune(state: BattleState, use: RuneUse): BattleState {
       break;
     }
     case 'echo': {
-      for (const n of neighbours(use.cell!)) {
+      for (const n of neighbours(use.cell!, board.length)) {
         const o = board[n.cell];
         if (!o || o.owner === side) continue;
         const attack = attackValue(board, state.terrain, use.cell!, n.mine);

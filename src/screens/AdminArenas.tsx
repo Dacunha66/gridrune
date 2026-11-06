@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ConfirmButton } from '../components/ConfirmButton';
 import {
-  ARENAS_COLLECTION, ARENA_NAME_MAX, ARENA_STATUSES, Arena, ArenaStatus, BUILTIN_ARENAS, nextArenaId, parseArena, rankedProblems, setArenas,
+  ARENAS_COLLECTION, ARENA_NAME_MAX, ARENA_STATUSES, Arena, ArenaShape, ArenaStatus, BUILTIN_ARENAS, SHAPE_LABEL, arenaShape, emptyCells, nextArenaId, parseArena,
+  rankedProblems, setArenas,
 } from '../game/arenas';
-import { CELL_COUNT } from '../game/battle';
+import { boardHoles } from '../game/battle';
 import { Db, deleteArena, describeError, saveArena } from '../game/cardStore';
 import { TERRAINS, TERRAIN_INFO, Terrain } from '../game/effects';
 
@@ -53,7 +54,7 @@ export function ArenaView({ db, onToast }: { db: Db; onToast: (m: string) => voi
   }
 
   const newArena = (): Arena => ({
-    id: nextArenaId(all.map((a) => a.id)), name: '', cells: Array<Terrain>(CELL_COUNT).fill('normal'), status: 'draft', ranked: false, updatedAt: '',
+    id: nextArenaId(all.map((a) => a.id)), name: '', cells: emptyCells('square'), status: 'draft', ranked: false, updatedAt: '',
   });
   return (
     <div className="scroll">
@@ -66,7 +67,7 @@ export function ArenaView({ db, onToast }: { db: Db; onToast: (m: string) => voi
           <li key={a.id}>
             <button type="button" className="admin-row" onClick={() => setEditing({ ...a, cells: [...a.cells] })}>
               <span className="arena-thumb" aria-hidden="true">
-                {a.cells.map((t, i) => <span key={i} className={`mini-cell terrain-${t}`} />)}
+                {a.cells.map((t, i) => <span key={i} className={`mini-cell terrain-${t} ${boardHoles(a.cells.length).includes(i) ? 'hole' : ''}`} />)}
               </span>
               <span className="admin-row-main">
                 <strong>{a.name}</strong>
@@ -146,6 +147,19 @@ function ArenaEditor({ db, initial, isBuiltin, isSaved, onToast, onClose }: {
       </label>
 
       <div className="field">
+        <span>Form des Spielfelds</span>
+        <div className="segmented" role="radiogroup" aria-label="Form">
+          {(['square', 'kristall'] as ArenaShape[]).map((sh) => (
+            <button key={sh} type="button" role="radio" aria-checked={arenaShape(draft.cells) === sh} className={`seg ${arenaShape(draft.cells) === sh ? 'active' : ''}`}
+              onClick={() => arenaShape(draft.cells) !== sh && setDraft({ ...draft, cells: emptyCells(sh) })}>
+              {SHAPE_LABEL[sh]}
+            </button>
+          ))}
+        </div>
+        <small className="muted">Beide Formen haben 16 Felder. Beim Wechsel der Form wird das Gelände zurückgesetzt.</small>
+      </div>
+
+      <div className="field">
         <span>Gelände malen: wählen, dann Felder antippen (nochmal tippen = normal)</span>
         <div className="segmented" role="radiogroup" aria-label="Gelände">
           {TERRAINS.map((t) => (
@@ -154,8 +168,8 @@ function ArenaEditor({ db, initial, isBuiltin, isSaved, onToast, onClose }: {
             </button>
           ))}
         </div>
-        <div className="arena-grid" role="grid" aria-label="Arena 4 mal 4">
-          {draft.cells.map((t, i) => (
+        <div className="arena-grid" role="grid" aria-label={arenaShape(draft.cells) === 'kristall' ? 'Kristall-Arena' : 'Arena 4 mal 4'}>
+          {draft.cells.map((t, i) => boardHoles(draft.cells.length).includes(i) ? <span key={i} className="cell hole" aria-hidden="true" /> : (
             <button key={i} type="button" role="gridcell" className={`cell terrain-${t}`} aria-label={`Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1}: ${TERRAIN_INFO[t].label}`} onClick={() => paint(i)}>
               <span className="terrain-icon" aria-hidden="true">{TERRAIN_INFO[t].icon}</span>
             </button>
