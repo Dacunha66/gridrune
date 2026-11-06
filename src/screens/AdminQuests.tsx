@@ -72,24 +72,45 @@ function RewardEditor({ value, onChange }: { value: QuestReward; onChange: (r: Q
 }
 
 function QuestEditorRow({ def, list, onChange, onDelete }: { def: QuestDef; list: ListKey; onChange: (d: QuestDef) => void; onDelete: () => void }) {
+  const [open, setOpen] = useState(false);
   const metrics = list === 'achievements' ? QUEST_METRICS : COUNTED_METRICS;
+  const text = def.text || METRIC_TEXT[def.metric](def.target);
   return (
-    <div className={`admin-quest ${def.enabled ? '' : 'off'}`}>
-      <label className="admin-quest-on"><input type="checkbox" checked={def.enabled} onChange={(e) => onChange({ ...def, enabled: e.target.checked })} /> aktiv</label>
-      <span className="muted small">{def.id}</span>
-      <select className="admin-input" value={def.metric} onChange={(e) => onChange({ ...def, metric: e.target.value as QuestMetric })} aria-label="Was zählt">
-        {metrics.map((m) => <option key={m} value={m}>{METRIC_LABEL[m]}</option>)}
-      </select>
-      <input className="admin-input num" type="number" min={1} value={def.target} aria-label="Ziel"
-        onChange={(e) => onChange({ ...def, target: Math.max(1, Math.round(Number(e.target.value) || 1)) })} />
-      {list === 'achievements' && (
-        <input className="admin-input" value={def.chain ?? ''} placeholder="Gruppe (z. B. Sieger)" maxLength={30} aria-label="Gruppe"
-          onChange={(e) => onChange({ ...def, chain: e.target.value })} />
+    <div className={`admin-quest ${def.enabled ? '' : 'off'} ${open ? 'open' : ''}`}>
+      <div className="admin-quest-head">
+        <input type="checkbox" checked={def.enabled} aria-label="aktiv" onChange={(e) => onChange({ ...def, enabled: e.target.checked })} />
+        <button type="button" className="admin-quest-summary" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <span className="admin-quest-title">{list === 'achievements' && def.chain ? <b>{def.chain}: </b> : null}{text}</span>
+          <span className="admin-quest-reward">{rewardText(def.reward)}</span>
+        </button>
+        <button type="button" className="btn btn-small" onClick={() => setOpen(!open)}>{open ? 'Fertig' : 'Ändern'}</button>
+      </div>
+      {open && (
+        <div className="admin-quest-fields">
+          <label className="field"><span>Was zählt</span>
+            <select className="admin-input" value={def.metric} onChange={(e) => onChange({ ...def, metric: e.target.value as QuestMetric })}>
+              {metrics.map((m) => <option key={m} value={m}>{METRIC_LABEL[m]}</option>)}
+            </select>
+          </label>
+          <label className="field"><span>Ziel</span>
+            <input className="admin-input num" type="number" inputMode="numeric" min={1} value={def.target}
+              onChange={(e) => onChange({ ...def, target: Math.max(1, Math.round(Number(e.target.value) || 1)) })} />
+          </label>
+          {list === 'achievements' && (
+            <label className="field"><span>Gruppe (Stufen gleicher Gruppe stehen zusammen)</span>
+              <input className="admin-input" value={def.chain ?? ''} placeholder="z. B. Sieger" maxLength={30} onChange={(e) => onChange({ ...def, chain: e.target.value })} />
+            </label>
+          )}
+          <label className="field"><span>Eigener Text (leer = automatisch)</span>
+            <input className="admin-input" value={def.text ?? ''} placeholder={METRIC_TEXT[def.metric](def.target)} maxLength={80} onChange={(e) => onChange({ ...def, text: e.target.value })} />
+          </label>
+          <div className="field"><span>Belohnung</span><RewardEditor value={def.reward} onChange={(reward) => onChange({ ...def, reward })} /></div>
+          <div className="admin-quest-foot">
+            <span className="muted small">Kennung: {def.id}</span>
+            <ConfirmButton label="Löschen" confirmLabel="Wirklich löschen?" onConfirm={onDelete} />
+          </div>
+        </div>
       )}
-      <input className="admin-input admin-quest-text" value={def.text ?? ''} placeholder={METRIC_TEXT[def.metric](def.target)} maxLength={80} aria-label="Eigener Text"
-        onChange={(e) => onChange({ ...def, text: e.target.value })} />
-      <RewardEditor value={def.reward} onChange={(reward) => onChange({ ...def, reward })} />
-      <ConfirmButton label="Löschen" confirmLabel="Wirklich?" onConfirm={onDelete} />
     </div>
   );
 }
@@ -143,7 +164,7 @@ export function QuestsView({ db, onToast }: Props) {
   }
 
   return (
-    <section className="admin-quests">
+    <section className="scroll admin-quests">
       <p className="muted small">
         Täglich und wöchentlich wird für alle Spieler dieselbe zufällige Auswahl aus den aktiven Quests gezogen (Wechsel um Mitternacht deutscher Zeit, Wochen am Montag).
         Gezählt wird nur, was der Server geprüft hat. Bereits abgeholte Belohnungen bleiben abgeholt; Zähler bleiben beim Ändern erhalten.
