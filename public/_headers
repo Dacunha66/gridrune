@@ -1,3 +1,10 @@
 # Cloudflare Pages: program files have a fingerprint in their name – browsers may keep them for a year (faster start).
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# PWA: the service worker and the manifest must always be fetched fresh (updates arrive at the next start).
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+  Content-Type: application/manifest+json

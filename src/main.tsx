@@ -18,3 +18,13 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+// PWA: on the website, a service worker keeps the game on the device (fast start, opens without internet).
+// Not in the single-file version for the hosted preview and not during development.
+if (import.meta.env.PROD && import.meta.env.MODE !== 'single' && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      // Without the service worker the game simply works as a normal website.
+    });
+  });
+}

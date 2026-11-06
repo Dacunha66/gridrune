@@ -1,4 +1,5 @@
-// Renders the GridRune symbol (LOGO_SVG in src/components/LogoMark.tsx) to the favicon and the home-screen icon.
+// Renders the GridRune symbol (LOGO_SVG in src/components/LogoMark.tsx) to the favicon, the home-screen icon and the
+// app icons of the PWA.
 // Usage: node scripts/render-icons.cjs   (needs Playwright with Chromium)
 const fs = require('fs');
 const path = require('path');
@@ -19,6 +20,13 @@ const svg = /LOGO_SVG = `([\s\S]*?)`;/.exec(src)[1];
   // iOS rounds the corners itself: full square, ink background behind the tablet.
   await render(180, '#0b1120', 6, path.join(assets, 'apple-touch-icon.png'));
   await render(512, 'transparent', 0, path.join(assets, 'gridrune-mark.png'));
+  // PWA (public/manifest.webmanifest): normal icons and a "maskable" one with room around the symbol (Android cuts
+  // the corners into a circle or a rounded square).
+  const icons = path.join(__dirname, '../public/icons');
+  fs.mkdirSync(icons, { recursive: true });
+  await render(192, '#0b1120', 8, path.join(icons, 'icon-192.png'));
+  await render(512, '#0b1120', 20, path.join(icons, 'icon-512.png'));
+  await render(512, '#0b1120', 92, path.join(icons, 'icon-maskable-512.png'));
   await b.close();
   console.log('icons written');
 })();

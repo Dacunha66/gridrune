@@ -432,6 +432,14 @@ Sicherung vor dem Umbau: Stand v1.3 = Commit `2ab6b82` (auf GitHub) und Version 
   Abholen mit Einblendung, Titelwahl, Erfolgs-Gruppen mit Stufen.
 - Nicht live getestet: Zählung aus echten gespielten Spielen (Abenteuer, Kampagne, Rangliste, Raid, Online).
 
+## PWA (v1.34)
+
+- public/manifest.webmanifest (Name, Symbole 192/512 + „maskable“, Vollbild, Hochformat), public/sw.js (Seite: immer neu
+  wenn online, sonst gespeichert; Programmdateien/Bilder aus dem Speicher; Server-Aufrufe nie aus dem Speicher).
+- Browser (Chromium, Vorschau): Service Worker aktiv, Manifest erreichbar, nach dem ersten Besuch startet das Spiel
+  auch ohne Internet (Willkommensseite, „Als Gast spielen“). Ohne Internet fehlen nur die Google-Schriften (Ersatzschrift).
+- Nicht geprüft: Installation auf echtem iPhone/Android.
+
 ## Browser-Durchlauf (automatisiert mit Playwright/Chromium, nicht im Repo)
 In iPhone-Größe (390×844 und 375×667) und iPad-Größe (820×1180) mit Touch-Emulation:
 Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Überspringen) → vollständiges Duell mit 16 Zügen → Ergebnisbildschirm → Neuladen der Seite (Münzen und Statistik bleiben erhalten) → Aufgeben im Duell. Keine JavaScript-Fehler.
