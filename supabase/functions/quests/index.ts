@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
   async function readState() {
     const [{ data: prog }, { data: claims }] = await Promise.all([
       db.from('quest_progress').select('day, week, daily, weekly, total, titles').eq('player_id', uid).maybeSingle(),
-      db.from('quest_claims').select('key').eq('player_id', uid).or(`key.like.a:%,key.like.d:${day}:%,key.like.w:${week}:%`),
+      db.from('quest_claims').select('key').eq('player_id', uid).or(`key.like.a:*,key.like.d:${day}:*,key.like.w:${week}:*`),
     ]);
     return { ...(prog ?? {}), claimed: (claims ?? []).map((c: Row) => c.key) };
   }
