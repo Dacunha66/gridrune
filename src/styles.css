@@ -2076,9 +2076,11 @@ label.btn.disabled { opacity: .45; }
 .menu-tab-badge { position: absolute; top: 0; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--glow); color: #0b1120; font: 900 11px/18px var(--f-body); box-shadow: 0 0 8px var(--glow); }
 
 /* ---------- Board shape „Kristall“: 4 columns × 5 rows without the corners ---------- */
+/* The tall board needs the height: the hand cards are a little smaller there, so the board's cards grow. */
+.play-area:has(.board-rows-5) { --hand-w: clamp(54px, min(17cqw, 11cqh), 108px); }
 .play-area .board.board-rows-5 {
-  --bw: calc(min(100cqw, calc((100cqh - var(--hand-h) - 30px) * 0.598)) * var(--board-size, 1));
-  margin-top: max(0px, calc((100cqh - var(--hand-h) - 30px - var(--bw) * 1.6667) * var(--board-offset, 0)));
+  --bw: calc(min(100cqw, calc((100cqh - var(--hand-h) - 24px) * 0.598)) * var(--board-size, 1));
+  margin-top: max(0px, calc((100cqh - var(--hand-h) - 24px - var(--bw) * 1.6667) * var(--board-offset, 0)));
 }
 .board .cell.hole { visibility: hidden; pointer-events: none; }
 .board.shape-kristall { background: radial-gradient(80% 60% at 50% 45%, rgba(120, 200, 255, 0.12), transparent 70%), var(--panel, #16203a); }
@@ -2090,3 +2092,6 @@ label.btn.disabled { opacity: .45; }
 }
 .board.shape-kristall .cell.terrain-normal:not(.hole):has(.card) { background: #1a2238; }
 .mini-cell.hole, .terrain-mini .tm-hole, .arena-grid .cell.hole { visibility: hidden; }
+
+/* Rune der Verdrehung: the chosen card already shows its new orientation (dashed outline = not confirmed yet). */
+.board .card.twist-preview { outline: 2px dashed rgba(69, 227, 207, 0.95); outline-offset: -3px; }

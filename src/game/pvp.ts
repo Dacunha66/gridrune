@@ -10,7 +10,7 @@ import { Action, applyAction, isRuneUse } from './runes';
 import type { RunnerLayout } from './runner';
 
 /** Seconds a player has for one move; then the server plays a random card for them. */
-export const PVP_TURN_SECONDS = 30;
+export const PVP_TURN_SECONDS = 90;
 /** Seconds without a sign of life after which the player who is still there wins. */
 export const PVP_ABSENT_SECONDS = 20;
 /** Coins for a win (like an adventure win). */

@@ -294,6 +294,10 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       : { rune: true, cells: runeMode.cells, ...(runeMode.cls ? { cls: runeMode.cls } : {}) }
     : null;
   const runeReady = !!runeUse && runeProblem(state, runeUse) === null;
+  /** Rune der Verdrehung: the board as it would look after the turn (preview on the chosen card). */
+  const twistPreviewBoard = runeMode && myRuneRules?.effect === 'twist' && runeMode.dir && runeMode.cells.length === 1 && state.board[runeMode.cells[0]]
+    ? state.board.map((c, k) => (k === runeMode.cells[0] && c ? { ...c, rot: (((c.rot ?? 0) + runeMode.dir!) % 4 + 4) % 4 } : c))
+    : null;
   /** Nachhall: enemy cards that could be taken – the player picks when there are more than allowed. */
   const echoChoice = runeMode && myRuneRules?.effect === 'echo' && runeMode.cells.length === 1 ? echoCapturable(state, runeMode.cells[0], 'player') : [];
   const echoMustPick = !!myRuneRules && echoChoice.length > myRuneRules.maxTargets;
@@ -462,7 +466,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
             const placed = state.lastPlaced === i;
             const canDrop = phase === 'play' && !cell && selected !== null && state.turn === 'player' && !over && !animating && !targeting;
             const terrain = state.terrain[i];
-            const info = cell ? cellBreakdown(state.board, state.terrain, i) : null;
+            // Rune der Verdrehung: the chosen card already shows its new orientation before it is confirmed.
+            const twisting = !!cell && !!twistPreviewBoard && runeMode!.cells[0] === i;
+            const info = cell ? cellBreakdown(twisting ? twistPreviewBoard! : state.board, state.terrain, i) : null;
             const isTarget = targeting?.targets.includes(i) || (runeMode && runeSelectable(i));
             const runePicked = runeMode?.cells.includes(i) || runeMode?.capture?.includes(i);
             const ghost = placing && placing.cell === i && placingCard;
@@ -497,6 +503,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                     className={[
                       flipped ? 'anim-flip' : placed ? `anim-drop ${activated.some((a) => a.effect === getCard(cell.cardId).effect) ? 'anim-drop-fx' : ''}` : '',
                       pending ? 'under-attack' : '',
+                      twisting ? 'twist-preview' : '',
                       winner && owner === winner ? 'winner-glow' : '',
                     ].join(' ')}
                   />
