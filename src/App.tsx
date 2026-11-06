@@ -32,14 +32,16 @@ import { Campaign } from './screens/Campaign';
 import { runeUnlocked } from './game/campaignProgress';
 import { setDevTools } from './game/cardStyle';
 import { SymbolTips } from './components/SymbolTips';
-import { CampaignContent, mergeContent, setCampaign } from './game/campaign';
+import { CAMPAIGN, CampaignContent, mergeContent, setCampaign } from './game/campaign';
 import { CampaignProgress, loadProgress, writeProgress } from './game/campaignProgress';
 import { AccountState, isGuest, watchAccount } from './game/account';
 import { AccountPage, CloudGate, NewPassword, Welcome } from './screens/Account';
 import { useCloudSync } from './game/useCloudSync';
 import { Quests } from './screens/Quests';
 import { questOverview } from './game/questApi';
-import { claimable } from './game/quests';
+import { QuestItem, claimable, rewardText } from './game/quests';
+import { NextStep } from './screens/Menu';
+import { nextMission } from './game/campaignProgress';
 import {
   claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, readPending, startAdventure, writePending,
 } from './game/adventureApi';
@@ -137,11 +139,15 @@ export function App() {
   const cloud = useCloudSync({ account, save, setSave, progress: campaignProgress, setProgress: setCampaignProgress });
   // Erfolge: how many rewards are ready (badge on the menu button), looked up when the menu opens.
   const [questsReady, setQuestsReady] = useState(0);
+  const [questDaily, setQuestDaily] = useState<QuestItem | null>(null);
   useEffect(() => {
     if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
     let alive = true;
     questOverview().then((r) => {
-      if (alive && r !== 'offline') setQuestsReady(claimable(r.board).length);
+      if (alive && r !== 'offline') {
+        setQuestsReady(claimable(r.board).length);
+        setQuestDaily(r.board.daily.find((i) => !i.done) ?? null);
+      }
     });
     return () => {
       alive = false;
@@ -306,6 +312,18 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloud.uid, cloud.phase]);
 
+  // Home screen: what the player can do next – first game, the next campaign mission, rewards ready, today's quest.
+  const nextSteps: NextStep[] = [];
+  {
+    const next = nextMission(CAMPAIGN, campaignProgress);
+    const firstTime = save.stats.wins + save.stats.draws + save.stats.losses === 0;
+    if (firstTime) nextSteps.push({ icon: 'run', title: 'Dein erstes Spiel', sub: 'Einfaches Spiel auf „Leicht“ – lerne die Regeln kennen', onClick: () => void startRun('easy') });
+    if (next) nextSteps.push({ icon: 'map', title: next.number === 1 && next.world.order <= 1 ? 'Kampagne beginnen' : 'Kampagne fortsetzen', sub: `${next.world.name} · ${next.mission.name}`, onClick: () => setScreen({ name: 'campaign' }) });
+    if (questsReady > 0) nextSteps.push({ icon: 'gift', title: questsReady === 1 ? '1 Belohnung bereit' : `${questsReady} Belohnungen bereit`, sub: 'Erfolge – jetzt abholen', onClick: () => setScreen({ name: 'quests' }) });
+    if (questDaily) nextSteps.push({ icon: 'hourglass', title: questDaily.text, sub: `Tagesquest · ${rewardText(questDaily.reward)}`, progress: questDaily.progress / questDaily.target, onClick: () => setScreen({ name: 'quests' }) });
+    if (account?.kind === 'signedOut') nextSteps.push({ icon: 'user', title: 'Konto erstellen', sub: 'Für Erfolge, Online-Duelle und Speichern auf allen Geräten', onClick: () => setGuestState(false) });
+  }
+
   return (
     <>
     <PageArt design={pageDesign} />
@@ -340,6 +358,7 @@ export function App() {
           onRaid={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'raid' }) : undefined}
           onQuests={account ? () => setScreen({ name: 'quests' }) : undefined}
           questsReady={questsReady}
+          nextSteps={nextSteps}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}

@@ -440,6 +440,17 @@ Sicherung vor dem Umbau: Stand v1.3 = Commit `2ab6b82` (auf GitHub) und Version 
   auch ohne Internet (Willkommensseite, „Als Gast spielen“). Ohne Internet fehlen nur die Google-Schriften (Ersatzschrift).
 - Nicht geprüft: Installation auf echtem iPhone/Android.
 
+## Design: Karten „Klar“, Fächer-Hand, Startseite (v1.35)
+
+- Kartendesign „Klar“ für alle (Admin kann Hybrid Premium / Steampunk zum Vergleich auf dem Gerät wählen): Bild füllt
+  die Karte, Rand abgedunkelt in Klassenfarbe; Werte kompakt im Kreis oben links (Klassenzeichen in der Mitte), Effekt
+  oben rechts, Name nur außerhalb des Spielfelds.
+- Duell: Hand als Fächer, alle 8 Karten sichtbar (Werte-Kreis jeder Karte bleibt frei), angetippte Karte hebt sich.
+- Startseite: Kopf (Logo, Münzen, Konto), großer Spielen-Knopf, „Dein nächster Schritt“ (erstes Spiel, Kampagne,
+  Belohnungen, Tagesquest, Konto), Leiste Start/Karten/Shop/Erfolge/Mehr.
+- Browser (iPhone 390×844 und SE 375×667, Gast): Startseite, Reiter Karten/Mehr, Sammlung, Duell mit Fächer-Hand,
+  Karte wählen und legen – keine Fehler. Nicht geprüft: angemeldet mit Tagesquest-Zeile, echte Geräte.
+
 ## Browser-Durchlauf (automatisiert mit Playwright/Chromium, nicht im Repo)
 In iPhone-Größe (390×844 und 375×667) und iPad-Größe (820×1180) mit Touch-Emulation:
 Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Überspringen) → vollständiges Duell mit 16 Zügen → Ergebnisbildschirm → Neuladen der Seite (Münzen und Statistik bleiben erhalten) → Aufgeben im Duell. Keine JavaScript-Fehler.

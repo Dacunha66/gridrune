@@ -1,17 +1,19 @@
-// Card design: everyone sees "Hybrid Premium". The admin can switch this device back to the former
-// steampunk design to compare (admin area or the 🎨 button in the duel); stored on this device only –
+// Card design: everyone sees "Klar". The admin can switch this device to the former designs
+// (Hybrid Premium, Steampunk) to compare (admin area or the 🎨 button in the duel); stored on this device only –
 // never in the save, never for other players. Only the look changes: values, rules and collections stay the same.
 import { useSyncExternalStore } from 'react';
 
-export type CardStyle = 'premium' | 'current';
-export const CARD_STYLES: CardStyle[] = ['premium', 'current'];
+export type CardStyle = 'klar' | 'premium' | 'current';
+export const CARD_STYLES: CardStyle[] = ['klar', 'premium', 'current'];
 /** Design every player sees. */
-export const DEFAULT_CARD_STYLE: CardStyle = 'premium';
+export const DEFAULT_CARD_STYLE: CardStyle = 'klar';
 export const CARD_STYLE_LABEL: Record<CardStyle, string> = {
-  premium: 'Hybrid Premium',
-  current: 'Standard (Steampunk)',
+  klar: 'Klar',
+  premium: 'Hybrid Premium (bisher)',
+  current: 'Steampunk (alt)',
 };
 export const CARD_STYLE_HINT: Record<CardStyle, string> = {
+  klar: 'Das Bild füllt die Karte, der Hintergrund ist abgedunkelt; alle vier Werte kompakt oben links mit dem Klassenzeichen in der Mitte, Fähigkeit oben rechts, Rahmen in Klassenfarbe, Name nur in der Hand.',
   premium: 'Außen der Spielerrahmen (rot/blau), innen ein Klassenrahmen aus passendem Material, Werte als Metall-Medaillons, Klasse oben links, Fähigkeit oben rechts, Namensleiste mit bis zu zwei Zeilen.',
   current: 'Das bisherige Steampunk-Design (zum Vergleich).',
 };

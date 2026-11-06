@@ -1,7 +1,7 @@
 // Campaign progress of this player. For now it is stored on this device only (separate key, the
 // normal save stays untouched); with player accounts it moves to the server, which then also pays
 // out rewards. Earned stars are never taken away – not by edits of a mission, not by a worse result.
-import { CampaignContent, Mission, STARS_PER_MISSION, World, maxWorldStars, worldMissions } from './campaign';
+import { CampaignContent, Mission, STARS_PER_MISSION, World, maxWorldStars, visibleWorlds, worldMissions } from './campaign';
 import { DuelStats, goalMet } from './campaignGoals';
 import { KeyValueStore } from './storage';
 import type { RuneDef } from './runes';
@@ -191,4 +191,15 @@ export function runeUnlocked(r: RuneDef, p: CampaignProgress, content: CampaignC
   if (r.unlock.kind === 'start') return true;
   if (r.unlock.kind === 'mission') return missionDone(p, r.unlock.missionId);
   return totalStars(content, p) >= r.unlock.n;
+}
+
+/** The next mission to play: the first open, unfinished mission in world order (null = everything done or locked). */
+export function nextMission(content: CampaignContent, p: CampaignProgress): { world: World; mission: Mission; number: number } | null {
+  for (const w of visibleWorlds(content)) {
+    if (!worldUnlocked(content, p, w)) continue;
+    const ms = worldMissions(content, w.id);
+    const i = ms.findIndex((m) => missionUnlocked(content, p, m) && !missionDone(p, m.id));
+    if (i >= 0) return { world: w, mission: ms[i], number: i + 1 };
+  }
+  return null;
 }

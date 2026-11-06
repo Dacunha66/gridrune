@@ -122,15 +122,44 @@ export function Card({
   const effect = c.effect ? EFFECTS[c.effect] : null;
   const style = { '--hue': c.hue, '--cls': cls?.color ?? '#f3c77a' } as CSSProperties;
   const classes = [
-    'card', `card-${size}`, `rarity-${c.rarity}`, `cs-${cardStyle}`, premium ? `cs-prem cls-${c.cls ?? 'none'}` : '',
+    'card', `card-${size}`, `rarity-${c.rarity}`, `cs-${cardStyle}`, premium ? `cs-prem cls-${c.cls ?? 'none'}` : '', cardStyle === 'klar' ? `cs-klar kcls-${c.cls ?? 'none'}` : '',
     owner ? `owner-${owner}` : '', locked ? 'locked' : '', selected ? 'selected' : '',
     badge === 'discovery' ? 'discovery' : '', detail ? 'card-detail' : '', terrainGlow ? 'terrain-glow' : '', className,
   ].join(' ');
   const label = ariaLabel ?? (locked
     ? `Gesperrte Karte, ${RARITY_LABEL[c.rarity]}`
     : `${c.name}${mod < 0 ? ` (geschwächt ${mod})` : ''}, ${RARITY_LABEL[c.rarity]}${c.cls ? `, ${CLASS_INFO[c.cls].label}` : ''}${effect ? `, Effekt ${effect.name}` : ''}, oben ${effective(0)}, rechts ${effective(1)}, unten ${effective(2)}, links ${effective(3)}${shield ? ', Schild aktiv' : ''}${rot % 4 ? `, gedreht um ${(rot % 4) * 90} Grad` : ''}`);
-  const v2 = premium;
-  const content = v2 ? (
+  const klar = cardStyle === 'klar';
+  // Klar: the name sits on the card in the hand and in lists, never on the board (the picture stays free).
+  const klarName = klar && !locked && !owner && size !== 'xs';
+  const delta = (i: number) => (values ? effective(i) - (base ? base[i] : c[DIRS[i]]) : mod);
+  const content = klar ? (
+    <>
+      <span className="art kl-art" aria-hidden="true">
+        {locked ? <span className="art-emoji">🔒</span> : <CardArt image={size === 'lg' || detail ? c.image : c.thumb ?? c.image} art={c.art} />}
+      </span>
+      <span className="kl-vig" aria-hidden="true" />
+      <span className="kl-vals" aria-hidden="true">
+        {DIRS.map((d, i) => (
+          <span key={d} className={`kv kv-${d} ${delta(i) > 0 ? 'up' : delta(i) < 0 ? 'down' : ''}`}>{locked ? '?' : effective(i) === 10 ? 'A' : effective(i)}</span>
+        ))}
+        {!locked && c.cls && <span className="kv-cls" data-sym={`cls:${c.cls}`}><ClassShield cls={c.cls} /></span>}
+      </span>
+      {!locked && c.effect && <span className="kl-fx" data-sym={`fx:${c.effect}`}><AbilityMedallion effect={c.effect} /></span>}
+      {klarName && <span className="kl-name"><span className="kl-gem" aria-hidden="true" />{c.name}</span>}
+      {rot % 4 !== 0 && !locked && <span className="cs-rot" aria-hidden="true">↻{(rot % 4) * 90}°</span>}
+      {shield && !locked && (
+        <span className="cs-shield" aria-hidden="true"><Icon path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" /></span>
+      )}
+      {owner && <span className="owner-ring" aria-hidden="true" />}
+      {badge === 'discovery' && (
+        <span className={`badge ${badgeText === 'Neutral' ? 'badge-neutral' : badgeText === 'NEU' ? 'badge-new' : ''}`} title={badgeText} aria-label={badgeText === 'Neutral' ? 'neutrale Entdeckung' : badgeText === 'NEU' ? 'neue Karte' : 'Entdeckung'}>
+          {badgeText === 'Neutral' ? '◆' : '★'}
+        </span>
+      )}
+      {showName && !klarName && size !== 'xs' && <span className="name">{locked ? '???' : c.name}</span>}
+    </>
+  ) : premium ? (
     <>
       <span className="cs-frame" aria-hidden="true" />
       {premium && <ClassFrame cls={c.cls} />}

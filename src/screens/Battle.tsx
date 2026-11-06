@@ -598,10 +598,13 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           </div>
         )}
 
-        {/* Hand: one row to swipe through; tap = select, hold = large preview. */}
-        <div className="hand" aria-label="Deine Hand">
-          {state.hands.player.map(({ cardId: id, mod }, i) => (
-            <div key={handOrigin[i]} className="hand-slot" {...longPress(() => setPreview({ id, mod }))}>
+        {/* Hand: fanned out like a hand of cards – all cards visible at once; tap = select (it rises), hold = large preview. */}
+        <div className="hand fan" aria-label="Deine Hand" style={{ '--n': state.hands.player.length } as CSSProperties}>
+          {state.hands.player.map(({ cardId: id, mod }, i) => {
+            const t = i - (state.hands.player.length - 1) / 2;
+            return (
+            <div key={handOrigin[i]} className={`hand-slot ${selected === i ? 'sel' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
+              {...longPress(() => setPreview({ id, mod }))}>
               <Card
                 id={id}
                 mod={mod}
@@ -618,7 +621,8 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 }}
               />
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       {preview && (
