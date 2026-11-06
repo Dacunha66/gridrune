@@ -419,6 +419,19 @@ Sicherung vor dem Umbau: Stand v1.3 = Commit `2ab6b82` (auf GitHub) und Version 
 - Duell-Anzeige: Kettenvergleiche erscheinen Welle für Welle als gestrichelte Blasen „6 −1 > 4“ mit pulsierendem roten
   „−1“, dazu das Banner „KETTENÜBERNAHME ×n · Kette −1“.
 
+## Erfolge: Tages-/Wochenquests, Erfolge, Titel (v1.33)
+
+- Automatisch (tests/quests.test.ts, 15 Tests): Tag/Woche in deutscher Zeit (Winter/Sommer, ISO-Woche, Montag),
+  gleiche Tagesauswahl für alle, Zähler pro Tag/Woche/gesamt, Bonus, Stand-Erfolge (Karten, verschiedene Effekte),
+  Abholen nur einmal, Titel, Kartenrücken doppelt = Münzen, Booster gleich bei gleichem Seed, unsichere Daten.
+  campaignServer.test.ts: eine geprüfte Mission zählt eine Mission und ein Duell.
+- Live (Supabase, Testkonto): quest_add zählt (ungültige Werte ignoriert, neuer Tag beginnt bei 0), Tafel stimmt,
+  „Alle abholen“ zahlt 640 Münzen + Titel „Effektmeister“ genau einmal (8 Abhol-Einträge, Spielstand-Version 2),
+  zweites und paralleles Abholen zahlt nichts, Titel tragen nur wenn besessen.
+- Browser (iPhone-Größe, angemeldet): Menü-Knopf „Erfolge“ mit Zähler, Reiter Täglich/Wöchentlich/Erfolge,
+  Abholen mit Einblendung, Titelwahl, Erfolgs-Gruppen mit Stufen.
+- Nicht live getestet: Zählung aus echten gespielten Spielen (Abenteuer, Kampagne, Rangliste, Raid, Online).
+
 ## Browser-Durchlauf (automatisiert mit Playwright/Chromium, nicht im Repo)
 In iPhone-Größe (390×844 und 375×667) und iPad-Größe (820×1180) mit Touch-Emulation:
 Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Überspringen) → vollständiges Duell mit 16 Zügen → Ergebnisbildschirm → Neuladen der Seite (Münzen und Statistik bleiben erhalten) → Aufgeben im Duell. Keine JavaScript-Fehler.
