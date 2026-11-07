@@ -4,7 +4,7 @@
 // are unknown to it – where it thinks ahead it uses cautious stand-ins with the strongest values the player
 // has shown on the board so far.
 import {
-  BattleState, DIR_ORDER, HAND_SIZE, HandCard, Move, Side, Values, applyMove, cardValue, cellBreakdown, computeFlips, isGameOver, legalMoves,
+  BattleState, DIR_ORDER, HAND_SIZE, cardsLeft, HandCard, Move, Side, Values, applyMove, cardValue, cellBreakdown, computeFlips, isGameOver, legalMoves,
   neighbours, other, rotateValues, score, toHand, totalMoves,
 } from './battle';
 import { CARDS, Rarity, getCard, pickByRarity, virtualCard } from './cards';
@@ -92,7 +92,13 @@ export function publicView(state: BattleState, side: Side): BattleState {
   const shown = state.board.filter((c) => c && c.placedBy === opp).map((c) => getCard(c!.cardId));
   const avg = (k: 'top' | 'right' | 'bottom' | 'left') => (shown.length ? Math.max(...shown.map((c) => c[k])) : 6);
   const id = virtualCard([avg('top'), avg('right'), avg('bottom'), avg('left')]);
-  return { ...state, hands: { ...state.hands, [opp]: state.hands[opp].map(() => ({ cardId: id, mod: 0 })) } };
+  const stand = (cards: readonly HandCard[]) => cards.map(() => ({ cardId: id, mod: 0 }));
+  // Nachziehen: the opponent's pile is unknown like its hand; of its own pile the computer knows the cards but not
+  // the order, so it thinks ahead with them in a fixed order (sorted by id) instead of the real one.
+  const piles = state.piles
+    ? { ...state.piles, [opp]: stand(state.piles[opp]), [side]: [...state.piles[side]].sort((a, b) => a.cardId.localeCompare(b.cardId)) }
+    : undefined;
+  return { ...state, hands: { ...state.hands, [opp]: stand(state.hands[opp]) }, ...(piles ? { piles } : {}) };
 }
 
 /** In the last moves the hard opponent looks at every possible continuation (few enough to check them all). */
@@ -219,7 +225,7 @@ export function chooseCpuRune(state: BattleState, rng: Rng, options: AiOptions =
     }
   }
   if (!best) return null;
-  const ownMovesLeft = state.hands[side].length;
+  const ownMovesLeft = cardsLeft(state, side);
   const bar = ownMovesLeft <= 1 ? 1 : ownMovesLeft <= 3 ? 60 : level === 'hard' ? 140 : 110;
   return gain >= bar ? best : null;
 }

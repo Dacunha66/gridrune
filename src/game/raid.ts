@@ -253,9 +253,10 @@ export interface RaidLog {
 export const raidRngs = (seed: string): { toss: Rng; ai: Rng } => ({ toss: deriveRng(seed, 'raid-toss'), ai: deriveRng(seed, 'raid-ai') });
 
 /** Start position before the coin toss: the player's 8 cards against the boss deck on the phase's arena. */
-export function raidStart(ticket: Pick<RaidTicket, 'hand' | 'playerRune' | 'snapshot'>): BattleState {
+export function raidStart(ticket: Pick<RaidTicket, 'hand' | 'playerRune' | 'snapshot'> & { seed?: string }, deal?: Rng): BattleState {
   const boss: HandCard[] = toHand(ticket.snapshot.deck);
-  return createBattle(toHand(ticket.hand), boss, 'player', [], ticket.snapshot.cells, { player: ticket.playerRune, cpu: ticket.snapshot.bossRune });
+  return createBattle(toHand(ticket.hand), boss, 'player', [], ticket.snapshot.cells, { player: ticket.playerRune, cpu: ticket.snapshot.bossRune },
+    deal ?? (ticket.seed ? deriveRng(ticket.seed, 'raid-deal') : undefined));
 }
 
 export const raidAi = (s: RaidSnapshot) => ({ level: s.level, prefer: s.prefer });
@@ -377,7 +378,7 @@ export function randomRaidHand(rng: Rng): string[] {
 
 /** One fight of a simulated player (normal computer strength, 8 random cards, no rune) against the boss. */
 export function aiRaidFight(snapshot: RaidSnapshot, rng: Rng): { outcome: Outcome; fields: number } {
-  let state = raidStart({ hand: randomRaidHand(rng), playerRune: null, snapshot });
+  let state = raidStart({ hand: randomRaidHand(rng), playerRune: null, snapshot }, rng);
   const first: Side = coinToss(rng) === 'cpu' ? cpuChoosesFirst() : rng() < 0.5 ? 'player' : 'cpu';
   state = { ...state, turn: first };
   const boss = raidAi(snapshot);

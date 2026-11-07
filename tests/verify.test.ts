@@ -74,7 +74,7 @@ function playLeague(t: LeagueTicket, choices: number): { log: LeagueLog; winner:
     const step = nextStep(match);
     if (step.kind === 'done') return { log: { run: sim.inputs.slice(), rounds }, winner: step.winner };
     const r = leagueRound(t.seed, step.round);
-    let state = createBattle(hand, leagueCpuHand(t.seed), 'player', r.rocks, r.arena.cells, { player: t.playerRune, cpu: t.cpuRune });
+    let state = createBattle(hand, leagueCpuHand(t.seed), 'player', r.rocks, r.arena.cells, { player: t.playerRune, cpu: t.cpuRune }, r.deal);
     let first = step.first;
     if (!first) {
       const w = coinToss(r.toss);

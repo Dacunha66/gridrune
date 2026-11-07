@@ -7,7 +7,7 @@ import { Card } from '../components/Card';
 import { CARDS, RARITY_LABEL, RARITY_ORDER, Rarity, cardPower, getCard, ownedActiveIds } from '../game/cards';
 import { Outcome, Side } from '../game/battle';
 import { COLLECTION_LEAGUE_RULES, OwnedCounts, autoDeck, countCards, rarityCounts, validateDeck } from '../game/rules';
-import { leagueLayout, matchCode, newMatchSeed, seedFingerprint } from '../game/league';
+import { deriveRng, leagueLayout, matchCode, newMatchSeed, seedFingerprint } from '../game/league';
 import { MatchProgress, emptyMatch, nextStep, recordRound, wins } from '../game/match';
 import { Pick, RunInput, replayRun } from '../game/runner';
 import { SaveData } from '../game/storage';
@@ -220,6 +220,7 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
           label: `${step.decider ? 'Entscheidungsduell' : `Runde ${step.round} von 2`} · Stand ${wins(match, 'player')}:${wins(match, 'cpu')}`,
           tossRng: round.toss,
           rng: round.ai,
+          deal: () => deriveRng(seed, `deal:${stepRound}`),
           finishLabel: 'Weiter',
           runes: { player: playerRune, cpu: cpuRune },
         }}

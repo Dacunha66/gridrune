@@ -21,7 +21,7 @@ import { grantedText } from '../game/campaignRewards';
 import { findRune } from '../game/runes';
 import { Pick } from '../game/runner';
 import { RaidConfig, checkRaid, raidAi, raidRngs, raidSnapshot, resumeRaid } from '../game/raid';
-import { newMatchSeed } from '../game/league';
+import { deriveRng, newMatchSeed } from '../game/league';
 import {
   LeaderRow, OpenTicket, RaidInfo, RaidMe, RaidOverview, RaidResult, raidErrorText, raidFinishFight, raidLeaderboard, raidOverview, raidStartFight,
   readFight, writeFight,
@@ -297,7 +297,7 @@ function RaidFight({ ticket, reducedMotion, onDone, onQuit, test = false }: {
     return {
       cpuHand: toHand(s.deck), first: null, rocks: [], arena: { id: 'raid', name: s.arenaName, cells: s.cells, status: 'active', ranked: false, updatedAt: '' },
       label: `${test ? 'TEST · ' : ''}${s.bossName} · Phase ${s.phase + 1}: ${s.phaseName}`, tossRng: rngs.toss, rng: rngs.ai, finishLabel: 'Ergebnis', ai: raidAi(s),
-      badgeText: '', runes: { player: ticket.playerRune, cpu: s.bossRune },
+      badgeText: '', runes: { player: ticket.playerRune, cpu: s.bossRune }, deal: () => deriveRng(ticket.seed, 'raid-deal'),
     };
   });
   // Continue where the fight stopped (moves kept on this device).

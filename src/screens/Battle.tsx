@@ -6,7 +6,7 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { GameIcon } from '../components/GameIcon';
 import { Burst } from '../components/Effects';
 import {
-  BOARD_SIZE, BattleState, boardHoles, boardRows, Breakdown, HandCard, Move, Outcome, Side, Values, applyMove, blickTargets, cardValue, cellBreakdown, coinToss, cpuChoosesFirst,
+  BOARD_SIZE, BattleState, boardHoles, boardRows, Breakdown, HandCard, Move, Outcome, Side, Values, applyMove, blickTargets, cardValue, cardsLeft, cellBreakdown, coinToss, cpuChoosesFirst,
   createBattle, isGameOver, other, outcome, rotateValues, score, totalMoves,
 } from '../game/battle';
 import { Arena, pickArena } from '../game/arenas';
@@ -78,6 +78,8 @@ export interface BattleSetup {
   badgeText?: string;
   /** Runes of both sides for this duel. */
   runes?: { player: string | null; cpu: string | null };
+  /** Nachziehen: the shuffle's random source (checked games: from the seed, so the server deals the same). */
+  deal?: () => Rng;
 }
 
 /** A finished duel that can be replayed exactly: start position (after the toss) and all moves. */
@@ -129,7 +131,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     const cpuRune = r?.cpu === 'random' ? basic[Math.floor(rng() * basic.length)] : r?.cpu ?? null;
     return createBattle(
       picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells,
-      { player: r?.player ?? null, cpu: cpuRune },
+      { player: r?.player ?? null, cpu: cpuRune }, setup?.deal?.(),
     );
   });
   const [state, setState] = useState<BattleState>(initial);
@@ -199,8 +201,17 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   const over = isGameOver(state);
   const sc = score(state);
   const discoveryIndexes = useMemo(() => new Set(picks.flatMap((p, i) => (p.kind === 'discovery' ? [i] : []))), [picks]);
-  // Map current hand positions back to the original pick (to keep the "NEU" marker).
-  const [handOrigin, setHandOrigin] = useState<number[]>(() => resume?.handOrigin ?? picks.map((_, i) => i));
+  // Map current hand positions back to the original pick (to keep the "NEU" marker) – by card, since with
+  // Nachziehen the hand is shuffled and fills up from the pile.
+  const handOrigin = useMemo(() => {
+    const used = new Set<number>();
+    return state.hands.player.map((c, k) => {
+      const i = picks.findIndex((p, j) => !used.has(j) && p.cardId === c.cardId && p.mod === c.mod);
+      if (i < 0) return 100 + k;
+      used.add(i);
+      return i;
+    });
+  }, [state.hands.player, picks]);
   // Report the fight so far after every action (and after the coin toss).
   useEffect(() => {
     if (phase === 'play') onProgress?.(record.current);
@@ -276,7 +287,6 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     record.current.moves.push(move);
     setState(applyMove(state, move));
     online?.onAction(move, state);
-    setHandOrigin(handOrigin.filter((_, i) => i !== handIndex));
     setSelected(null);
     setTargeting(null);
     setPlacing(null);
@@ -412,7 +422,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
         <ConfirmButton label={<GameIcon name="close" />} ariaLabel="Duell abbrechen (keine Belohnung)" confirmLabel="Aufgeben?" onConfirm={onQuit} skipConfirm={over} />
         <div className="scorebar" aria-live="polite">
           <span key={`p${sc.player}`} className="score blue pop">Du {sc.player}</span>
-          <span className="moves" aria-label={`Zug ${Math.min(state.moveCount + 1, totalMoves(state))} von ${totalMoves(state)}, Gegner hat noch ${state.hands.cpu.length} Karten`}>
+          <span className="moves" aria-label={`Zug ${Math.min(state.moveCount + 1, totalMoves(state))} von ${totalMoves(state)}, Gegner hat noch ${cardsLeft(state, 'cpu')} Karten`}>
             Zug {Math.min(state.moveCount + 1, totalMoves(state))}/{totalMoves(state)}
           </span>
           <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner</span>
@@ -611,11 +621,11 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
         )}
 
         {/* Hand: fanned out like a hand of cards – all cards visible at once; tap = select (it rises), hold = large preview. */}
-        <div className="hand fan" aria-label="Deine Hand" style={{ '--n': state.hands.player.length } as CSSProperties}>
+        <div className={`hand fan ${state.piles ? 'has-pile' : ''}`} aria-label="Deine Hand" style={{ '--n': state.hands.player.length } as CSSProperties}>
           {state.hands.player.map(({ cardId: id, mod }, i) => {
             const t = i - (state.hands.player.length - 1) / 2;
             return (
-            <div key={handOrigin[i]} className={`hand-slot ${selected === i ? 'sel' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
+            <div key={handOrigin[i]} className={`hand-slot ${selected === i ? 'sel' : ''} ${state.lastDraw === 'player' && i === state.hands.player.length - 1 && !reducedMotion ? 'drawn' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
               {...longPress(() => setPreview({ id, mod }))}>
               <Card
                 id={id}
@@ -635,6 +645,13 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
             </div>
             );
           })}
+          {/* Nachziehen: the face-down pile – only how many cards are still to come. */}
+          {state.piles && (
+            <div className={`draw-pile ${state.piles.player.length === 0 ? 'empty' : ''}`} aria-label={`Nachziehstapel: noch ${state.piles.player.length} Karten`}>
+              <span className="draw-pile-back" aria-hidden="true">ᚱ</span>
+              <b>{state.piles.player.length}</b>
+            </div>
+          )}
         </div>
       </div>
       {preview && (

@@ -46,7 +46,12 @@ export function swapSides<T>(value: T): T {
 /** The duel as one player sees it: own side = "player", the opponent's hand replaced by hidden cards. */
 export function viewState(state: BattleState, seat: Seat): BattleState {
   const turned = seat === 'a' ? state : swapSides(state);
-  return { ...turned, hands: { player: turned.hands.player, cpu: turned.hands.cpu.map(() => ({ cardId: HIDDEN, mod: 0 })) } };
+  const hide = (cards: HandCard[]) => cards.map(() => ({ cardId: HIDDEN, mod: 0 }));
+  // Nachziehen: both piles stay face down (the own one too – only its size is known).
+  return {
+    ...turned, hands: { player: turned.hands.player, cpu: hide(turned.hands.cpu) },
+    ...(turned.piles ? { piles: { player: hide(turned.piles.player), cpu: hide(turned.piles.cpu) } } : {}),
+  };
 }
 
 /** Is this a usable hand: 8 different active cards the player owns? */
@@ -65,7 +70,7 @@ export function startPvp(seed: string, handA: readonly (string | HandCard)[], ha
   // Draft hands come with stumble penalties from the run; normal online hands are plain card ids.
   const toHand = (cards: readonly (string | HandCard)[]): HandCard[] => cards.map((c) => (typeof c === 'string' ? { cardId: c, mod: 0 } : { cardId: c.cardId, mod: c.mod }));
   const rock = roundRock(seed, 0, arena.cells);
-  return { arena, state: createBattle(toHand(handA), toHand(handB), first, [rock], arena.cells, { player: runeA, cpu: runeB }) };
+  return { arena, state: createBattle(toHand(handA), toHand(handB), first, [rock], arena.cells, { player: runeA, cpu: runeB }, deriveRng(seed, 'deal')) };
 }
 
 /** Applies one action of `seat` (sent from that player's own view – hand indices and cells are the same). */

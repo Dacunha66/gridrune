@@ -1,5 +1,17 @@
 # Testprotokoll
 
+## Nachziehen: 5 Karten auf der Hand (07.11.)
+
+- Admin → Runen → Freigabe: Schalter „Nachziehen“ (Standard: Aus). An: Die 8 Karten jeder Seite werden zu Beginn gemischt,
+  5 sind auf der Hand, 3 liegen verdeckt; vor jedem eigenen Zug wird eine gezogen, bis der Stapel leer ist. Gilt in allen
+  Modi. Geprüfte Spiele mischen aus dem Seed (Abenteuer, Rangliste, Kampagne, Raid, Online), Spiel und Server gleich.
+- Der Computer kennt weder die Karten des Spielers noch die Reihenfolge seines eigenen Stapels. Online sind beide Stapel
+  verdeckt (nur die Anzahl).
+- Automatisch (tests/drawhand.test.ts): Aus = wie bisher; 5+3 mit denselben Karten; gleicher Seed = gleiches Austeilen;
+  Auffüllen bis 5 auf Quadrat und Kristall (mit/ohne Fels); KI-Sicht; Online-Sicht; Abenteuer gleich ausgeteilt. Zusätzlich
+  lief die ganze Testsammlung einmal mit eingeschalteter Regel (nur Tests mit fester Kartenreihenfolge weichen ab).
+- Browser (Testseite, iPhone und SE): Stapel mit Anzahl links neben der Hand, Zieh-Animation, Hand 5 → 4 → 5.
+
 ## Neue Fähigkeiten Dominanz und Standhaft (03.11.)
 
 Dominanz: Greift die Karte an, gewinnt sie auch bei Gleichstand (nicht gegen Standhaft). Standhaft: Bei Gleichstand nie übernommen, auch nicht durch Dominanz. Beide klassenübergreifend (jede Klasse darf sie haben), eigene Symbole (Krone, Turm). Gelten beim Legen, in der Kettenübernahme (die eroberte Karte greift mit ihrer eigenen Fähigkeit an) und beim Angriff mit der Rune des Nachhalls; KI und Server-Prüfung nutzen dieselbe Vergleichsregel. Alle vier Server-Funktionen auf Engine 2669e0a / engine-3ddf400c8f23, laufen (Startprüfung).

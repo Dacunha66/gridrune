@@ -3,6 +3,7 @@ import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { Coin } from '../components/Coin';
 import { Header } from './Header';
 import { AI_COINS, LEAGUE_NO_CARD_COINS } from '../game/rewards';
+import { DRAW_HAND_SIZE, HAND_SIZE } from '../game/battle';
 import { SETTINGS } from '../game/settings';
 import { RuneBadge } from '../components/RuneBadge';
 import { BUILTIN_RUNES, findRune } from '../game/runes';
@@ -24,6 +25,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
 
         <h2>2 · Das Duell</h2>
         <p>Ein 4×4-Feld, du und der Computer habt je 8 Karten und legt abwechselnd eine Karte auf ein freies Feld.</p>
+        {SETTINGS.drawHand && <p><b>Nachziehen:</b> Deine 8 Karten werden zu Beginn gemischt. {DRAW_HAND_SIZE} hast du auf der Hand, die übrigen {HAND_SIZE - DRAW_HAND_SIZE} liegen verdeckt auf deinem Stapel (links neben der Hand steht, wie viele noch kommen). Vor jedem eigenen Zug ziehst du eine Karte nach, bis der Stapel leer ist. Für den Gegner gilt dasselbe.</p>}
         <p>Jede Karte hat 4 Werte (oben, rechts, unten, links). Liegt daneben eine gegnerische Karte, wird verglichen: <b>deine Seite gegen die zugewandte Seite</b> der Nachbarkarte.</p>
         <p>Ist dein Wert <b>höher</b>, gehört die Karte jetzt dir. Gleichstand übernimmt nicht – außer mit der Fähigkeit <b>Dominanz</b> (eine Karte mit <b>Standhaft</b> hält aber jedem Gleichstand stand). Diagonal zählt nicht. Kettenreaktionen gibt es nur mit der Fähigkeit <b>Kettenübernahme</b>: Eine eroberte Karte greift dann ihre Nachbarn an ({SETTINGS.chainDepth === 1 ? 'eine weitere Stufe' : SETTINGS.chainDepth ? `höchstens ${SETTINGS.chainDepth} weitere Stufen` : 'bis keine Karte mehr erobert wird'}); dabei greift sie mit <b>−1</b> an, und nur ein höherer Wert erobert, nie ein Gleichstand.</p>
         <p>Nach 16 Zügen gewinnt, wer mehr Felder besitzt. 8:8 ist unentschieden.</p>

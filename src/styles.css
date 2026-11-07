@@ -2019,10 +2019,10 @@ label.btn.disabled { opacity: .45; }
 }
 .play-area .hand.fan {
   position: relative; display: block; overflow: visible; padding: 0; scroll-snap-type: none;
-  --gap: min(calc(var(--hand-w) * 0.94), calc((100cqw - var(--hand-w) * 1.32 - 6px) / max(1, var(--n) - 1)));
+  --gap: min(calc(var(--hand-w) * 0.94), calc((100cqw - var(--pile, 0px) - var(--hand-w) * 1.32 - 6px) / max(1, var(--n) - 1)));
 }
 .hand.fan .hand-slot {
-  position: absolute; bottom: 4px; left: calc(50% - var(--hand-w) / 2 + var(--t) * var(--gap)); width: var(--hand-w);
+  position: absolute; bottom: 4px; left: calc(50% + var(--pile, 0px) / 2 - var(--hand-w) / 2 + var(--t) * var(--gap)); width: var(--hand-w);
   transform-origin: 50% 120%; transform: translateY(calc(var(--t2) * 1.4px)) rotate(calc(var(--t) * 2.6deg));
   transition: transform 0.18s ease-out; touch-action: manipulation;
 }
@@ -2095,3 +2095,23 @@ label.btn.disabled { opacity: .45; }
 
 /* Rune der Verdrehung: the chosen card already shows its new orientation (dashed outline = not confirmed yet). */
 .board .card.twist-preview { outline: 2px dashed rgba(69, 227, 207, 0.95); outline-offset: -3px; }
+
+/* Nachziehen: the face-down pile next to the hand (count only) and the card drawn before the own move. */
+.hand.fan .draw-pile {
+  position: absolute; left: 6px; bottom: 10px; z-index: 40; width: calc(var(--hand-w) * 0.55); aspect-ratio: 3 / 4;
+  display: grid; place-items: center; border-radius: 6px; border: 1px solid var(--gold-line, #b8954a);
+  background: repeating-linear-gradient(135deg, #22305a 0 6px, #1a2546 6px 12px); box-shadow: 2px 2px 0 #0d1530, 4px 4px 0 #0a1028, 0 4px 10px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+.hand.fan .draw-pile-back { position: absolute; color: rgba(255, 211, 77, 0.35); font-size: calc(var(--hand-w) * 0.22); }
+.hand.fan .draw-pile b {
+  position: relative; min-width: 20px; padding: 0 5px; border-radius: 999px; background: #ffd34d; color: #1a1300; font: 900 13px/20px var(--f-body, sans-serif); text-align: center;
+}
+.hand.fan .draw-pile.empty { opacity: 0.35; box-shadow: none; }
+.hand.fan .hand-slot.drawn > .card { animation: draw-in 0.55s cubic-bezier(0.2, 0.8, 0.3, 1.2); }
+@keyframes draw-in {
+  from { transform: translate(calc(-1 * var(--hand-w) * 2.4), 30%) rotate(-14deg) scale(0.5); opacity: 0; }
+  60% { opacity: 1; }
+  to { transform: none; opacity: 1; }
+}
+.play-area .hand.fan.has-pile { --pile: calc(var(--hand-w) * 0.55 + 14px); }

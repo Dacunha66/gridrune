@@ -624,6 +624,7 @@ function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, play
       arena: findArena(mission.arenaId) ?? CLASSIC_ARENA,
       label: `${KIND_ICON[mission.kind]} ${mission.name} · ${opponent.emoji} ${opponent.name}`,
       tossRng: seeded?.toss ?? rng,
+      deal: ticket ? () => missionRngs(ticket.seed).deal : undefined,
       rng: seeded?.ai,
       finishLabel: 'Weiter',
       ai: { level: opponent.level, prefer: opponent.prefer },

@@ -1,6 +1,7 @@
 // Admin: runes (create, edit, deactivate, artwork, unlock, modes) and the release of the new features
 // (runes, Wirbelwind/Kettenübernahme) plus the chain length. Runes are never deleted – only deactivated –
 // so collections stay valid. Variants copy their base rune's effect, so rarer versions are never stronger.
+import { DRAW_HAND_SIZE, HAND_SIZE } from '../game/battle';
 import { useEffect, useMemo, useState } from 'react';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { RuneBadge } from '../components/RuneBadge';
@@ -118,6 +119,14 @@ function ReleasePanel({ db, settings, onToast, onSaved }: { db: Db; settings: Ga
           onChange={(e) => setDraft({ ...draft, chainDepth: Math.min(CHAIN_DEPTH_MAX, Math.max(0, Math.round(Number(e.target.value) || 0))) })} />
         <small className="muted">Test-Standard: 2. 0 = unbegrenzt (jede Karte greift trotzdem höchstens einmal an).</small>
       </label>
+      <div className="field">
+        <span>Nachziehen: {DRAW_HAND_SIZE} Karten auf der Hand, der Rest wird gezogen</span>
+        <div className="segmented" role="radiogroup" aria-label="Nachziehen">
+          <button type="button" role="radio" aria-checked={!draft.drawHand} className={`seg ${!draft.drawHand ? 'active' : ''}`} onClick={() => setDraft({ ...draft, drawHand: false })}>Aus</button>
+          <button type="button" role="radio" aria-checked={draft.drawHand} className={`seg ${draft.drawHand ? 'active' : ''}`} onClick={() => setDraft({ ...draft, drawHand: true })}>An</button>
+        </div>
+        <small className="muted">An: Die 8 Karten werden zu Beginn gemischt, {DRAW_HAND_SIZE} sind auf der Hand, die übrigen {HAND_SIZE - DRAW_HAND_SIZE} liegen verdeckt und werden vor jedem eigenen Zug gezogen. Gilt für beide Seiten in allen Modi (auch Online, Raid, Kampagne). Laufende Spiele beim Umschalten können bei der Prüfung scheitern.</small>
+      </div>
       <ConfirmButton
         label={busy ? 'Speichert …' : dirty ? 'Freigabe speichern' : 'Gespeichert ✓'}
         confirmLabel={draft.features.runes === 'all' || draft.features.abilities === 'all' ? 'Wirklich für alle Spieler?' : 'Speichern?'}

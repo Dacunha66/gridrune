@@ -62,6 +62,7 @@ export function adventureRngs(seed: string) {
     cpuRune: deriveRng(seed, 'cpu-rune'),
     toss: deriveRng(seed, 'toss'),
     ai: deriveRng(seed, 'ai'),
+    deal: deriveRng(seed, 'deal'),
   };
 }
 
@@ -76,7 +77,7 @@ export function adventureDuel(ticket: AdventureTicket, picks: Pick[], rngs = adv
   const basic = basicRunes().map((r) => r.id);
   const cpuRune = ticket.cpuRune === 'random' && basic.length > 0 ? basic[Math.floor(rngs.cpuRune() * basic.length)] : null;
   const hand: HandCard[] = picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
-  const start = createBattle(hand, drawCpuHand(rngs.cpuHand), 'player', [], arena.cells, { player: ticket.playerRune, cpu: cpuRune });
+  const start = createBattle(hand, drawCpuHand(rngs.cpuHand), 'player', [], arena.cells, { player: ticket.playerRune, cpu: cpuRune }, rngs.deal);
   return { arena, start };
 }
 
@@ -208,7 +209,7 @@ export function leagueCpuRune(seed: string, runesOn: boolean): string | null {
 /** Arena, rock and random sources of one round – the game plays with them, the server replays with them. */
 export function leagueRound(seed: string, round: number, arenas: readonly Arena[] = ARENAS) {
   const arena = leagueArena(seed, round, arenas);
-  return { arena, rocks: [roundRock(seed, round, arena.cells)], toss: deriveRng(seed, `toss:${round}`), ai: deriveRng(seed, `ai:${round}`) };
+  return { arena, rocks: [roundRock(seed, round, arena.cells)], toss: deriveRng(seed, `toss:${round}`), ai: deriveRng(seed, `ai:${round}`), deal: deriveRng(seed, `deal:${round}`) };
 }
 
 const MAX_LEAGUE_ROUNDS = 7;
@@ -240,7 +241,7 @@ export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readon
     const r = leagueRound(ticket.seed, step.round, arenas);
     let start: BattleState;
     try {
-      start = createBattle(hand, cpuHand, 'player', r.rocks, r.arena.cells, { player: ticket.playerRune, cpu: ticket.cpuRune });
+      start = createBattle(hand, cpuHand, 'player', r.rocks, r.arena.cells, { player: ticket.playerRune, cpu: ticket.cpuRune }, r.deal);
     } catch {
       return { ok: false, error: 'Duell konnte nicht aufgebaut werden' };
     }
@@ -281,13 +282,14 @@ export type MissionCheck =
   | { ok: false; error: string };
 
 export function missionRngs(seed: string) {
-  return { runner: deriveRng(seed, 'runner'), toss: deriveRng(seed, 'toss'), ai: deriveRng(seed, 'ai') };
+  return { runner: deriveRng(seed, 'runner'), toss: deriveRng(seed, 'toss'), ai: deriveRng(seed, 'ai'), deal: deriveRng(seed, 'deal') };
 }
 
 /** Start position of a mission duel (before the coin toss) – the game plays it, the server replays it. */
 export function missionStart(ticket: MissionTicket, mission: Mission, opponent: Opponent, picks: readonly Pick[], arenas: readonly Arena[] = ARENAS): BattleState {
   const arena = findArena(mission.arenaId, arenas) ?? CLASSIC_ARENA;
-  return createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), toHand(opponent.deck), 'player', [], arena.cells, { player: ticket.playerRune, cpu: ticket.cpuRune });
+  return createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), toHand(opponent.deck), 'player', [], arena.cells, { player: ticket.playerRune, cpu: ticket.cpuRune },
+    missionRngs(ticket.seed).deal);
 }
 
 /** The hand of a duel mission as runner picks (no discoveries, no modifiers). */
