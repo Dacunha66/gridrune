@@ -130,13 +130,13 @@ describe('Katalog im Spiel', () => {
     expect(cat.active).toHaveLength(100);
   });
 
-  it('der Computer findet auch mit ungewöhnlichem Katalog immer 8 Karten', () => {
+  it('der Computer findet auch mit ungewöhnlichem Katalog immer ein volles Deck', () => {
     const records = builtinRecords('t').map((r) => ({ ...r, status: ['common', 'uncommon', 'rare'].includes(r.rarity) ? 'disabled' as const : r.status }));
     records.push(...Array.from({ length: 10 }, (_, i) => rec({ id: `k0${10 + i}`, name: `Extra ${i}`, rarity: 'epic', top: 6, right: 6, bottom: 6, left: 6 })));
     const cat = buildCatalog(records);
     expect(cat.usable).toBe(true);
     setCardCatalog(cat.active, cat.known);
-    expect(new Set(drawCpuHand(createRng(1)).map((c) => c.cardId)).size).toBe(8);
+    expect(new Set(drawCpuHand(createRng(1)).map((c) => c.cardId)).size).toBe(20);
   });
 });
 

@@ -46,7 +46,7 @@ import {
   claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, readPending, startAdventure, writePending,
 } from './game/adventureApi';
 import { grantedText } from './game/campaignRewards';
-import { AdventureLog, AdventureTicket } from './game/verify';
+import { AdventureLog, AdventureTicket, handPicks } from './game/verify';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
@@ -56,7 +56,7 @@ export type Screen =
   /** Admin: raid test fight with the raid as it is in the editor (nothing stored). */
   | { name: 'raidTest'; config: RaidConfig; phase: number }
   | { name: 'runner'; runId: number; deck: string[]; level: AiLevel; ticket?: AdventureTicket }
-  | { name: 'battle'; picks: Pick[]; level: AiLevel; ticket?: AdventureTicket; run?: AdventureLog['run'] }
+  | { name: 'battle'; picks: Pick[]; level: AiLevel; ticket?: AdventureTicket; run?: AdventureLog['run']; battleId?: number }
   | { name: 'result'; outcome: Outcome; reward: Reward; level: AiLevel; score: { player: number; cpu: number }; status?: 'checking' | 'paid' | 'pending' | 'rejected' };
 
 function prefersReducedMotion(): boolean {
@@ -222,12 +222,13 @@ export function App() {
   const starting = useRef(false);
   const startRun = async (level: AiLevel) => {
     const deck = repairDeck(save.deck, save.unlocked, CARDS).deck;
-    if (!cloud.accountMode) return setScreen({ name: 'runner', runId: Date.now(), deck, level });
+    // No run any more: the duel starts right away with the whole deck (5 on the hand, the rest drawn).
+    if (!cloud.accountMode) return setScreen({ name: 'battle', picks: handPicks(deck), level, battleId: Date.now() });
     if (cloud.phase !== 'ready' || starting.current) return;
     starting.current = true;
     const r = await startAdventure(deck, duelRune('adventure'), level);
     starting.current = false;
-    if (r.kind === 'ticket') return setScreen({ name: 'runner', runId: Date.now(), deck: r.ticket.deck, level: r.ticket.level ?? level, ticket: r.ticket });
+    if (r.kind === 'ticket') return setScreen({ name: 'battle', picks: handPicks(r.ticket.deck), level: r.ticket.level ?? level, ticket: r.ticket, battleId: Date.now() });
     setScreen({ name: 'menu' });
     cloud.notify(r.kind === 'offline'
       ? 'Keine Verbindung – zum Starten eines Spiels mit deinem Konto brauchst du kurz Internet.'
@@ -243,14 +244,14 @@ export function App() {
 
   const finishBattle = async (level: AiLevel, outcome: Outcome, score: { player: number; cpu: number }, ticket?: AdventureTicket, run?: AdventureLog['run'], record?: DuelRecord) => {
     const reward = computeReward(outcome, level);
-    if (!ticket || !run || !record || !cloud.uid) {
+    if (!ticket || !record || !cloud.uid) {
       setSave((prev) => applyReward(prev, outcome, reward));
       setScreen({ name: 'result', outcome, reward, level, score });
       return;
     }
     // Checked adventure: show the result at once, the server confirms and pays out.
     setScreen({ name: 'result', outcome, reward, level, score, status: 'checking' });
-    const log: AdventureLog = { run, duel: { first: record.start.turn, moves: record.moves } };
+    const log: AdventureLog = { ...(run ? { run } : {}), duel: { first: record.start.turn, moves: record.moves } };
     const r = await finishAdventureRemote(ticket.id, log);
     const update = (patch: Partial<Extract<Screen, { name: 'result' }>>) => setScreen((s) => (s.name === 'result' ? { ...s, ...patch } : s));
     if (r.kind === 'paid') {
@@ -476,6 +477,7 @@ export function App() {
       )}
       {screen.name === 'battle' && (
         <Battle
+          key={screen.battleId}
           picks={screen.picks}
           unlocked={save.unlocked}
           reducedMotion={reducedMotion}

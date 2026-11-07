@@ -3,7 +3,7 @@
 import { getCard } from './cards';
 import { CLASS_TERRAIN, EFFECTS, ELEMENT_BONUS, EffectId, TERRAIN_INFO, Terrain } from './effects';
 import { SETTINGS } from './settings';
-import { Rng, createRng } from './rng';
+import { Rng } from './rng';
 
 export type Side = 'player' | 'cpu';
 
@@ -22,9 +22,12 @@ export function boardHoles(count: number): number[] {
 }
 export const boardRows = (count: number) => Math.round(count / BOARD_SIZE);
 export const isBoardCount = (n: number) => (BOARD_CELL_COUNTS as readonly number[]).includes(n);
+/** Fewest cards a side needs for a duel (8 own moves on 16 fields). */
 export const HAND_SIZE = 8;
-/** Nachziehen (admin switch): cards on the hand; the rest of the 8 lie face down and one is drawn before each own move. */
+/** Cards on the hand: the rest of the deck lies face down and one is drawn before each own move. */
 export const DRAW_HAND_SIZE = 5;
+/** Most cards a duel deck may have. */
+export const MAX_DUEL_DECK = 40;
 
 export type Dir = 'top' | 'right' | 'bottom' | 'left';
 
@@ -114,10 +117,12 @@ export interface BattleState {
   /** Rune used in the most recent action (for the animation). */
   lastRune: { side: Side; id: string } | null;
   /**
-   * Nachziehen: the face-down cards of each side, drawn from the front (absent = all 8 on the hand from the start).
+   * The face-down deck of each side, drawn from the front (absent only in duels saved by older versions).
    * Hidden from the other side and – in the order – from the owner too.
    */
   piles?: Record<Side, HandCard[]>;
+  /** Random number for reshuffles during the duel (Rune der Hand); hidden from players online. */
+  seed?: number;
   /** Side that drew a card with the most recent move (for the animation), if any. */
   lastDraw?: Side | null;
 }
@@ -191,7 +196,7 @@ export function other(side: Side): Side {
 export const NORMAL_TERRAIN: Terrain[] = Array<Terrain>(16).fill('normal');
 
 /** Fisher–Yates with the given random source (the same seed gives the same order in the game and on the server). */
-function shuffle<T>(list: readonly T[], rng: Rng): T[] {
+export function shuffle<T>(list: readonly T[], rng: Rng): T[] {
   const out = [...list];
   for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -208,28 +213,32 @@ export function cardsLeft(state: Pick<BattleState, 'hands' | 'piles'>, side: Sid
 export function createBattle(
   playerHand: HandCard[], cpuHand: HandCard[], first: Side = 'player', rocks: number[] = [], terrain: readonly Terrain[] = NORMAL_TERRAIN,
   runes: Partial<Record<Side, string | null>> = {},
-  /** Random source of the shuffle when the admin switch "Nachziehen" is on (checked games: from the seed). */
+  /**
+   * Random source of the shuffle (checked games: from the seed, so the game and the server deal the same).
+   * Without one the decks keep the given order (tests and tools).
+   */
   deal?: Rng,
 ): BattleState {
-  if (playerHand.length !== HAND_SIZE || cpuHand.length !== HAND_SIZE) {
-    throw new Error(`Each side needs exactly ${HAND_SIZE} cards`);
+  const ok = (n: number) => n >= HAND_SIZE && n <= MAX_DUEL_DECK;
+  if (!ok(playerHand.length) || !ok(cpuHand.length)) {
+    throw new Error(`Each side needs ${HAND_SIZE}–${MAX_DUEL_DECK} cards`);
   }
   const count = isBoardCount(terrain.length) ? terrain.length : CELL_COUNT;
   const holes = boardHoles(count);
-  let hands: Record<Side, HandCard[]> = { player: playerHand.map((c) => ({ ...c })), cpu: cpuHand.map((c) => ({ ...c })) };
-  let piles: Record<Side, HandCard[]> | undefined;
-  if (SETTINGS.drawHand) {
-    // Nachziehen: both sides' 8 cards are shuffled; 5 are the hand, the other 3 are drawn one per own move.
-    const rng = deal ?? createRng();
-    const player = shuffle(hands.player, rng);
-    const cpu = shuffle(hands.cpu, rng);
-    hands = { player: player.slice(0, DRAW_HAND_SIZE), cpu: cpu.slice(0, DRAW_HAND_SIZE) };
-    piles = { player: player.slice(DRAW_HAND_SIZE), cpu: cpu.slice(DRAW_HAND_SIZE) };
+  // Both decks are shuffled: 5 cards are the hand, the rest is drawn one before each own move.
+  const player = playerHand.map((c) => ({ ...c }));
+  const cpu = cpuHand.map((c) => ({ ...c }));
+  if (deal) {
+    player.splice(0, player.length, ...shuffle(player, deal));
+    cpu.splice(0, cpu.length, ...shuffle(cpu, deal));
   }
+  const seed = deal ? Math.floor(deal() * 4294967296) : 0;
   return {
     board: Array<BoardCell | null>(count).fill(null),
-    hands,
-    ...(piles ? { piles, lastDraw: null } : {}),
+    hands: { player: player.slice(0, DRAW_HAND_SIZE), cpu: cpu.slice(0, DRAW_HAND_SIZE) },
+    piles: { player: player.slice(DRAW_HAND_SIZE), cpu: cpu.slice(DRAW_HAND_SIZE) },
+    seed,
+    lastDraw: null,
     turn: first,
     moveCount: 0,
     lastFlips: [],

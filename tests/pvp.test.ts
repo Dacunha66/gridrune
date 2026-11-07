@@ -5,8 +5,9 @@ import { applyAction } from '../src/game/runes';
 import { isGameOver, legalMoves, outcome } from '../src/game/battle';
 import { createRng } from '../src/game/rng';
 
-const handA = STARTER_DECK.slice(0, 8);
-const handB = STARTER_DECK.slice(8, 16);
+// Online duels are played with whole decks (20 cards: 5 on the hand, the rest drawn).
+const handA = [...STARTER_DECK];
+const handB = [...STARTER_DECK].reverse();
 
 describe('Online-Duell (Server-Regeln)', () => {
   it('Seitentausch ist umkehrbar und passt zu den Regeln', () => {
@@ -51,8 +52,9 @@ describe('Online-Duell (Server-Regeln)', () => {
     expect(t).not.toBeNull();
     expect(pvpAction(state, seat, t)).toMatchObject({ ok: true });
     expect(validPvpHand(handA, STARTING_UNLOCKED)).toBe(true);
-    expect(validPvpHand([...handA.slice(0, 7), handA[0]], STARTING_UNLOCKED)).toBe(false);
-    expect(validPvpHand([...handA.slice(0, 7), 'l03'], STARTING_UNLOCKED)).toBe(false);
+    expect(validPvpHand([...handA.slice(0, 19), handA[0]], STARTING_UNLOCKED)).toBe(false);
+    expect(validPvpHand([...handA.slice(0, 19), 'l03'], STARTING_UNLOCKED)).toBe(false);
+    expect(validPvpHand(handA.slice(0, 8), STARTING_UNLOCKED)).toBe(false);
   });
 
   it('Start ist fair und aus dem Seed nachrechenbar (Felsfeld, Arena)', () => {

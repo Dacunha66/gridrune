@@ -13,8 +13,6 @@ export interface GameSettings {
   chainDepth: number;
   /** Release of runes and of the abilities Wirbelwind / Kettenübernahme. */
   features: { runes: Release; abilities: Release };
-  /** Nachziehen: 5 of the 8 cards on the hand, the other 3 drawn one before each own move (shuffled). */
-  drawHand: boolean;
 }
 
 export const DEFAULT_CHAIN_DEPTH = 1;
@@ -24,7 +22,7 @@ export const DEFAULT_DISCOVERY_SHARES: Readonly<Record<Rarity, number>> = { comm
 export const SHARE_MAX = 1000;
 
 export function defaultSettings(): GameSettings {
-  return { discoveryShares: { ...DEFAULT_DISCOVERY_SHARES }, chainDepth: DEFAULT_CHAIN_DEPTH, features: { runes: 'all', abilities: 'all' }, drawHand: false };
+  return { discoveryShares: { ...DEFAULT_DISCOVERY_SHARES }, chainDepth: DEFAULT_CHAIN_DEPTH, features: { runes: 'all', abilities: 'all' } };
 }
 
 /** Settings currently used by the game; replaced in place by `setGameSettings`. */
@@ -34,7 +32,6 @@ export function setGameSettings(s: GameSettings): void {
   SETTINGS.discoveryShares = { ...s.discoveryShares };
   SETTINGS.chainDepth = s.chainDepth;
   SETTINGS.features = { ...s.features };
-  SETTINGS.drawHand = s.drawHand;
 }
 
 /** Turns an untrusted settings document into valid settings (falls back to the defaults). */
@@ -42,7 +39,6 @@ export function parseSettings(raw: unknown): GameSettings {
   const out = defaultSettings();
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   if (typeof r.chainDepth === 'number' && Number.isFinite(r.chainDepth)) out.chainDepth = Math.min(CHAIN_DEPTH_MAX, Math.max(0, Math.round(r.chainDepth)));
-  if (typeof r.drawHand === 'boolean') out.drawHand = r.drawHand;
   const f = (r.features && typeof r.features === 'object' ? r.features : {}) as Record<string, unknown>;
   for (const k of ['runes', 'abilities'] as const) if (RELEASES.includes(f[k] as Release)) out.features[k] = f[k] as Release;
   const shares = r.discoveryShares as Record<string, unknown> | undefined;

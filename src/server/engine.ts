@@ -16,7 +16,7 @@ import { PackCard, SHOP_DOC, buyPack, buySkin, parseShopDoc, setPackLooks } from
 import { SaveData, sanitize } from '../game/storage';
 import { validPvpHand } from '../game/pvp';
 import {
-  AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, MissionLog, MissionTicket, checkAdventure, checkLeague, checkMission, leagueCpuRune, validMissionHand,
+  AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, MissionLog, MissionTicket, checkAdventure, checkLeague, checkMission, leagueCpuRune,
 } from '../game/verify';
 import { Reward, applyReward, computeReward, grant, isAiLevel, leagueReward } from '../game/rewards';
 import { COLLECTION_LEAGUE_RULES, validateDeck } from '../game/rules';
@@ -185,14 +185,14 @@ export function prepareLeague(saveRaw: unknown, campaignRaw: unknown, deck: unkn
   return { ok: true, ticket: { seed, deck: [...deck], playerRune, cpuRune: leagueCpuRune(seed, runesOn) } };
 }
 
-/** Replays the match; a won match unlocks the rarest new discovery of the run (else coins). */
+/** Replays the match; a won match unlocks a random card not owned yet (else coins). */
 export function finishLeague(ticket: LeagueTicket, log: LeagueLog, saveRaw: unknown):
   { ok: true; won: boolean; rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[]; reward: Reward; save: SaveData; quest: QuestEvent } | { ok: false; error: string } {
   const check = checkLeague(ticket, log);
   if (!check.ok) return check;
   const save = sanitize(saveRaw);
   const won = check.winner === 'player';
-  const reward = leagueReward(won, check.picks, save.unlocked);
+  const reward = leagueReward(won, ticket.seed, save.unlocked);
   const quest: QuestEvent = { games: check.rounds.length, wins: won ? 1 : 0, leagueWins: won ? 1 : 0, ...duelTally(check.duels) };
   return { ok: true, won, rounds: check.rounds, reward, save: grant(save, reward), quest };
 }
@@ -221,7 +221,7 @@ function playableMission(progress: CampaignProgress, missionId: unknown): { miss
 }
 
 /** Checks a mission start (mission open, deck, hand, rune); returns the ticket without id/seed or why not. */
-export function prepareMission(saveRaw: unknown, campaignRaw: unknown, missionId: unknown, deck: unknown, hand: unknown, rune: unknown, isAdmin: boolean):
+export function prepareMission(saveRaw: unknown, campaignRaw: unknown, missionId: unknown, deck: unknown, _hand: unknown, rune: unknown, isAdmin: boolean):
   { ok: true; ticket: Omit<StoredMissionTicket, 'id' | 'seed'> } | { ok: false; error: string } {
   const save = sanitize(saveRaw);
   const progress = sanitizeProgress(campaignRaw);
@@ -229,12 +229,12 @@ export function prepareMission(saveRaw: unknown, campaignRaw: unknown, missionId
   if (!found) return { ok: false, error: 'mission' };
   const { mission, opponent } = found;
   if (!validDeck(save, deck)) return { ok: false, error: 'deck' };
-  if (mission.mode !== 'runner' && !validMissionHand(mission, deck, hand)) return { ok: false, error: 'hand' };
   const runesOn = released(SETTINGS.features.runes, isAdmin);
   return {
     ok: true,
     ticket: {
-      missionId: mission.id, deck, owned: [...save.unlocked], hand: mission.mode === 'runner' ? null : (hand as string[]),
+      // No hand choice any more: the mission is played with the (class-filtered) deck.
+      missionId: mission.id, deck, owned: [...save.unlocked], hand: null,
       playerRune: allowedRune(save, progress, rune, 'campaign', isAdmin),
       // Like the game: the opponent brings its rune whenever runes are released.
       cpuRune: runesOn ? opponent.rune ?? null : null,
@@ -303,7 +303,7 @@ export {
 export { isGameOver } from '../game/battle';
 
 /**
- * Checks the hand (8 different owned cards; not needed for a draft) and the rune (league rules: owned basic runes
+ * Checks the deck (20 different owned cards; not needed for a draft) and the rune (league rules: owned basic runes
  * only) for an online duel.
  */
 export function preparePvp(saveRaw: unknown, campaignRaw: unknown, hand: unknown, rune: unknown, isAdmin: boolean, needHand = true):
@@ -332,7 +332,7 @@ export function payRaidRewards(saveRaw: unknown, config: RaidConfig, stats: { to
   return { keys: owed.map((o) => o.key), granted: r.granted, save: r.save };
 }
 
-/** Checks the 8 cards (different, owned, active) and the rune (any unlocked rune allowed in raids). */
+/** Checks the deck (20 different owned active cards) and the rune (any unlocked rune allowed in raids). */
 export function prepareRaid(saveRaw: unknown, campaignRaw: unknown, hand: unknown, rune: unknown, isAdmin: boolean):
   { ok: true; hand: string[]; rune: string | null } | { ok: false; error: string } {
   const save = sanitize(saveRaw);

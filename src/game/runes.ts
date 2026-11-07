@@ -3,19 +3,21 @@
 // The four effect kinds are rules; name, texts, strength, targets, classes, modes and pictures are data
 // the admin can change. Variants (rarity, artwork) always keep the effect of their base rune.
 import {
-  BattleState, BoardCell, Clash, Move, Side, applyCurses, applyMove, attackValue, cellName, comparisonEvents, defenseValue, isGameOver, neighbours, beats,
+  BattleState, BoardCell, Clash, Move, Side, applyCurses, shuffle, applyMove, attackValue, cellName, comparisonEvents, defenseValue, isGameOver, neighbours, beats,
 } from './battle';
 import { Rarity, getCard } from './cards';
+import { createRng } from './rng';
 import { CLASS_INFO, CLASSES, CardClass, isCardClass } from './effects';
 import { ContentStatus, CONTENT_STATUSES, ImageRef, parseImage } from './campaign';
 
-export type RuneEffect = 'twist' | 'echo' | 'empower' | 'curse';
-export const RUNE_EFFECTS: RuneEffect[] = ['twist', 'echo', 'empower', 'curse'];
+export type RuneEffect = 'twist' | 'echo' | 'empower' | 'curse' | 'mulligan';
+export const RUNE_EFFECTS: RuneEffect[] = ['twist', 'echo', 'empower', 'curse', 'mulligan'];
 export const RUNE_EFFECT_LABEL: Record<RuneEffect, string> = {
   twist: 'Drehen (eigene Karte um 90°)',
   echo: 'Erneut angreifen (ohne Kette)',
   empower: 'Stärken (eigene Karten einer Klasse)',
   curse: 'Schwächen (Gegnerkarten einer gewählten Klasse)',
+  mulligan: 'Neu ziehen (alle Handkarten ins Deck mischen)',
 };
 
 export type GameMode = 'adventure' | 'campaign' | 'league' | 'raid';
@@ -74,6 +76,7 @@ export const BUILTIN_RUNES: readonly RuneDef[] = [
   rune('rn03', 'Rune der Glut', 'empower', 'ᚲ', 'Bis zu zwei eigene Feuerkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'feuer', maxTargets: 2, unlock: { kind: 'mission', missionId: 'm015' } }),
   rune('rn04', 'Rune des Fluchs', 'curse', 'ᚦ', 'Wähle eine gegnerische Klasse: Bis zu zwei Gegnerkarten dieser Klasse auf dem Spielfeld erhalten −1 auf alle vier Werte bis Duellende.', { maxTargets: 2, unlock: { kind: 'mission', missionId: 'm020' } }),
   rune('rn05', 'Rune des Waldes', 'empower', 'ᛟ', 'Bis zu zwei eigene Naturkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'natur', maxTargets: 2, unlock: { kind: 'mission', missionId: 'm005' } }),
+  rune('rn06', 'Rune der Hand', 'mulligan', 'ᚺ', 'Mische alle deine Handkarten zurück in dein Deck und ziehe genauso viele neu. Dein Zug bleibt bei dir.', { unlock: { kind: 'start' } }),
 ];
 
 export const RUNES: RuneDef[] = [...BUILTIN_RUNES];
@@ -95,7 +98,7 @@ export function runeRules(def: RuneDef): RuneDef {
   return base && !base.variantOf ? { ...def, effect: base.effect, amount: base.amount, maxTargets: base.maxTargets, minPlaced: base.minPlaced, cls: base.cls } : def;
 }
 
-/** One of the four basic runes (not a variant). */
+/** One of the built-in basic runes (not a variant). */
 export function isBasicRune(r: RuneDef): boolean {
   return BUILTIN_RUNES.some((b) => b.id === r.id) && !r.variantOf;
 }
@@ -153,7 +156,17 @@ export function runeChoices(state: BattleState, side: Side, def: RuneDef): { cel
       const classes = CLASSES.filter((c) => all.some((i) => theirs(i) && getCard(state.board[i]!.cardId).cls === c));
       return { cells: all.filter((i) => theirs(i) && !!getCard(state.board[i]!.cardId).cls), classes };
     }
+    case 'mulligan':
+      return { cells: [], classes: [] };
   }
+}
+
+/** Can the rune be used right now (something to choose, or – Rune der Hand – cards in hand and deck)? */
+export function runeUsable(state: BattleState, side: Side, def: RuneDef): boolean {
+  const r = runeRules(def);
+  if (!runeOpen(state, r)) return false;
+  if (r.effect === 'mulligan') return state.hands[side].length > 0 && (state.piles?.[side].length ?? 0) > 0;
+  return runeChoices(state, side, def).cells.length > 0;
 }
 
 /** Cards on the board (rocks do not count). */
@@ -191,6 +204,9 @@ export function runeProblem(state: BattleState, use: RuneUse): string | null {
   const choices = runeChoices(state, side, def);
   const okCell = (c: unknown): c is number => Number.isInteger(c) && choices.cells.includes(c as number);
   switch (r.effect) {
+    case 'mulligan':
+      if (!runeUsable(state, side, def)) return 'Dein Deck ist leer – es gibt nichts neu zu ziehen.';
+      return null;
     case 'twist':
       if (!okCell(use.cell)) return 'Wähle eine eigene Karte auf dem Spielfeld.';
       if (use.dir !== 1 && use.dir !== -1) return 'Wähle links oder rechts.';
@@ -235,7 +251,18 @@ export function applyRune(state: BattleState, use: RuneUse): BattleState {
   const events: BattleState['lastEvents'] = [];
   let clashes: Clash[] = [];
   let text = '';
+  let hands = state.hands;
+  let piles = state.piles;
   switch (r.effect) {
+    case 'mulligan': {
+      // Rune der Hand: the hand goes back into the deck, the deck is shuffled, the same number is drawn again.
+      const hand = state.hands[side];
+      const mixed = shuffle([...(state.piles?.[side] ?? []), ...hand], createRng(((state.seed ?? 0) + 7919 * (state.moveCount + 1) + (side === 'player' ? 1 : 2)) >>> 0));
+      hands = { ...state.hands, [side]: mixed.slice(0, hand.length) };
+      piles = { ...(state.piles ?? { player: [], cpu: [] }), [side]: mixed.slice(hand.length) };
+      text = `${hand.length} Handkarten ins Deck gemischt und neu gezogen`;
+      break;
+    }
     case 'twist': {
       const c = board[use.cell!]!;
       board[use.cell!] = { ...c, rot: (((c.rot ?? 0) + use.dir!) % 4 + 4) % 4 };
@@ -286,6 +313,9 @@ export function applyRune(state: BattleState, use: RuneUse): BattleState {
   return {
     ...state,
     board,
+    hands,
+    ...(piles ? { piles } : {}),
+    lastDraw: r.effect === 'mulligan' ? side : null,
     runes: { ...state.runes, [side]: { ...state.runes[side]!, used: true } },
     lastFlips: clashes.filter((c) => c.captured).map((c) => c.cell),
     lastClashes: clashes,

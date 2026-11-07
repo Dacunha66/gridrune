@@ -3,7 +3,8 @@ import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { Coin } from '../components/Coin';
 import { Header } from './Header';
 import { AI_COINS, LEAGUE_NO_CARD_COINS } from '../game/rewards';
-import { DRAW_HAND_SIZE, HAND_SIZE } from '../game/battle';
+import { DRAW_HAND_SIZE } from '../game/battle';
+import { DECK_SIZE } from '../game/cards';
 import { SETTINGS } from '../game/settings';
 import { RuneBadge } from '../components/RuneBadge';
 import { BUILTIN_RUNES, findRune } from '../game/runes';
@@ -14,18 +15,12 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
     <main className="screen rules">
       <Header title="Regeln" onBack={onBack} />
       <div className="scroll prose">
-        <h2>1 · Der Lauf</h2>
-        <p>Deine Figur rennt von allein. Wische nach links/rechts oder tippe auf ◀ ▶, um die Spur zu wechseln.</p>
-        <p>Du kommst durch <b>8 Tore</b> mit je 3 Karten und nimmst die Karte auf deiner Spur:</p>
-        <ul>
-          <li><b>Tor 1–7</b> – Karten aus <b>deinem Deck</b>. Stell dir dein Deck vorher gut zusammen!</li>
-          <li><b>Tor 8 (Finale)</b> – <b>3 Entdeckungen</b>: Karten, die du noch nicht hast. Die gewählte spielst du im Duell mit.</li>
-        </ul>
-        <p><b>Stolpersteine</b> halten dich nicht auf, aber die <b>nächste Karte</b>, die du danach nimmst, ist im Duell um <b>1 schwächer</b> (alle vier Werte, mindestens 1). Weiche ihnen aus! Mit dem Schneller-Knopf oben läufst du schneller.</p>
+        <h2>1 · Dein Deck</h2>
+        <p>Stell dir unter „Deck bearbeiten“ ein Deck aus <b>{DECK_SIZE} Karten</b> zusammen. Mit diesem Deck spielst du in allen Modi (in der Rangliste mit deinem Liga-Deck, im Draft mit dem Draft-Deck).</p>
 
         <h2>2 · Das Duell</h2>
-        <p>Ein 4×4-Feld, du und der Computer habt je 8 Karten und legt abwechselnd eine Karte auf ein freies Feld.</p>
-        {SETTINGS.drawHand && <p><b>Nachziehen:</b> Deine 8 Karten werden zu Beginn gemischt. {DRAW_HAND_SIZE} hast du auf der Hand, die übrigen {HAND_SIZE - DRAW_HAND_SIZE} liegen verdeckt auf deinem Stapel (links neben der Hand steht, wie viele noch kommen). Vor jedem eigenen Zug ziehst du eine Karte nach, bis der Stapel leer ist. Für den Gegner gilt dasselbe.</p>}
+        <p>Ihr legt abwechselnd eine Karte aus der Hand auf ein freies Feld, bis das Spielfeld voll ist (16 Felder, mit Fels 15).</p>
+        <p><b>Hand und Deck:</b> Du spielst mit deinem Deck aus {DECK_SIZE} Karten. Es wird zu Beginn gemischt, {DRAW_HAND_SIZE} Karten hast du auf der Hand, der Rest liegt verdeckt als Stapel daneben (die Zahl zeigt, wie viele noch darin sind). Vor jedem eigenen Zug ziehst du eine Karte nach. Für den Gegner gilt dasselbe.</p>
         <p>Jede Karte hat 4 Werte (oben, rechts, unten, links). Liegt daneben eine gegnerische Karte, wird verglichen: <b>deine Seite gegen die zugewandte Seite</b> der Nachbarkarte.</p>
         <p>Ist dein Wert <b>höher</b>, gehört die Karte jetzt dir. Gleichstand übernimmt nicht – außer mit der Fähigkeit <b>Dominanz</b> (eine Karte mit <b>Standhaft</b> hält aber jedem Gleichstand stand). Diagonal zählt nicht. Kettenreaktionen gibt es nur mit der Fähigkeit <b>Kettenübernahme</b>: Eine eroberte Karte greift dann ihre Nachbarn an ({SETTINGS.chainDepth === 1 ? 'eine weitere Stufe' : SETTINGS.chainDepth ? `höchstens ${SETTINGS.chainDepth} weitere Stufen` : 'bis keine Karte mehr erobert wird'}); dabei greift sie mit <b>−1</b> an, und nur ein höherer Wert erobert, nie ein Gleichstand.</p>
         <p>Nach 16 Zügen gewinnt, wer mehr Felder besitzt. 8:8 ist unentschieden.</p>
@@ -70,7 +65,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
                 </li>
               ))}
             </ul>
-            <p>Die Rune der Verdrehung hast du von Anfang an. Weitere Runen spielst du in der <b>Kampagne</b> frei – jeweils in Level 5 und Level 10 einer Welt. Ohne Rune spielst du ohne. In der Liga sind nur Grundrunen erlaubt, die du freigespielt hast. Runen gibt es nie für Echtgeld, Varianten sind nie stärker.</p>
+            <p>Die Rune der Verdrehung und die <b>Rune der Hand</b> (alle Handkarten zurück ins Deck mischen und genauso viele neu ziehen) hast du von Anfang an. Weitere Runen spielst du in der <b>Kampagne</b> frei – jeweils in Level 5 und Level 10 einer Welt. Ohne Rune spielst du ohne. In der Liga sind nur Grundrunen erlaubt, die du freigespielt hast. Runen gibt es nie für Echtgeld, Varianten sind nie stärker.</p>
           </>
         )}
 
@@ -81,7 +76,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
             <li key={l}><b>{{ easy: 'Leicht', medium: 'Normal', hard: 'Schwer' }[l]}</b>: Sieg <Coin /> {AI_COINS[l].win} · Unentschieden <Coin /> {AI_COINS[l].draw} · Niederlage <Coin /> {AI_COINS[l].loss}</li>
           ))}
         </ul>
-        <p><b>Rangliste</b> (Collection League, mit Konto) – gewinnst du das Match, gehört dir die seltenste <b>neue Entdeckung</b> aus deinem Lauf (im Lauf mit „NEU“ markiert). Ist keine neu, gibt es <Coin /> {LEAGUE_NO_CARD_COINS}. Der Server prüft Lauf und Duelle vorher.</p>
+        <p><b>Rangliste</b> (Collection League, mit Konto) – gewinnst du das Match, bekommst du eine <b>zufällige Karte, die du noch nicht hast</b>. Hast du schon alle, gibt es <Coin /> {LEAGUE_NO_CARD_COINS}. Der Server prüft die Duelle vorher.</p>
         <p>Neue Karten gibt es außerdem im <b>Shop</b> und als Belohnung in der <b>Kampagne</b>.</p>
 
         <h2>Shop</h2>

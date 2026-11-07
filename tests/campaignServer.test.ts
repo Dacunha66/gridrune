@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CAMPAIGN, Mission, setCampaign, mergeContent } from '../src/game/campaign';
 import { CampaignProgress, emptyProgress, missionProgress, sanitizeProgress } from '../src/game/campaignProgress';
 import { owedRewards, payRewards } from '../src/game/campaignRewards';
-import { MissionLog, handPicks, missionRngs, missionStart, adventureRunner } from '../src/game/verify';
+import { MissionLog, missionDeckPicks, missionRngs, missionStart } from '../src/game/verify';
 import { claimCampaign, finishMission, prepareMission, buyPackServer, buySkinServer, StoredMissionTicket } from '../src/server/engine';
 import { STARTER_DECK } from '../src/game/cards';
 import { defaultSave } from '../src/game/storage';
@@ -25,18 +25,9 @@ function playMission(t: StoredMissionTicket, mission: Mission, choices: number):
   const me = createRng(choices);
   const rngs = missionRngs(t.seed);
   const opponent = CAMPAIGN.opponents.find((o) => o.id === mission.opponentId)!;
-  let picks: Pick[];
-  let run: MissionLog['run'] = null;
-  if (mission.mode === 'runner') {
-    const sim = adventureRunner(t, rngs.runner);
-    let steps = 0;
-    while (!sim.finished && steps++ < 5000) {
-      if (me() < 0.04) sim.moveLane(me() < 0.5 ? -1 : 1);
-      sim.update(1 / 30);
-    }
-    picks = sim.picks.slice();
-    run = { inputs: sim.inputs.slice(), skippedAt: null };
-  } else picks = handPicks(t.hand!);
+  // No run and no hand choice: the mission deck, shuffled from the seed like in the game.
+  const picks: Pick[] = missionDeckPicks(mission, t.deck);
+  const run: MissionLog['run'] = null;
   let state = missionStart(t, mission, opponent, picks);
   const winner = coinToss(rngs.toss);
   const first = winner === 'cpu' ? cpuChoosesFirst() : me() < 0.5 ? 'player' : 'cpu';
@@ -89,17 +80,16 @@ describe('Kampagne über den Server (Phase 4c)', () => {
     }
   });
 
-  it('gesperrte Missionen, fremde Karten und falsche Hände werden abgelehnt', () => {
+  it('gesperrte Missionen und fremde Karten werden abgelehnt (keine Handauswahl mehr)', () => {
     const save = defaultSave();
     const m1 = CAMPAIGN.missions.find((m) => m.id === 'm001')!;
     const hand = suggestHand(m1, missionPool(m1, STARTER_DECK)).map((c) => c.cardId);
     expect(prepareMission(save, emptyProgress(), 'm002', STARTER_DECK, hand, null, false)).toMatchObject({ ok: false, error: 'mission' });
-    expect(prepareMission(save, emptyProgress(), 'm001', STARTER_DECK, ['x99', ...hand.slice(1)], null, false)).toMatchObject({ ok: false, error: 'hand' });
     expect(prepareMission(save, emptyProgress(), 'm001', ['c01'], hand, null, false)).toMatchObject({ ok: false, error: 'deck' });
     expect(prepareMission(save, emptyProgress(), 'm001', STARTER_DECK, hand, null, false)).toMatchObject({ ok: true });
   });
 
-  it('ehrlich gespielte Missionen (Duell und Lauf) werden bestätigt und gespeichert', () => {
+  it('ehrlich gespielte Missionen (auch frühere Lauf-Missionen) werden bestätigt und gespeichert', () => {
     const save = defaultSave();
     for (const [id, before] of [['m001', emptyProgress()], ['m006', won(['m001', 'm002', 'm003', 'm004', 'm005'])]] as const) {
       const mission = CAMPAIGN.missions.find((m) => m.id === id)!;

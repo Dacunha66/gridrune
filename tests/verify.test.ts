@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, adventureDuel, adventureRngs, adventureRunner, checkAdventure, checkLeague, leagueCpuHand, leagueCpuRune, leagueRound,
+  AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, adventureDuel, adventureRngs, checkAdventure, handPicks, checkLeague, leagueCpuHand, leagueCpuRune, leagueRound,
 } from '../src/game/verify';
-import { RunnerSim } from '../src/game/runner';
-import { leagueLayout } from '../src/game/league';
 import { emptyMatch, nextStep, recordRound } from '../src/game/match';
 import { createBattle } from '../src/game/battle';
 import { STARTER_DECK, STARTING_UNLOCKED } from '../src/game/cards';
@@ -17,20 +15,9 @@ const ticket = (seed: string, rune: string | null = null): AdventureTicket => ({
 });
 
 /** Plays a run and a duel exactly like the game does (random lane changes and moves for the player). */
-function play(t: AdventureTicket, choices: number, skip = false): { log: AdventureLog; result: string; picks: string[] } {
-  const me = createRng(choices);
-  const sim = adventureRunner(t);
-  let steps = 0;
-  while (!sim.finished && steps++ < 5000) {
-    if (me() < 0.04) sim.moveLane(me() < 0.5 ? -1 : 1);
-    if (skip && sim.distance > 30) {
-      const at = sim.distance;
-      sim.skipToEnd();
-      return finishDuel(t, { inputs: sim.inputs.slice(), skippedAt: at }, sim.picks, me);
-    }
-    sim.update(1 / 30);
-  }
-  return finishDuel(t, { inputs: sim.inputs.slice(), skippedAt: null }, sim.picks, me);
+/** Plays a duel exactly like the game does (no run: the deck is shuffled from the seed; random player moves). */
+function play(t: AdventureTicket, choices: number, _skip = false): { log: AdventureLog; result: string; picks: string[] } {
+  return finishDuel(t, undefined, handPicks(t.deck), createRng(choices));
 }
 
 function finishDuel(t: AdventureTicket, run: AdventureLog['run'], picks: { cardId: string }[], me: () => number) {
@@ -55,24 +42,19 @@ function finishDuel(t: AdventureTicket, run: AdventureLog['run'], picks: { cardI
       state = applyMove(state, m);
     }
   }
-  return { log: { run, duel: { first, moves } }, result: outcome(state), picks: picks.map((p) => p.cardId) };
+  return { log: { ...(run ? { run } : {}), duel: { first, moves } }, result: outcome(state), picks: picks.map((p) => p.cardId) };
 }
 
 /** Plays a whole league match like the game: run on the league track, then rounds until the match is decided. */
 function playLeague(t: LeagueTicket, choices: number): { log: LeagueLog; winner: string } {
   const me = createRng(choices);
-  const sim = new RunnerSim(leagueLayout(t.seed, 'du', t.deck));
-  let steps = 0;
-  while (!sim.finished && steps++ < 5000) {
-    if (me() < 0.04) sim.moveLane(me() < 0.5 ? -1 : 1);
-    sim.update(1 / 30);
-  }
-  const hand = sim.picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
+  // No run: every round is played with the league deck, shuffled from the seed.
+  const hand = handPicks(t.deck).map((p) => ({ cardId: p.cardId, mod: p.mod }));
   let match = emptyMatch();
   const rounds: LeagueLog['rounds'] = [];
   for (;;) {
     const step = nextStep(match);
-    if (step.kind === 'done') return { log: { run: sim.inputs.slice(), rounds }, winner: step.winner };
+    if (step.kind === 'done') return { log: { rounds }, winner: step.winner };
     const r = leagueRound(t.seed, step.round);
     let state = createBattle(hand, leagueCpuHand(t.seed), 'player', r.rocks, r.arena.cells, { player: t.playerRune, cpu: t.cpuRune }, r.deal);
     let first = step.first;
@@ -101,7 +83,7 @@ function playLeague(t: LeagueTicket, choices: number): { log: LeagueLog; winner:
 }
 
 describe('Abenteuer vom Server geprüft (Phase 4)', () => {
-  it('ein ehrlich gespielter Lauf + Duell wird bestätigt – mit identischem Ergebnis', () => {
+  it('ein ehrlich gespieltes Duell wird bestätigt – mit identischem Ergebnis', () => {
     for (let s = 1; s <= 12; s++) {
       const t = ticket(`seed-${s}`, s % 3 === 0 ? 'rn01' : null);
       const { log, result, picks } = play(t, s, s % 4 === 0);
@@ -128,11 +110,8 @@ describe('Abenteuer vom Server geprüft (Phase 4)', () => {
     const cheat3 = structuredClone(log);
     cheat3.duel.moves.pop();
     expect(checkAdventure(t, cheat3)).toMatchObject({ ok: false });
-    const cheat4 = structuredClone(log);
-    cheat4.run.inputs = [{ d: 5, lane: 0 }, { d: 5.1, lane: 2 }];
-    expect(checkAdventure(t, cheat4)).toMatchObject({ ok: false });
   });
-  it('ein anderer Seed ergibt einen anderen Lauf (Protokoll passt nicht mehr)', () => {
+  it('ein anderer Seed ergibt ein anderes Duell (Protokoll passt nicht mehr)', () => {
     const { log } = play(ticket('seed-a'), 3);
     expect(checkAdventure(ticket('seed-b'), log).ok).toBe(false);
   });
@@ -175,7 +154,7 @@ describe('Rangliste vom Server geprüft', () => {
       if (check.ok) {
         expect(check.winner).toBe(winner);
         expect(check.rounds.length).toBe(log.rounds.length);
-        expect(check.picks).toHaveLength(8);
+        expect(check.picks).toHaveLength(t.deck.length);
         if (winner === 'player') playerWins++;
       }
     }

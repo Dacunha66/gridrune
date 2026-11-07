@@ -124,7 +124,7 @@ export async function loadGameSettings(db: Db | null): Promise<GameSettings | nu
 
 export async function saveGameSettings(db: Db, settings: GameSettings): Promise<void> {
   await db.collection(SETTINGS_COLLECTION).doc(SETTINGS_DOC).set({
-    discoveryShares: { ...settings.discoveryShares }, chainDepth: settings.chainDepth, features: { ...settings.features }, drawHand: settings.drawHand, updatedAt: new Date().toISOString(),
+    discoveryShares: { ...settings.discoveryShares }, chainDepth: settings.chainDepth, features: { ...settings.features }, updatedAt: new Date().toISOString(),
   });
 }
 

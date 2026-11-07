@@ -37,7 +37,7 @@ export function Collection({ save, onBack }: { save: SaveData; onBack: () => voi
         <CardDetail
           id={detail}
           locked={!owned.has(detail)}
-          status={!owned.has(detail) ? 'Noch nicht freigeschaltet – finde sie als Entdeckung im Lauf und gewinne das Duell.' : deck.has(detail) ? 'In deinem Deck' : 'Freigeschaltet'}
+          status={!owned.has(detail) ? 'Noch nicht freigeschaltet – gewinne sie in der Rangliste, im Shop oder als Belohnung.' : deck.has(detail) ? 'In deinem Deck' : 'Freigeschaltet'}
           onClose={() => setDetail(null)}
         />
       )}

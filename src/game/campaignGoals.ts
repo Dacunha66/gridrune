@@ -24,7 +24,7 @@ export const GOAL_LABEL: Record<GoalType, string> = {
   without_class: 'Ohne Klasse gewinnen',
   terrain_bonus: 'Geländeboni auslösen',
   effect_active: 'Effekt auslösen',
-  runner_clean: 'Lauf ohne Stolpern',
+  runner_clean: 'Gewinnen (früher: Lauf ohne Stolpern)',
 };
 
 /** Which goal types need a number, a class or an effect. */
@@ -132,7 +132,8 @@ export function goalMet(goal: Goal, st: DuelStats): boolean {
     case 'without_class': return !!goal.cls && (st.played[goal.cls] ?? 0) === 0;
     case 'terrain_bonus': return st.terrainBonus >= goal.n;
     case 'effect_active': return !!goal.effect && (st.effects[goal.effect] ?? 0) >= goal.n;
-    case 'runner_clean': return st.stumbles === 0;
+    // There is no run any more: the old goal counts like a win.
+    case 'runner_clean': return true;
   }
 }
 
@@ -161,7 +162,7 @@ export function goalText(goal: Goal): string {
     case 'without_class': return `Gewinne ohne ${cls}-Karten`;
     case 'terrain_bonus': return `Gewinne und löse ${goal.n} Geländebonus${goal.n === 1 ? '' : 'e'} aus`;
     case 'effect_active': return `Gewinne und löse ${goal.effect ? EFFECTS[goal.effect].name : '?'} ${goal.n}× aus`;
-    case 'runner_clean': return 'Gewinne nach einem Lauf ohne Stolpern';
+    case 'runner_clean': return 'Gewinne die Mission';
   }
 }
 
@@ -223,7 +224,7 @@ export function goalProblems(goal: Goal, ctx: GoalContext): { errors: string[]; 
       break;
     }
     case 'runner_clean':
-      if (!ctx.runner) errors.push('Nur in Missionen mit Lauf möglich.');
+      warnings.push('Den Lauf gibt es nicht mehr – dieses Ziel zählt jetzt wie „Gewinnen“. Besser ein anderes Ziel wählen.');
       break;
   }
   return { errors, warnings };

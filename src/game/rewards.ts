@@ -1,11 +1,12 @@
 // Rewards after a duel.
 // Simple game against the computer: coins only, depending on the chosen difficulty.
-// Collection League (match against the computer, checked by the server): a won match unlocks the rarest new
-// discovery from the run; if none of the collected discoveries is new, there are coins instead.
+// Collection League (match against the computer, checked by the server): a won match unlocks a random card the
+// player does not own yet (with the admin's rarity shares, drawn from the match seed); with none left, coins.
 import { Outcome } from './battle';
 import type { AiLevel } from './ai';
-import { RARITY_ORDER, getCard } from './cards';
-import { Pick } from './runner';
+import { CARDS, pickByRarity } from './cards';
+import { deriveRng } from './league';
+import { SETTINGS } from './settings';
 import { SaveData } from './storage';
 
 /** Coins in the simple game per difficulty. */
@@ -14,7 +15,7 @@ export const AI_COINS: Record<AiLevel, Record<Outcome, number>> = {
   medium: { win: 50, draw: 20, loss: 10 },
   hard: { win: 100, draw: 40, loss: 15 },
 };
-/** Collection League: coins for a won match when no collected discovery is new. */
+/** Collection League: coins for a won match when every card is owned already. */
 export const LEAGUE_NO_CARD_COINS = 50;
 
 export interface Reward {
@@ -32,15 +33,18 @@ export function computeReward(result: Outcome, level: AiLevel = 'medium'): Rewar
   return { coins: AI_COINS[isAiLevel(level) ? level : 'medium'][result], newCard: null, duplicateCard: null };
 }
 
-/** Collection League match: only a won match pays – the rarest new discovery, else coins. */
-export function leagueReward(won: boolean, picks: Pick[], unlocked: string[]): Reward {
+/**
+ * Collection League match: only a won match pays – a random card not owned yet (rarity shares from the admin,
+ * the same draw on every device for this match seed), else coins.
+ */
+export function leagueReward(won: boolean, seed: string, unlocked: readonly string[]): Reward {
   if (!won) return { coins: 0, newCard: null, duplicateCard: null };
   const owned = new Set(unlocked);
-  const discoveries = picks.filter((p) => p.kind === 'discovery').map((p) => p.cardId);
-  const fresh = [...new Set(discoveries.filter((id) => !owned.has(id)))]
-    .sort((a, b) => RARITY_ORDER[getCard(b).rarity] - RARITY_ORDER[getCard(a).rarity] || a.localeCompare(b));
-  if (fresh.length > 0) return { coins: 0, newCard: fresh[0], duplicateCard: null };
-  return { coins: LEAGUE_NO_CARD_COINS, newCard: null, duplicateCard: discoveries[0] ?? null };
+  // Cards the admin allows as a find ("Ranglisten-Belohnung", formerly the run's final gate).
+  const fresh = CARDS.filter((c) => c.inRunner !== false && !owned.has(c.id));
+  const rng = deriveRng(seed, 'league-reward');
+  const card = pickByRarity(rng, fresh, SETTINGS.discoveryShares) ?? fresh[Math.floor(rng() * fresh.length)];
+  return card ? { coins: 0, newCard: card.id, duplicateCard: null } : { coins: LEAGUE_NO_CARD_COINS, newCard: null, duplicateCard: null };
 }
 
 export function applyReward(save: SaveData, result: Outcome, reward: Reward): SaveData {

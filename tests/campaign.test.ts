@@ -109,9 +109,9 @@ describe('Kampagne: Sterne-Ziele', () => {
     expect(goalMet(goal, stats({ fields: 11, outcome: 'draw' }))).toBe(false);
     expect(goalMet({ id: 'g', type: 'without_class', n: 0, cls: 'magier' }, stats({ played: { natur: 8 } }))).toBe(true);
     expect(goalMet({ id: 'g', type: 'without_class', n: 0, cls: 'magier' }, stats({ played: { magier: 1 } }))).toBe(false);
-    expect(goalMet({ id: 'g', type: 'runner_clean', n: 0 }, stats({ stumbles: 0 }))).toBe(true);
-    expect(goalMet({ id: 'g', type: 'runner_clean', n: 0 }, stats({ stumbles: 1 }))).toBe(false);
-    expect(goalMet({ id: 'g', type: 'runner_clean', n: 0 }, stats({ stumbles: null }))).toBe(false);
+    // There is no run any more: the old run goal counts like a win.
+    expect(goalMet({ id: 'g', type: 'runner_clean', n: 0 }, stats({ stumbles: null }))).toBe(true);
+    expect(goalMet({ id: 'g', type: 'runner_clean', n: 0 }, stats({ stumbles: null, outcome: 'draw' }))).toBe(false);
   });
 
   it('Nachspielen der Züge ergibt dieselben Werte wie das Duell', () => {
@@ -170,7 +170,7 @@ describe('Kampagne: Sterne-Ziele', () => {
     const ctx = { runner: false, terrain: BUILTIN_ARENAS[0].cells, rocks: 0 };
     expect(goalProblems({ id: 'g', type: 'min_fields', n: 9 }, ctx).warnings.join()).toMatch(/einfachen Sieg/);
     expect(goalProblems({ id: 'g', type: 'min_fields', n: 17 }, ctx).errors.length).toBeGreaterThan(0);
-    expect(goalProblems({ id: 'g', type: 'runner_clean', n: 0 }, ctx).errors.join()).toMatch(/Lauf/);
+    expect(goalProblems({ id: 'g', type: 'runner_clean', n: 0 }, ctx).warnings.join()).toMatch(/Lauf/);
     expect(goalProblems({ id: 'g', type: 'terrain_bonus', n: 1 }, ctx).errors.join()).toMatch(/kein Gelände/);
     expect(goalProblems({ id: 'g', type: 'play_class', n: 2, cls: 'feuer' }, { ...ctx, onlyClass: 'natur' }).errors.length).toBe(1);
   });

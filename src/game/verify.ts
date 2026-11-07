@@ -8,11 +8,11 @@ import { BattleState, HAND_SIZE, HandCard, Outcome, Side, coinToss, cpuChoosesFi
 import { CLASSIC_ARENA } from './arenas';
 import { Mission, Opponent, findArena, missionPool } from './campaign';
 import { DuelStats, duelStats } from './campaignGoals';
-import { deriveRng, leagueLayout, roundRock } from './league';
+import { deriveRng, roundRock } from './league';
 import { leagueArena } from './arenas';
 import { emptyMatch, nextStep, recordRound } from './match';
 import { Rng } from './rng';
-import { Pick, RunInput, RunnerSim, FINISH_DISTANCE, replayRun, validateRunInputs } from './runner';
+import { Pick, RunInput, RunnerSim, FINISH_DISTANCE, validateRunInputs } from './runner';
 import { Action, basicRunes, isRuneUse, applyAction } from './runes';
 
 /** What the server hands out when a run starts (and keeps to check the result). */
@@ -45,7 +45,8 @@ export interface DuelLog {
 
 /** Recorded by the game while playing. */
 export interface AdventureLog {
-  run: { inputs: RunInput[]; skippedAt: number | null };
+  /** Runs of older versions (the run is gone: the duel starts with the deck). */
+  run?: { inputs: RunInput[]; skippedAt: number | null };
   duel: DuelLog;
 }
 
@@ -82,7 +83,7 @@ export function adventureDuel(ticket: AdventureTicket, picks: Pick[], rngs = adv
 }
 
 /** Replays the run like the game played it: lane changes at their distances, optionally skipped to the end. */
-export function replayAdventureRun(ticket: RunTicket, log: AdventureLog['run']): { picks: Pick[]; error: string | null } {
+export function replayAdventureRun(ticket: RunTicket, log: NonNullable<AdventureLog['run']>): { picks: Pick[]; error: string | null } {
   const error = validateRunInputs(log.inputs);
   if (error) return { picks: [], error };
   const sim = adventureRunner(ticket);
@@ -161,19 +162,19 @@ export function replayDuel(start: BattleState, log: DuelLog, rngs: { toss: Rng; 
  * every player action must be legal. Returns the result the server pays out for.
  */
 export function checkAdventure(ticket: AdventureTicket, log: AdventureLog, arenas: readonly Arena[] = ARENAS): AdventureCheck {
-  const run = replayAdventureRun(ticket, log.run);
-  if (run.error) return { ok: false, error: run.error };
-  if (run.picks.length !== 8) return { ok: false, error: 'Lauf unvollständig' };
+  if (!log || !log.duel) return { ok: false, error: 'Duell fehlt' };
+  // No run any more: the whole deck is shuffled, 5 cards are the hand.
+  const picks = handPicks(ticket.deck);
   const rngs = adventureRngs(ticket.seed);
   let start: BattleState;
   try {
-    start = adventureDuel(ticket, run.picks, rngs, arenas).start;
+    start = adventureDuel(ticket, picks, rngs, arenas).start;
   } catch {
     return { ok: false, error: 'Duell konnte nicht aufgebaut werden' };
   }
   const duel = replayDuel(start, log.duel, rngs, { level: ticket.level ?? 'medium' });
   if (!duel.ok) return duel;
-  return { ok: true, picks: run.picks, outcome: outcome(duel.end), score: score(duel.end), duel: { begin: duel.begin, moves: log.duel.moves } };
+  return { ok: true, picks, outcome: outcome(duel.end), score: score(duel.end), duel: { begin: duel.begin, moves: log.duel.moves } };
 }
 
 // ---------- Collection League against the computer (checked, card reward) ----------
@@ -190,13 +191,13 @@ export interface LeagueTicket {
 }
 
 export interface LeagueLog {
-  /** Lane changes of the run (league runs cannot be skipped). */
-  run: RunInput[];
+  /** Runs of older versions (the run is gone: every round is played with the deck). */
+  run?: RunInput[];
   /** Every round in order: who started and all moves. */
   rounds: DuelLog[];
 }
 
-/** The computer's 8 cards (the same in every round of the match). */
+/** The computer's deck (the same in every round of the match). */
 export const leagueCpuHand = (seed: string): HandCard[] => drawCpuHand(deriveRng(seed, 'cpu-hand'));
 
 /** The computer's basic rune for a match (only when runes are in play for the player). */
@@ -220,11 +221,9 @@ export type LeagueCheck =
 
 /** Checks a whole league match: the run gives the hand, then every round is replayed until the match is decided. */
 export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readonly Arena[] = ARENAS): LeagueCheck {
-  if (!log || !Array.isArray(log.run) || !Array.isArray(log.rounds)) return { ok: false, error: 'Match fehlt' };
-  const run = replayRun(leagueLayout(ticket.seed, 'du', ticket.deck), log.run);
-  if (run.error) return { ok: false, error: run.error };
-  if (run.picks.length !== HAND_SIZE) return { ok: false, error: 'Lauf unvollständig' };
-  const hand: HandCard[] = run.picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
+  if (!log || !Array.isArray(log.rounds)) return { ok: false, error: 'Match fehlt' };
+  const picks = handPicks(ticket.deck);
+  const hand: HandCard[] = picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
   const cpuHand = leagueCpuHand(ticket.seed);
   let match = emptyMatch();
   const rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[] = [];
@@ -233,7 +232,7 @@ export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readon
     const step = nextStep(match);
     if (step.kind === 'done') {
       if (i !== log.rounds.length) return { ok: false, error: 'Zusätzliche Runden nach Matchende' };
-      return { ok: true, picks: run.picks, winner: step.winner, rounds, duels };
+      return { ok: true, picks, winner: step.winner, rounds, duels };
     }
     if (i >= MAX_LEAGUE_ROUNDS) return { ok: false, error: 'Match zu lang' };
     const duelLog = log.rounds[i];
@@ -292,6 +291,11 @@ export function missionStart(ticket: MissionTicket, mission: Mission, opponent: 
     missionRngs(ticket.seed).deal);
 }
 
+/** The cards a mission is played with: the mission pool from the own deck (class missions: with loans). */
+export function missionDeckPicks(mission: Mission, deck: readonly string[]): Pick[] {
+  return handPicks(missionPool(mission, deck).map((c) => c.cardId));
+}
+
 /** The hand of a duel mission as runner picks (no discoveries, no modifiers). */
 export const handPicks = (hand: readonly string[]): Pick[] => hand.map((cardId, i) => ({ cardId, kind: 'deck', gate: i, mod: 0 }));
 
@@ -306,19 +310,9 @@ export function validMissionHand(mission: Mission, deck: readonly string[], hand
 export function checkMission(ticket: MissionTicket, log: MissionLog, mission: Mission, opponent: Opponent, arenas: readonly Arena[] = ARENAS): MissionCheck {
   if (!log || !log.duel) return { ok: false, error: 'Protokoll fehlt' };
   const rngs = missionRngs(ticket.seed);
-  let picks: Pick[];
-  let stumbles: number | null = null;
-  if (mission.mode === 'runner') {
-    if (!log.run) return { ok: false, error: 'Lauf fehlt' };
-    const run = replayAdventureRun(ticket, log.run);
-    if (run.error) return { ok: false, error: run.error };
-    if (run.picks.length !== HAND_SIZE) return { ok: false, error: 'Lauf unvollständig' };
-    picks = run.picks;
-    stumbles = picks.filter((p) => p.mod < 0).length;
-  } else {
-    if (!ticket.hand) return { ok: false, error: 'Hand fehlt' };
-    picks = handPicks(ticket.hand);
-  }
+  // No run and no hand choice any more: the mission deck (the own deck, filtered for class missions) is shuffled.
+  const picks = missionDeckPicks(mission, ticket.deck);
+  const stumbles: number | null = null;
   let start: BattleState;
   try {
     start = missionStart(ticket, mission, opponent, picks, arenas);

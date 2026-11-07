@@ -638,17 +638,17 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
             </div>
 
             <div className="field">
-              <span>Lauf &amp; Belohnung</span>
+              <span>Belohnung</span>
               <label className="toggle toggle-left">
                 <input id="card-in-runner" type="checkbox" checked={draft.inRunner} onChange={(e) => set('inRunner', e.target.checked)} />
-                <span>Darf im Lauf als neue Karte erscheinen (Finaltor)</span>
+                <span>Kann als Ranglisten-Belohnung erscheinen (neue Karte nach einem Sieg)</span>
               </label>
               <label className="toggle toggle-left">
                 <input id="card-reward-only" type="checkbox" checked={draft.rewardOnly} onChange={(e) => set('rewardOnly', e.target.checked)} />
                 <span>Nur durch Belohnung freischaltbar (nicht in Booster-Packs)</span>
               </label>
               {draft.rewardOnly && !draft.inRunner && (
-                <small className="field-warn">⚠️ So kann niemand diese Karte bekommen: Sie ist „nur Belohnung“, darf aber nicht im Lauf erscheinen.</small>
+                <small className="field-warn">⚠️ Diese Karte gibt es nur über Kampagnen-, Raid- oder Erfolgs-Belohnungen: Sie ist „nur Belohnung“ und keine Ranglisten-Belohnung.</small>
               )}
             </div>
           </section>

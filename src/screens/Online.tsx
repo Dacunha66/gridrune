@@ -4,24 +4,21 @@ import { Coin } from '../components/Coin';
 import { GameIcon } from '../components/GameIcon';
 import { ResultIcon } from '../components/ResultIcon';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
 import { RuneBadge } from '../components/RuneBadge';
 import { Header } from './Header';
-import { CardPicker } from '../components/CardPicker';
 import { Battle, BattleSetup } from './Battle';
 import { CLASSIC_ARENA } from '../game/arenas';
-import { BattleState, HAND_SIZE } from '../game/battle';
-import { cardPower, getCard } from '../game/cards';
+import { BattleState, DRAW_HAND_SIZE } from '../game/battle';
+import { DECK_SIZE } from '../game/cards';
 import { findRune, Action } from '../game/runes';
 import { PVP_ABSENT_SECONDS, PVP_TURN_SECONDS, PVP_WIN_COINS, PvpView, normalizeCode } from '../game/pvp';
 import {
-  PvpMode, pvpDeck, pvpErrorText, pvpFetch, pvpInvite, pvpJoin, pvpLeave, pvpMove, pvpPing, pvpQueue, pvpRun, pvpStats, pvpTick, pvpWatch,
+  PvpMode, pvpDeck, pvpErrorText, pvpFetch, pvpInvite, pvpJoin, pvpLeave, pvpMove, pvpPing, pvpQueue, pvpStats, pvpTick, pvpWatch,
 } from '../game/pvpApi';
-import { Pick, RunnerLayout } from '../game/runner';
+import { Pick } from '../game/runner';
 import { DRAFT_DECK_SECONDS, DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS } from '../game/draft';
 import { DraftDeckBuilder, poolPlanText, useSecondsLeft } from './Draft';
-import { Runner } from './Runner';
 
 interface Props {
   uid: string;
@@ -41,28 +38,13 @@ interface Props {
   onExit: () => void;
 }
 
-const HAND_KEY = 'gridrune/pvp-hand';
 const SITE = typeof location !== 'undefined' ? location.origin : 'https://gridrune.pages.dev';
 
-function strongest(deck: readonly string[]): string[] {
-  return [...deck].sort((a, b) => cardPower(getCard(b)) - cardPower(getCard(a)) || a.localeCompare(b)).slice(0, HAND_SIZE);
-}
-
-function savedHand(deck: readonly string[]): string[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(HAND_KEY) ?? '[]');
-    if (Array.isArray(raw) && raw.length === HAND_SIZE && raw.every((id) => deck.includes(id)) && new Set(raw).size === HAND_SIZE) return raw;
-  } catch {
-    // no saved hand
-  }
-  return strongest(deck);
-}
-
-export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c5fd'], onPractice, deck, rune, reducedMotion, onFinished, onExit }: Props) {
+export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMotion, onFinished, onExit }: Props) {
   const draftMode = mode === 'draft';
   const title = draftMode ? 'Draft-Liga' : 'Online-Duell';
-  const [hand, setHand] = useState<string[]>(() => savedHand(deck));
-  const [choosing, setChoosing] = useState(false);
+  // Online duels are played with the whole deck (5 on the hand, the rest drawn).
+  const hand = deck;
   const [code, setCode] = useState(() => normalizeCode(new URLSearchParams(location.search).get('duell') ?? ''));
   const [view, setView] = useState<PvpView | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,13 +59,6 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
   useEffect(() => {
     pvpStats(mode).then(setStats);
   }, [mode]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(HAND_KEY, JSON.stringify(hand));
-    } catch {
-      // private mode
-    }
-  }, [hand]);
 
   // Only take newer views of the current match (live updates and replies can arrive out of order).
   const take = useCallback((v: PvpView | null | undefined) => {
@@ -148,7 +123,7 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
 
   // ---------- Draft: deck building, run, waiting ----------
   if (view && view.status === 'drafting' && view.draft) {
-    return <DraftPrep key={view.matchId} view={view} skin={skin} reducedMotion={reducedMotion} onView={take} onQuit={leave} />;
+    return <DraftPrep key={view.matchId} view={view} onView={take} onQuit={leave} />;
   }
 
   // ---------- Duel ----------
@@ -231,7 +206,7 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
     e.preventDefault();
     start('join');
   };
-  const ready = draftMode || (hand.length === HAND_SIZE && !choosing);
+  const ready = draftMode || hand.length === DECK_SIZE;
   return (
     <main className="screen online">
       <Header title={title} onBack={onExit} />
@@ -242,8 +217,7 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
             <ol className="draft-steps">
               <li>Beide bekommen denselben Pool aus 30 Karten ({poolPlanText()}). Deine Sammlung spielt keine Rolle.</li>
               <li>Du wählst in {Math.round(DRAFT_DECK_SECONDS / 60)} Minuten verdeckt 20 Karten für dein Draft-Deck.</li>
-              <li>Im Lauf sammelst du daraus 8 Karten ein – gleiche Steine und Funde für beide.</li>
-              <li>Duell mit {PVP_TURN_SECONDS} s pro Zug. Ein Sieg bringt <Coin /> {DRAFT_WIN_COINS}. Danach verfällt das Draft-Deck.</li>
+              <li>Duell mit deinem Draft-Deck: 5 Karten auf der Hand, vor jedem Zug ziehst du nach. {PVP_TURN_SECONDS} s pro Zug. Ein Sieg bringt <Coin /> {DRAFT_WIN_COINS}. Danach verfällt das Draft-Deck.</li>
             </ol>
           </section>
         ) : (
@@ -255,23 +229,8 @@ export function Online({ uid, mode = 'duel', skin = ['#3b82f6', '#1e3a8a', '#93c
         {stats && <p className="small">Deine {draftMode ? 'Draft' : 'Online'}-Bilanz: <GameIcon name="crown" /> {stats.wins} · <GameIcon name="handshake" /> {stats.draws} · <GameIcon name="skull" /> {stats.losses}</p>}
 
         {!draftMode && <section className="brief-hand">
-          <h2>Deine 8 Karten <span className="muted small">{hand.length}/{HAND_SIZE}</span></h2>
-          {choosing ? (
-            <CardPicker pool={deck} picked={hand} size={HAND_SIZE} onChange={setHand} label="Deine Auswahl" />
-          ) : (
-            <div className="hand-grid">
-              {hand.map((id) => (
-                <div key={id} className="hand-pick"><Card id={id} size="sm" ariaLabel={getCard(id).name} /></div>
-              ))}
-            </div>
-          )}
-          {choosing ? (
-            <div className="row-buttons">
-              <button type="button" className="btn btn-small" onClick={() => setChoosing(false)} disabled={hand.length !== HAND_SIZE}>Fertig</button>
-            </div>
-          ) : (
-            <button type="button" className="btn btn-small" onClick={() => setChoosing(true)}>Karten ändern</button>
-          )}
+          <h2>Dein Deck <span className="muted small">{hand.length}/{DECK_SIZE}</span></h2>
+          <p className="muted small">Du spielst mit deinem ganzen Deck: gemischt, {DRAW_HAND_SIZE} Karten auf der Hand, vor jedem Zug ziehst du nach. Ändern unter „Deck bearbeiten“.</p>
           {runeDef && <p className="small rune-reward"><RuneBadge rune={runeDef} className="small" /> <span>Deine Rune: <b>{runeDef.name}</b></span></p>}
         </section>}
         {draftMode && runeDef && <p className="small rune-reward"><RuneBadge rune={runeDef} className="small" /> <span>Deine Rune: <b>{runeDef.name}</b></span></p>}
@@ -321,18 +280,13 @@ function OnlineDuel({ view, reducedMotion, onView, onDone, onQuit }: {
   return <Battle picks={picks} unlocked={[]} reducedMotion={reducedMotion} setup={setup} online={online} onEnd={onDone} onQuit={onQuit} />;
 }
 
-/** Draft preparation: build the deck, run the track, then wait for the opponent. */
-function DraftPrep({ view, skin, reducedMotion, onView, onQuit }: {
-  view: PvpView; skin: [string, string, string]; reducedMotion: boolean; onView: (v: PvpView | undefined) => void; onQuit: () => void;
+/** Draft preparation: build the deck, then wait for the opponent (the duel is played with the draft deck). */
+function DraftPrep({ view, onView, onQuit }: {
+  view: PvpView; onView: (v: PvpView | undefined) => void; onQuit: () => void;
 }) {
   const d = view.draft!;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  // The track is kept once received (later views must not restart the run).
-  const [layout, setLayout] = useState<RunnerLayout | null>(d.layout);
-  useEffect(() => {
-    if (!layout && d.layout) setLayout(d.layout);
-  }, [layout, d.layout]);
   const prepareLeft = useSecondsLeft(d.deadline);
   // The deck must be ready a few minutes before the end of the preparation (the rest is for the run).
   const deckDeadline = d.deadline ? new Date(new Date(d.deadline).getTime() - (DRAFT_PREPARE_SECONDS - DRAFT_DECK_SECONDS) * 1000).toISOString() : null;
@@ -350,25 +304,15 @@ function DraftPrep({ view, skin, reducedMotion, onView, onQuit }: {
         }} />
     );
   }
-  if (!d.runDone && layout) {
-    return (
-      <Runner key={view.matchId} deck={d.deck} unlocked={[]} reducedMotion={reducedMotion} skin={skin} layout={layout} onQuit={onQuit}
-        onFinish={async (_picks, inputs, skippedAt) => {
-          const r = await pvpRun(view.matchId, { inputs, skippedAt });
-          onView(r.view);
-          if (!r.ok) setError(pvpErrorText(r.error));
-        }} />
-    );
-  }
   return (
     <main className="screen online">
       <Header title="Draft-Liga" onBack={onQuit} />
       <div className="scroll online-body">
         <section className="online-card">
-          <p className="searching" aria-live="polite">{d.runDone ? `Warte auf ${opponent} …` : 'Einen Moment …'}</p>
+          <p className="searching" aria-live="polite">Warte auf {opponent} …</p>
           <ul className="draft-status">
-            <li>Du: Deck {d.deck ? '✓' : '…'} · Lauf {d.runDone ? '✓' : '…'}</li>
-            <li>{opponent}: Deck {d.opponentDeckDone ? '✓' : '…'} · Lauf {d.opponentRunDone ? '✓' : '…'}</li>
+            <li>Du: Deck {d.deck ? '✓' : '…'}</li>
+            <li>{opponent}: Deck {d.opponentDeckDone ? '✓' : '…'}</li>
           </ul>
           {prepareLeft !== null && <p className="muted small">Spätestens in {Math.floor(prepareLeft / 60)}:{String(prepareLeft % 60).padStart(2, '0')} beginnt das Duell – wer dann nicht fertig ist, bekommt seine Karten automatisch.</p>}
           {error && <p className="admin-warning" role="alert">{error}</p>}

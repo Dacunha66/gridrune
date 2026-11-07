@@ -1,9 +1,9 @@
 // Online duels between two signed-in players. This function is the referee: it creates matches (invite code or
 // random opponent), checks every move with the game's own rules (engine.js) and decides time-outs (a random card
-// after 30 seconds) and absences (whoever is still there after 20 seconds without a sign of life from the other
+// after 90 seconds) and absences (whoever is still there after 20 seconds without a sign of life from the other
 // one wins). The full duel stays in pvp_matches; each player gets only their own view in pvp_views (live).
-// Draft League ("draft"): both get the same pool of 30 cards, build a secret deck of 20, run their own fair track
-// (replayed here) and duel with the 8 collected cards.
+// Draft League ("draft"): both get the same pool of 30 cards, build a secret deck of 20 and duel with it.
+// Every duel: the deck is shuffled, 5 cards on the hand, the rest drawn before each own move.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
@@ -299,8 +299,11 @@ Deno.serve(async (req) => {
     if (action === 'deck') {
       if (m[`deck_${seat}`]) return json({ view: viewOf(m, seat) });
       if (!validDraftDeck(body.deck, m.pool)) return json({ error: 'deck', view: viewOf(m, seat) }, 422);
-      const saved = await saveDraft(m, { [`deck_${seat}`]: body.deck });
-      return saved ? json({ view: viewOf(saved, seat) }) : json({ error: 'stale', view: viewOf((await load(m.id))!, seat) }, 409);
+      // No run any more: the draft deck is the duel deck (5 on the hand, the rest drawn).
+      let saved = await saveDraft(m, { [`deck_${seat}`]: body.deck, [`hand_${seat}`]: body.deck });
+      if (!saved) return json({ error: 'stale', view: viewOf((await load(m.id))!, seat) }, 409);
+      if (saved.hand_a && saved.hand_b) saved = await startDraftDuel(saved);
+      return json({ view: viewOf(saved, seat) });
     }
     if (action === 'run') {
       const deck = m[`deck_${seat}`];
@@ -317,13 +320,13 @@ Deno.serve(async (req) => {
         m = await finish(m, null, seat, 'absent');
         return json({ view: viewOf(m, seat) });
       }
-      // Time is up: missing decks are completed with the strongest cards, missing runs taken automatically.
+      // Time is up: missing decks are completed with the strongest cards and become the duel decks.
       if (m.prepare_deadline && Date.now() > new Date(m.prepare_deadline).getTime() + GRACE_SECONDS * 1000) {
         const patch: Match = {};
         for (const s of ['a', 'b'] as Seat[]) {
           const deck = m[`deck_${s}`] ?? completeDraftDeck(m.pool, []);
           if (!m[`deck_${s}`]) patch[`deck_${s}`] = deck;
-          if (!m[`hand_${s}`]) patch[`hand_${s}`] = picksToHand(replayDraftRun(draftLayout(m.seed, s, deck), { inputs: [], skippedAt: 0 }).picks);
+          if (!m[`hand_${s}`]) patch[`hand_${s}`] = deck;
         }
         const saved = await saveDraft(m, patch);
         if (saved) m = await startDraftDuel(saved);

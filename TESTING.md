@@ -1,5 +1,22 @@
 # Testprotokoll
 
+## Deck statt Lauf: 5 Handkarten, Rest wird gezogen, Rune der Hand (07.11.)
+
+- Feste Regel (kein Admin-Schalter mehr): Jede Seite spielt mit ihrem Deck; es wird gemischt, 5 Karten auf der Hand, vor
+  jedem eigenen Zug wird nachgezogen. Der Lauf entfällt in allen Modi (Code bleibt für ein späteres Minispiel).
+- Einfaches Spiel, Rangliste, Kampagne, Raid, Online: das 20er-Deck (Rangliste: Liga-Deck; Kampagnen-Missionen mit
+  Klassen-Vorgabe: nur die erlaubten Karten des Decks, mit Leihkarten aufgefüllt; Draft: das 20er-Draft-Deck).
+  Computer: 20er-Deck (gleiche Seltenheits-Mischung); Kampagnen-Gegner und Raid-Bosse behalten ihre Karten als Deck.
+- Rangliste: ein Sieg schenkt eine zufällige Karte, die noch fehlt (Seltenheits-Chancen aus dem Admin, nur Karten mit
+  „Kann als Ranglisten-Belohnung erscheinen“), aus dem Match-Seed – sonst 50 Münzen.
+- Rune der Hand (rn06, von Anfang an): alle Handkarten ins Deck mischen und genauso viele neu ziehen, Zug bleibt.
+  Der Computer nutzt sie nur mit eigenem Wissen (Hand klar schwächer als seine Restkarten).
+- Kampagnen-Ziel „Lauf ohne Stolpern“ zählt jetzt wie „Gewinnen“ (Warnung im Editor).
+- Automatisch (tests/deck.test.ts + angepasste Tests, 315 grün): Austeilen aus dem Seed, Decks 8–40, Auffüllen auf 5
+  (Quadrat/Kristall, mit/ohne Fels), KI-Sicht, Online-Sicht (Decks + Mischzahl verdeckt), Rune der Hand (Mischen,
+  leeres Deck, KI-Entscheidung, Server-Prüfung), Rangliste/Kampagne/Raid/Online/Draft mit Decks.
+- Browser (iPhone-Größe): Duell mit Rune der Hand, Einfaches Spiel startet direkt (5 + 15), Kampagnen-Briefing „Dein Deck“.
+
 ## Nachziehen: 5 Karten auf der Hand (07.11.)
 
 - Admin → Runen → Freigabe: Schalter „Nachziehen“ (Standard: Aus). An: Die 8 Karten jeder Seite werden zu Beginn gemischt,

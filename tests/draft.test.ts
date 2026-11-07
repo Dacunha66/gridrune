@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DRAFT_DECK_SIZE, DRAFT_POOL_PLAN, DRAFT_POOL_SIZE, completeDraftDeck, computerDraftHand, draftLayout, draftPool, replayDraftRun, validDraftDeck,
+  DRAFT_DECK_SIZE, DRAFT_POOL_PLAN, DRAFT_POOL_SIZE, completeDraftDeck, draftLayout, draftPool, replayDraftRun, validDraftDeck,
 } from '../src/game/draft';
 import { CARDS, getCard } from '../src/game/cards';
 import { RunnerSim } from '../src/game/runner';
@@ -44,7 +44,7 @@ describe('Draft-Liga: Regeln', () => {
     }
   });
 
-  it('Lauf wird vom Server nachgespielt (gleiche 8 Karten), Manipulation abgelehnt', () => {
+  it('Lauf (für ein späteres Minispiel) wird nachgespielt; das Duell nutzt das Draft-Deck', () => {
     const pool = draftPool('run-1');
     const deck = completeDraftDeck(pool);
     const layout = draftLayout('run-1', 'a', deck);
@@ -61,9 +61,11 @@ describe('Draft-Liga: Regeln', () => {
     expect(replayDraftRun(layout, { inputs: [{ d: 10, lane: 1 }], skippedAt: null }).error).not.toBeNull();
     // Time ran out: everything taken automatically.
     expect(replayDraftRun(layout, { inputs: [], skippedAt: 0 }).picks.length).toBe(8);
-    // Duel start with the run's penalties.
-    const { state } = startPvp('run-1', r.picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), computerDraftHand(draftLayout('run-1', 'b', completeDraftDeck(pool))), null, null);
-    expect(state.hands.player.map((h) => h.mod)).toEqual(r.picks.map((p) => p.mod));
-    expect(state.hands.cpu.length).toBe(8);
+    // The duel is played with the draft decks themselves (no run): 5 cards on the hand, 15 in the deck.
+    const deckA = completeDraftDeck(pool);
+    const { state } = startPvp('run-1', deckA, [...deckA].reverse(), null, null);
+    expect(state.hands.player.length).toBe(5);
+    expect(state.piles!.player.length).toBe(15);
+    expect([...state.hands.player, ...state.piles!.player].map((h) => h.cardId).sort()).toEqual([...deckA].sort());
   });
 });

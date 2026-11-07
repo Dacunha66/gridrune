@@ -22,7 +22,7 @@ import { AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from '../game/ai
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
 import { AdventureTicket, adventureDuel, adventureRngs } from '../game/verify';
-import { Action, RuneDef, RuneUse, applyRune, basicRunes, echoCapturable, findRune, placedCount, runeChoices, runeOpen, runeProblem, runeRules } from '../game/runes';
+import { Action, RuneDef, RuneUse, applyRune, basicRunes, echoCapturable, findRune, placedCount, runeChoices, runeOpen, runeProblem, runeRules, runeUsable } from '../game/runes';
 import { RuneBadge } from '../components/RuneBadge';
 import { CardClass } from '../game/effects';
 import { CARD_STYLE_LABEL, cycleCardStyle, useCardStyle, useDevTools } from '../game/cardStyle';
@@ -131,7 +131,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     const cpuRune = r?.cpu === 'random' ? basic[Math.floor(rng() * basic.length)] : r?.cpu ?? null;
     return createBattle(
       picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells,
-      { player: r?.player ?? null, cpu: cpuRune }, setup?.deal?.(),
+      { player: r?.player ?? null, cpu: cpuRune }, setup?.deal?.() ?? createRng(),
     );
   });
   const [state, setState] = useState<BattleState>(initial);
@@ -296,10 +296,12 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   const myRuneRules = myRune ? runeRules(myRune) : null;
   const runeChoice = myRune ? runeChoices(state, 'player', myRune) : null;
   const canUseRune = !!myRune && !state.runes.player!.used && phase === 'play' && !over && state.turn === 'player' && !animating && !placing
-    && !!runeChoice && runeChoice.cells.length > 0;
+    && runeUsable(state, 'player', myRune);
   /** The rune use as chosen so far (complete or not). */
   const runeUse: RuneUse | null = runeMode && myRuneRules
-    ? myRuneRules.effect === 'twist' || myRuneRules.effect === 'echo'
+    ? myRuneRules.effect === 'mulligan'
+      ? { rune: true }
+      : myRuneRules.effect === 'twist' || myRuneRules.effect === 'echo'
       ? { rune: true, cell: runeMode.cells[0], ...(runeMode.dir ? { dir: runeMode.dir } : {}), ...(runeMode.capture?.length ? { capture: runeMode.capture } : {}) }
       : { rune: true, cells: runeMode.cells, ...(runeMode.cls ? { cls: runeMode.cls } : {}) }
     : null;
@@ -338,7 +340,8 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   function confirmRune() {
     if (!runeUse || !runeReady) return;
     record.current.moves.push(runeUse);
-    setState(applyRune(state, runeUse));
+    // Online the own deck is face down here too: the server deals the new hand (Rune der Hand).
+    if (!(online && myRuneRules?.effect === 'mulligan')) setState(applyRune(state, runeUse));
     online?.onAction(runeUse, state);
     setRuneMode(null);
   }
@@ -625,7 +628,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           {state.hands.player.map(({ cardId: id, mod }, i) => {
             const t = i - (state.hands.player.length - 1) / 2;
             return (
-            <div key={handOrigin[i]} className={`hand-slot ${selected === i ? 'sel' : ''} ${state.lastDraw === 'player' && i === state.hands.player.length - 1 && !reducedMotion ? 'drawn' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
+            <div key={handOrigin[i]} className={`hand-slot ${selected === i ? 'sel' : ''} ${state.lastDraw === 'player' && (i === state.hands.player.length - 1 || state.lastRune?.side === 'player') && !reducedMotion ? 'drawn' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
               {...longPress(() => setPreview({ id, mod }))}>
               <Card
                 id={id}
@@ -756,6 +759,8 @@ function runeHint(r: RuneDef, mode: { cells: number[]; cls?: CardClass; dir?: 1 
       return `ᚱ Eigene Karten antippen (${mode.cells.length}/${r.maxTargets}), dann ✓`;
     case 'curse':
       return !mode.cls ? 'ᚱ Gegnerische Klasse wählen' : `ᚱ Gegnerkarten antippen (${mode.cells.length}/${r.maxTargets}), dann ✓`;
+    case 'mulligan':
+      return 'ᚱ ✓ mischt deine Handkarten ins Deck und zieht neu';
   }
 }
 
@@ -764,6 +769,7 @@ function runeBlockedText(state: BattleState, phase: string, over: boolean, choic
   if (over) return 'Das Duell ist vorbei.';
   if (phase !== 'play' || state.turn !== 'player') return 'Einsetzbar in deinem Zug, bevor du eine Karte legst.';
   if (rune && !runeOpen(state, rune)) return `Einsetzbar ab der Spielmitte: ${placedCount(state)}/${runeRules(rune).minPlaced} Karten auf dem Spielfeld.`;
+  if (rune && runeRules(rune).effect === 'mulligan') return (state.piles?.player.length ?? 0) === 0 ? 'Dein Deck ist leer – es gibt nichts neu zu ziehen.' : '';
   if (!choice || choice.cells.length === 0) return 'Gerade gibt es kein gültiges Ziel auf dem Spielfeld.';
   return '';
 }

@@ -6,16 +6,16 @@ import { ClassGlyph } from '../components/GlyphIcons';
 import { GameIcon } from '../components/GameIcon';
 import { ResultIcon } from '../components/ResultIcon';
 import { Header } from './Header';
-import { CardPicker } from '../components/CardPicker';
+import { Card } from '../components/Card';
 import { Battle, BattleSetup, DuelRecord } from './Battle';
 import { Coin, CoinText } from '../components/Coin';
 import { Confetti } from '../components/Effects';
 import { DesignImage } from '../components/DesignArt';
 import { RuneBadge } from '../components/RuneBadge';
-import { cardPower, getCard, ownedActiveIds } from '../game/cards';
-import { HAND_SIZE, toHand } from '../game/battle';
+import { CARDS, DECK_SIZE, ownedActiveIds } from '../game/cards';
+import { DRAW_HAND_SIZE, toHand } from '../game/battle';
 import { CLASS_INFO } from '../game/effects';
-import { imageUrl } from '../game/catalog';
+import { imageUrl, repairDeck } from '../game/catalog';
 import { LEVEL_LABEL, REWARD_ICON, Reward, rewardText } from '../game/campaign';
 import { grantedText } from '../game/campaignRewards';
 import { findRune } from '../game/runes';
@@ -43,15 +43,9 @@ const STATUS_TEXT: Record<RaidInfo['status'], string> = {
   upcoming: 'Startet bald', active: 'Läuft', paused: 'Pausiert', ended: 'Beendet', defeated: 'Besiegt!', expired: 'Vorbei',
 };
 
+/** The raid is fought with the player's deck (20 cards: 5 on the hand, the rest drawn). */
 function savedHand(owned: readonly string[], deck: readonly string[]): string[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(HAND_KEY) ?? '[]');
-    if (Array.isArray(raw) && raw.length === HAND_SIZE && new Set(raw).size === HAND_SIZE && raw.every((id) => owned.includes(id))) return raw;
-  } catch {
-    // no saved hand
-  }
-  const pool = deck.filter((id) => owned.includes(id));
-  return [...(pool.length >= HAND_SIZE ? pool : owned)].sort((a, b) => cardPower(getCard(b)) - cardPower(getCard(a)) || a.localeCompare(b)).slice(0, HAND_SIZE);
+  return repairDeck([...deck], [...owned], CARDS).deck;
 }
 
 export function HpBar({ current, max, phases }: { current: number; max: number; phases?: { threshold: number }[] }) {
@@ -91,8 +85,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>({ k: 'overview' });
   const [busy, setBusy] = useState(false);
-  const owned = useMemo(() => ownedActiveIds(unlocked), [unlocked]);
-  const [hand, setHand] = useState<string[]>(() => savedHand(ownedActiveIds(unlocked), deck));
+  const hand = useMemo(() => savedHand(ownedActiveIds(unlocked), deck), [unlocked, deck]);
 
   const sendResult = useCallback(async (ticket: OpenTicket, record: { first: 'player' | 'cpu'; moves: DuelRecord['moves'] }, bossName: string) => {
     setView({ k: 'sending', ticket });
@@ -201,17 +194,22 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
   if (view.k === 'leaderboard') return <RaidLeaderboard raid={raid} onBack={() => setView({ k: 'overview' })} />;
   if (view.k === 'rewards' && raid && me) return <RaidRewards raid={raid} me={me} onBack={() => setView({ k: 'overview' })} />;
 
-  // ---------- Choosing the 8 cards ----------
+  // ---------- The deck before the attack ----------
   if (view.k === 'hand' && raid) {
     const runeDef = findRune(rune);
     return (
       <main className="screen raid">
-        <Header title="Deine 8 Karten" onBack={() => setView({ k: 'overview' })} right={<span className={`pill ${hand.length === HAND_SIZE ? 'ok' : 'warn'}`}>{hand.length}/{HAND_SIZE}</span>} />
+        <Header title="Dein Deck" onBack={() => setView({ k: 'overview' })} right={<span className={`pill ${hand.length === DECK_SIZE ? 'ok' : 'warn'}`}>{hand.length}/{DECK_SIZE}</span>} />
         <p className="pick-rune">{runeDef ? <>Deine Rune: <RuneBadge rune={runeDef} className="small" /> <b>{runeDef.name}</b></> : 'Ohne Rune'}</p>
-        <CardPicker pool={owned} picked={hand} size={HAND_SIZE} onChange={setHand} label="Deine Auswahl" ownScroll />
+        <div className="scroll">
+          <p className="muted small center">Du kämpfst mit deinem Deck: Es wird gemischt, {DRAW_HAND_SIZE} Karten hast du auf der Hand, vor jedem Zug ziehst du nach. Ändern unter „Deck bearbeiten“.</p>
+          <div className="hand-grid pool">
+            {hand.map((id) => <div key={id} className="hand-pick"><Card id={id} size="sm" /></div>)}
+          </div>
+        </div>
         {error && <p className="hint warn-text" role="alert">{error}</p>}
         <div className="row-buttons">
-          <button type="button" className="btn btn-primary btn-wide" disabled={hand.length !== HAND_SIZE || busy} onClick={() => void challenge()}>
+          <button type="button" className="btn btn-primary btn-wide" disabled={hand.length !== DECK_SIZE || busy} onClick={() => void challenge()}>
             {busy ? '…' : <><GameIcon name="swords" /> {raid.bossName} angreifen</>}
           </button>
         </div>

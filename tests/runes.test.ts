@@ -46,7 +46,7 @@ describe('Runen: Grundregeln', () => {
     const a = applyRune(s, { rune: true, cell: 5, dir: 1 });
     expect(a.turn).toBe('player');
     expect(a.moveCount).toBe(0);
-    expect(a.hands.player).toHaveLength(8);
+    expect(a.hands.player).toHaveLength(5);
     expect(a.runes.player!.used).toBe(true);
     expect(runeProblem(a, { rune: true, cell: 5, dir: 1 })).toMatch(/schon eingesetzt/);
     expect(() => applyRune(a, { rune: true, cell: 5, dir: 1 })).toThrow();
@@ -257,16 +257,16 @@ describe('Runen: Daten, Varianten, Fairness', () => {
     expect(BUILTIN_RUNES.map((r) => [r.id, r.unlock])).toEqual([
       ['rn01', { kind: 'start' }], ['rn02', { kind: 'mission', missionId: 'm010' }],
       ['rn03', { kind: 'mission', missionId: 'm015' }], ['rn04', { kind: 'mission', missionId: 'm020' }],
-      ['rn05', { kind: 'mission', missionId: 'm005' }],
+      ['rn05', { kind: 'mission', missionId: 'm005' }], ['rn06', { kind: 'start' }],
     ]);
     const camp = parseRune('rn11', { name: 'Waldrune', effect: 'empower', cls: 'natur', status: 'active', unlock: { kind: 'stars', n: 20 } })!;
     setRunes([camp]);
-    // Nothing unlocked: only the starting rune (Verdrehung).
-    for (const m of ['adventure', 'campaign', 'league'] as const) expect(availableRunes(m, []).map((r) => r.id)).toEqual(['rn01']);
-    expect(availableRunes('league', ['rn01', 'rn04', 'rn11']).map((r) => r.id)).toEqual(['rn01', 'rn04']);
-    expect(availableRunes('campaign', ['rn01', 'rn11']).map((r) => r.id)).toEqual(['rn01', 'rn11']);
+    // Nothing unlocked: only the starting runes (Verdrehung, Hand).
+    for (const m of ['adventure', 'campaign', 'league'] as const) expect(availableRunes(m, []).map((r) => r.id)).toEqual(['rn01', 'rn06']);
+    expect(availableRunes('league', ['rn01', 'rn04', 'rn11']).map((r) => r.id)).toEqual(['rn01', 'rn04', 'rn06']);
+    expect(availableRunes('campaign', ['rn01', 'rn11']).map((r) => r.id)).toEqual(['rn01', 'rn06', 'rn11']);
     // The computer still gets any basic rune.
-    expect(basicRunes().map((r) => r.id)).toEqual(['rn01', 'rn02', 'rn03', 'rn04', 'rn05']);
+    expect(basicRunes().map((r) => r.id)).toEqual(['rn01', 'rn02', 'rn03', 'rn04', 'rn05', 'rn06']);
   });
   it('freigespielt durch den ersten Sieg der Mission', () => {
     const p0 = emptyProgress();
@@ -281,7 +281,7 @@ describe('Runen: Daten, Varianten, Fairness', () => {
     expect(parseRune('x', { name: 'A', effect: 'twist' })).toBeNull();
     expect(parseRune('rn09', { name: 'A', effect: 'nuke' })).toBeNull();
     expect(parseRune('rn09', { name: 'A', effect: 'curse', amount: 9, maxTargets: 0 })).toMatchObject({ amount: 2, maxTargets: 1, status: 'draft' });
-    expect(BUILTIN_RUNES).toHaveLength(5);
+    expect(BUILTIN_RUNES).toHaveLength(6);
   });
   it('Nachspielen mit Runen ergibt denselben Endstand (Kampagnen-Ziele)', () => {
     echoAnytime();

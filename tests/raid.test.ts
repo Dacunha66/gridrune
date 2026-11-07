@@ -153,14 +153,15 @@ describe('Raid: Belohnungen', () => {
 
 describe('Raid: Start auf dem Server', () => {
   const save = { ...defaultSave(), unlocked: [...STARTING_UNLOCKED] };
-  it('gültige Hand und Rune werden angenommen', () => {
-    const r = prepareRaid(save, null, STARTER_DECK.slice(0, 8), 'rn01', false);
-    expect(r).toEqual({ ok: true, hand: STARTER_DECK.slice(0, 8), rune: 'rn01' });
+  it('gültiges Deck und Rune werden angenommen', () => {
+    const r = prepareRaid(save, null, [...STARTER_DECK], 'rn01', false);
+    expect(r).toEqual({ ok: true, hand: [...STARTER_DECK], rune: 'rn01' });
   });
-  it('Karte nicht im Besitz, doppelte Karte, nicht freigespielte Rune werden abgelehnt', () => {
-    expect(prepareRaid(save, null, [...STARTER_DECK.slice(0, 7), 'm01'], null, false)).toEqual({ ok: false, error: 'hand' });
-    expect(prepareRaid(save, null, [...STARTER_DECK.slice(0, 7), STARTER_DECK[0]], null, false)).toEqual({ ok: false, error: 'hand' });
-    expect(prepareRaid(save, null, STARTER_DECK.slice(0, 8), 'rn04', false)).toEqual({ ok: false, error: 'rune' });
+  it('Karte nicht im Besitz, doppelte Karte, zu wenige Karten, nicht freigespielte Rune werden abgelehnt', () => {
+    expect(prepareRaid(save, null, [...STARTER_DECK.slice(0, 19), 'm01'], null, false)).toEqual({ ok: false, error: 'hand' });
+    expect(prepareRaid(save, null, [...STARTER_DECK.slice(0, 19), STARTER_DECK[0]], null, false)).toEqual({ ok: false, error: 'hand' });
+    expect(prepareRaid(save, null, STARTER_DECK.slice(0, 8), null, false)).toEqual({ ok: false, error: 'hand' });
+    expect(prepareRaid(save, null, [...STARTER_DECK], 'rn04', false)).toEqual({ ok: false, error: 'rune' });
   });
 });
 

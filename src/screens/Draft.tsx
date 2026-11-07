@@ -9,12 +9,12 @@ import { Card } from '../components/Card';
 import { Confetti } from '../components/Effects';
 import { Header } from './Header';
 import { Battle, BattleSetup } from './Battle';
-import { Runner } from './Runner';
 import { leagueArena } from '../game/arenas';
-import { Outcome } from '../game/battle';
+import { Outcome, toHand } from '../game/battle';
+import { handPicks } from '../game/verify';
 import { RARITY_LABEL, Rarity, cardPower, getCard } from '../game/cards';
 import { isCardClass } from '../game/effects';
-import { DRAFT_DECK_SIZE, DRAFT_POOL_PLAN, completeDraftDeck, computerDraftHand, draftLayout, draftPool } from '../game/draft';
+import { DRAFT_DECK_SIZE, DRAFT_POOL_PLAN, completeDraftDeck, draftPool } from '../game/draft';
 import { newMatchSeed, roundRock } from '../game/league';
 import { createRng } from '../game/rng';
 import { Pick } from '../game/runner';
@@ -73,7 +73,7 @@ export function DraftDeckBuilder({ pool, deadline, busy, title, onBack, onDone }
       <Header title={title} onBack={onBack} right={left !== null ? <span className={`pill ${left <= 30 ? 'urgent-pill' : ''}`}>{fmt(left)}</span> : undefined} />
       <p className="hint">
         Wähle <b>{DRAFT_DECK_SIZE}</b> der {pool.length} Karten. Beide haben denselben Pool – dein Deck sieht der Gegner nicht.
-        Legendäre Karten in deinem Deck kommen im Lauf sicher vorbei.
+        Mit diesem Deck spielst du das Duell: 5 Karten auf der Hand, vor jedem Zug ziehst du nach.
       </p>
       <div className="draft-bar">
         <span className={`draft-count ${deck.length === DRAFT_DECK_SIZE ? 'full' : ''}`}>{deck.length}/{DRAFT_DECK_SIZE}</span>
@@ -111,25 +111,19 @@ export function DraftDeckBuilder({ pool, deadline, busy, title, onBack, onDone }
 export const poolPlanText = () => Object.entries(DRAFT_POOL_PLAN).map(([r, n]) => `${n} ${RARITY_LABEL[r as Rarity].toLowerCase()}`).join(' · ');
 
 /** Practice against the computer: pool → deck → run → duel. Nothing is saved, no rewards. */
-export function DraftPractice({ reducedMotion, skin, rune, onExit }: {
+export function DraftPractice({ reducedMotion, rune, onExit }: {
   reducedMotion: boolean; skin: [string, string, string]; rune: string | null; onExit: () => void;
 }) {
   const [seed, setSeed] = useState(() => newMatchSeed());
   const pool = useMemo(() => draftPool(seed), [seed]);
-  const [stage, setStage] = useState<{ k: 'deck' } | { k: 'run'; deck: string[] } | { k: 'duel'; picks: Pick[] } | { k: 'done'; outcome: Outcome; score: { player: number; cpu: number } }>({ k: 'deck' });
+  const [stage, setStage] = useState<{ k: 'deck' } | { k: 'duel'; picks: Pick[] } | { k: 'done'; outcome: Outcome; score: { player: number; cpu: number } }>({ k: 'deck' });
   const restart = () => {
     setSeed(newMatchSeed());
     setStage({ k: 'deck' });
   };
   if (stage.k === 'deck') {
-    return <DraftDeckBuilder pool={pool} deadline={null} title="Draft-Übung" onBack={onExit} onDone={(deck) => setStage({ k: 'run', deck })} />;
-  }
-  if (stage.k === 'run') {
-    const layout = draftLayout(seed, 'a', stage.deck);
-    return (
-      <Runner key={seed} deck={stage.deck} unlocked={[]} reducedMotion={reducedMotion} skin={skin} layout={layout}
-        onFinish={(picks) => setStage({ k: 'duel', picks })} onQuit={onExit} />
-    );
+    // No run: the duel is played with the 20-card draft deck (5 on the hand, the rest drawn).
+    return <DraftDeckBuilder pool={pool} deadline={null} title="Draft-Übung" onBack={onExit} onDone={(deck) => setStage({ k: 'duel', picks: handPicks(deck) })} />;
   }
   if (stage.k === 'duel') return <PracticeDuel seed={seed} pool={pool} picks={stage.picks} rune={rune} reducedMotion={reducedMotion} onEnd={(outcome, score) => setStage({ k: 'done', outcome, score })} onQuit={onExit} />;
   const title = stage.outcome === 'win' ? 'Sieg!' : stage.outcome === 'draw' ? 'Unentschieden' : 'Niederlage';
@@ -157,8 +151,8 @@ function PracticeDuel({ seed, pool, picks, rune, reducedMotion, onEnd, onQuit }:
 }) {
   const [setup] = useState<BattleSetup>(() => {
     const arena = leagueArena(seed, 0);
-    // The computer builds its deck from the same pool and takes the strongest card at every gate of its own track.
-    const cpuHand = computerDraftHand(draftLayout(seed, 'b', completeDraftDeck(pool)));
+    // The computer builds its deck from the same pool (the strongest cards).
+    const cpuHand = toHand(completeDraftDeck(pool));
     return {
       cpuHand, first: null, rocks: [roundRock(seed, 0, arena.cells)], arena, label: 'Draft-Übung', tossRng: createRng(),
       finishLabel: 'Ergebnis', ai: { level: 'medium' }, runes: { player: rune, cpu: null },

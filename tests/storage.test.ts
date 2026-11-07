@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DECK_SIZE, STARTER_DECK, STARTING_UNLOCKED } from '../src/game/cards';
+import { CARDS, DECK_SIZE, STARTER_DECK, STARTING_UNLOCKED } from '../src/game/cards';
 import { applyReward, computeReward, grant, leagueReward } from '../src/game/rewards';
 import { KeyValueStore, SAVE_KEY, defaultSave, isValidDeck, loadSave, writeSave } from '../src/game/storage';
 
@@ -55,7 +55,6 @@ describe('Speichern & Laden', () => {
 
 describe('Belohnungen', () => {
   const unlocked = defaultSave().unlocked;
-  const pick = (cardId: string, kind: 'deck' | 'discovery', gate = 0) => ({ cardId, kind, gate, mod: 0 });
 
   it('Einfaches Spiel: nur Münzen nach Schwierigkeit, nie eine Karte', () => {
     expect(computeReward('win', 'easy')).toEqual({ coins: 30, newCard: null, duplicateCard: null });
@@ -69,18 +68,21 @@ describe('Belohnungen', () => {
     expect(after.stats.wins).toBe(1);
   });
 
-  it('Rangliste: gewonnenes Match schaltet die seltenste neue Entdeckung frei', () => {
-    const r = leagueReward(true, [pick('e01', 'discovery'), pick('l03', 'discovery', 1), pick('c01', 'deck', 2)], unlocked);
-    expect(r).toEqual({ coins: 0, newCard: 'l03', duplicateCard: null });
+  it('Rangliste: gewonnenes Match schaltet eine zufällige Karte frei, die noch fehlt (gleicher Seed = gleiche Karte)', () => {
+    const r = leagueReward(true, 'match-1', unlocked);
+    expect(r.coins).toBe(0);
+    expect(r.newCard).not.toBeNull();
+    expect(unlocked).not.toContain(r.newCard);
+    expect(leagueReward(true, 'match-1', unlocked)).toEqual(r);
+    const cards = new Set(Array.from({ length: 30 }, (_, i) => leagueReward(true, `m-${i}`, unlocked).newCard));
+    expect(cards.size).toBeGreaterThan(5);
     const after = grant(defaultSave(), r);
-    expect(after.unlocked).toContain('l03');
-    expect(after.unlocked).not.toContain('e01');
+    expect(after.unlocked).toContain(r.newCard);
     expect(after.stats).toEqual(defaultSave().stats);
   });
 
-  it('Rangliste: keine neue Entdeckung → 50 Münzen; verloren → nichts', () => {
-    expect(leagueReward(true, [pick('c12', 'discovery')], unlocked)).toEqual({ coins: 50, newCard: null, duplicateCard: 'c12' });
-    expect(leagueReward(true, [], unlocked).coins).toBe(50);
-    expect(leagueReward(false, [pick('l03', 'discovery')], unlocked)).toEqual({ coins: 0, newCard: null, duplicateCard: null });
+  it('Rangliste: alle Karten schon da → 50 Münzen; verloren → nichts', () => {
+    expect(leagueReward(true, 'x', CARDS.map((c) => c.id))).toEqual({ coins: 50, newCard: null, duplicateCard: null });
+    expect(leagueReward(false, 'x', unlocked)).toEqual({ coins: 0, newCard: null, duplicateCard: null });
   });
 });

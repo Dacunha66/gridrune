@@ -14,13 +14,13 @@ import { Header } from './Header';
 import { Battle, BattleSetup, DuelRecord } from './Battle';
 import { Runner } from './Runner';
 import { CLASSIC_ARENA } from '../game/arenas';
-import { HAND_SIZE, Outcome, toHand } from '../game/battle';
+import { DRAW_HAND_SIZE, HAND_SIZE, Outcome, toHand } from '../game/battle';
 import { getCard } from '../game/cards';
 import { imageUrl } from '../game/catalog';
 import { CLASS_INFO, TERRAIN_INFO, Terrain } from '../game/effects';
 import { createRng } from '../game/rng';
 import { RUNES, RuneDef, findRune } from '../game/runes';
-import { MissionLog, MissionTicket, handPicks, missionRngs } from '../game/verify';
+import { MissionLog, MissionTicket, missionDeckPicks, missionRngs } from '../game/verify';
 import { RevealItem, RewardReveal, runeFacts } from '../components/RewardReveal';
 import { GrantedReward } from '../game/campaignRewards';
 import { finishMissionRemote, readPending, startMission as startMissionRemote, writePending } from '../game/adventureApi';
@@ -29,7 +29,7 @@ import { RuneBadge, RuneMatchup } from '../components/RuneBadge';
 import { Pick } from '../game/runner';
 import {
   CampaignContent, ImageRef, KIND_LABEL, LEVEL_LABEL, Mission, MissionCard, Opponent, RANK_LABEL, Reward, World, findArena,
-  missionPool, rewardText, suggestHand, visibleWorlds, worldMissions,
+  missionPool, rewardText, visibleWorlds, worldMissions,
 } from '../game/campaign';
 import { DuelStats, duelStats, goalProgress, goalText } from '../game/campaignGoals';
 import {
@@ -123,14 +123,13 @@ export function Campaign({
     );
   }
   const back = () => (startMission ? onExit() : toWorld(mission.worldId));
-  const begin = async (hand: MissionCard[]) => {
-    const ids = hand.map((c) => c.cardId);
+  const begin = async (_hand: MissionCard[]) => {
     let ticket: MissionTicket | undefined;
     if (server) {
       // Signed in: the server checks the start and hands out the seed (toss and opponent follow from it).
       if (starting) return;
       setStarting(true);
-      const r = await startMissionRemote(mission.id, deck, mission.mode === 'runner' ? null : ids, playerRune);
+      const r = await startMissionRemote(mission.id, deck, null, playerRune);
       setStarting(false);
       if (r.kind !== 'ticket') {
         setView({ k: 'brief', missionId: mission.id });
@@ -141,8 +140,8 @@ export function Campaign({
       ticket = r.ticket;
     }
     setNotice('');
-    if (mission.mode === 'runner') setView({ k: 'runner', missionId: mission.id, runId: Date.now(), ticket });
-    else setView({ k: 'battle', missionId: mission.id, picks: handPicks(ticket?.hand ?? ids), stumbles: null, runId: Date.now(), ticket });
+    // No run and no hand choice: the mission deck is shuffled, 5 cards on the hand (the server deals the same).
+    setView({ k: 'battle', missionId: mission.id, picks: missionDeckPicks(mission, ticket?.deck ?? deck), stumbles: null, runId: Date.now(), ticket });
   };
 
   if (view.k === 'brief') {
@@ -428,13 +427,7 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
   const arena = findArena(mission.arenaId) ?? CLASSIC_ARENA;
   const slots = starSlots(progress, mission);
   const pool = useMemo(() => missionPool(mission, deck), [mission, deck]);
-  const [hand, setHand] = useState<MissionCard[]>(() => suggestHand(mission, pool));
-  const [choosing, setChoosing] = useState(false);
-  const runner = mission.mode === 'runner';
-  const toggle = (c: MissionCard) => {
-    if (hand.includes(c)) setHand(hand.filter((h) => h !== c));
-    else if (hand.length < HAND_SIZE) setHand([...hand, c]);
-  };
+  const [showDeck, setShowDeck] = useState(false);
   const terrains = [...new Set(arena.cells)].filter((t) => t !== 'normal');
   const world = content.worlds.find((w) => w.id === mission.worldId);
   return (
@@ -458,7 +451,6 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
           <div>
             <p><b>{arena.name}</b></p>
             <p className="muted small">{terrains.length > 0 ? terrains.map((t, i) => <span key={t}>{i > 0 && ' · '}<TerrainGlyph terrain={t} /> {TERRAIN_INFO[t].label}</span>) : 'Keine Geländefelder'}</p>
-            {runner && <p className="small"><GameIcon name="run" /> Erst laufen, dann mit den gesammelten Karten kämpfen.</p>}
             {mission.onlyClass && <p className="small">Nur <ClassGlyph cls={mission.onlyClass} /> {CLASS_INFO[mission.onlyClass].label}-Karten erlaubt.</p>}
           </div>
         </section>
@@ -492,45 +484,27 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
           </section>
         )}
 
-        {!runner && (
-          <section className="brief-hand">
-            <h2>Deine Karten <span className="muted small">{hand.length}/{HAND_SIZE}</span></h2>
-            {!choosing ? (
-              <>
-                <div className="hand-grid">
-                  {hand.map((c) => (
-                    <div key={c.cardId} className="hand-pick">
-                      <Card id={c.cardId} size="sm" />
-                      {c.loan && <span className="loan-tag">Leihe</span>}
-                    </div>
-                  ))}
+        <section className="brief-hand">
+          <h2>Dein Deck <span className="muted small">{pool.length} Karten</span></h2>
+          <p className="muted small">
+            Es wird gemischt, {DRAW_HAND_SIZE} Karten hast du auf der Hand, vor jedem Zug ziehst du nach.
+            {mission.onlyClass && ` Nur deine ${CLASS_INFO[mission.onlyClass].label}-Karten spielen mit${pool.some((c) => c.loan) ? ' – fehlende Plätze füllen gewöhnliche Leihkarten („Leihe“).' : '.'}`}
+          </p>
+          {showDeck ? (
+            <div className="hand-grid pool">
+              {pool.map((c) => (
+                <div key={c.cardId} className="hand-pick">
+                  <Card id={c.cardId} size="sm" ariaLabel={`${getCard(c.cardId).name}${c.loan ? ', Leihkarte' : ''}`} />
+                  {c.loan && <span className="loan-tag">Leihe</span>}
                 </div>
-                <button type="button" className="btn btn-small" onClick={() => setChoosing(true)}>Karten ändern</button>
-              </>
-            ) : (
-              <>
-                <p className="muted small">Tippe Karten an, um sie zu wählen oder abzuwählen.{pool.some((c) => c.loan) && ' „Leihe“ = gewöhnliche Leihkarte nur für diese Mission.'}</p>
-                <div className="hand-grid pool">
-                  {pool.map((c) => (
-                    <div key={c.cardId} className="hand-pick">
-                      <Card id={c.cardId} size="sm" selected={hand.includes(c)} onClick={() => toggle(c)} ariaLabel={`${getCard(c.cardId).name}${c.loan ? ', Leihkarte' : ''}${hand.includes(c) ? ', gewählt' : ''}`} />
-                      {c.loan && <span className="loan-tag">Leihe</span>}
-                    </div>
-                  ))}
-                </div>
-                <div className="row-buttons">
-                  <button type="button" className="btn btn-small" onClick={() => setHand(suggestHand(mission, pool))}>Vorschlag</button>
-                  <button type="button" className="btn btn-small" onClick={() => setChoosing(false)} disabled={hand.length !== HAND_SIZE}>Fertig</button>
-                </div>
-              </>
-            )}
-          </section>
-        )}
-        {runner && <p className="muted small">Hinweis: Fundkarten aus dem Lauf spielst du in diesem Duell mit – in deine Sammlung kommen sie in der Kampagne noch nicht.</p>}
+              ))}
+            </div>
+          ) : <button type="button" className="btn btn-small" onClick={() => setShowDeck(true)}>Deck ansehen</button>}
+        </section>
       </div>
       {notice && <p className="hint brief-notice" role="alert">{notice}</p>}
-      <button type="button" className="btn btn-primary btn-big brief-start" disabled={starting || (!runner && (hand.length !== HAND_SIZE || choosing))} onClick={() => onStart(hand)}>
-        {starting ? 'Wird gestartet …' : mission.kind === 'boss' ? <><GameIcon name="crown" /> Zum Boss</> : runner ? <><GameIcon name="run" /> Lauf starten</> : <><GameIcon name="swords" /> Duell starten</>}
+      <button type="button" className="btn btn-primary btn-big brief-start" disabled={starting || pool.length < HAND_SIZE} onClick={() => onStart(pool)}>
+        {starting ? 'Wird gestartet …' : mission.kind === 'boss' ? <><GameIcon name="crown" /> Zum Boss</> : <><GameIcon name="swords" /> Duell starten</>}
       </button>
     </main>
   );

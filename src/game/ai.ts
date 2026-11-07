@@ -4,10 +4,10 @@
 // are unknown to it – where it thinks ahead it uses cautious stand-ins with the strongest values the player
 // has shown on the board so far.
 import {
-  BattleState, DIR_ORDER, HAND_SIZE, cardsLeft, HandCard, Move, Side, Values, applyMove, cardValue, cellBreakdown, computeFlips, isGameOver, legalMoves,
+  BattleState, DIR_ORDER, cardsLeft, HandCard, Move, Side, Values, applyMove, cardValue, cellBreakdown, computeFlips, isGameOver, legalMoves,
   neighbours, other, rotateValues, score, toHand, totalMoves,
 } from './battle';
-import { CARDS, Rarity, getCard, pickByRarity, virtualCard } from './cards';
+import { CARDS, DECK_SIZE, Rarity, getCard, pickByRarity, virtualCard } from './cards';
 import { CardClass } from './effects';
 import { Rng } from './rng';
 import { RuneUse, applyRune, echoCapturable, findRune, runeChoices, runeProblem, runeRules } from './runes';
@@ -98,7 +98,7 @@ export function publicView(state: BattleState, side: Side): BattleState {
   const piles = state.piles
     ? { ...state.piles, [opp]: stand(state.piles[opp]), [side]: [...state.piles[side]].sort((a, b) => a.cardId.localeCompare(b.cardId)) }
     : undefined;
-  return { ...state, hands: { ...state.hands, [opp]: stand(state.hands[opp]) }, ...(piles ? { piles } : {}) };
+  return { ...state, seed: 0, hands: { ...state.hands, [opp]: stand(state.hands[opp]) }, ...(piles ? { piles } : {}) };
 }
 
 /** In the last moves the hard opponent looks at every possible continuation (few enough to check them all). */
@@ -213,6 +213,8 @@ export function chooseCpuRune(state: BattleState, rng: Rng, options: AiOptions =
   if (!slot || slot.used || isGameOver(state)) return null;
   const level = options.level ?? 'medium';
   if (level === 'easy' && rng() > 0.25) return null;
+  const def = findRune(slot.id);
+  if (def && runeRules(def).effect === 'mulligan') return mulliganChoice(state, side);
   const view = publicView(state, side);
   const before = positionValue(view, side);
   let best: RuneUse | null = null;
@@ -230,14 +232,27 @@ export function chooseCpuRune(state: BattleState, rng: Rng, options: AiOptions =
   return gain >= bar ? best : null;
 }
 
+/**
+ * Rune der Hand: the computer knows which cards are still in its deck (not their order). It reshuffles when its hand
+ * is clearly weaker than the cards it could draw instead.
+ */
+function mulliganChoice(state: BattleState, side: Side): RuneUse | null {
+  const hand = state.hands[side];
+  const pile = state.piles?.[side] ?? [];
+  if (hand.length === 0 || pile.length === 0) return null;
+  const power = (c: HandCard) => handValues(c).reduce((a, b) => a + b, 0);
+  const avg = (list: readonly HandCard[]) => list.reduce((s, c) => s + power(c), 0) / list.length;
+  return avg(hand) <= avg([...hand, ...pile]) - 2 ? { rune: true } : null;
+}
+
 /** Chance per rarity for the computer's cards – tuned (by simulation) to match the difficulty of version 1.1. */
 export const CPU_SHARE: Record<Rarity, number> = { common: 60, uncommon: 35, rare: 5, epic: 0, legendary: 0, mythic: 0 };
 
-/** Draws 8 distinct cards for the computer, mostly commons and uncommons. */
-export function drawCpuHand(rng: Rng): HandCard[] {
+/** Draws a deck of distinct cards for the computer (20 like the player's), mostly commons and uncommons. */
+export function drawCpuHand(rng: Rng, size: number = DECK_SIZE): HandCard[] {
   const pool = [...CARDS];
   const hand: string[] = [];
-  while (hand.length < HAND_SIZE) {
+  while (hand.length < Math.min(size, CARDS.length)) {
     // Fall back to any card if the active catalog has none of the usual rarities left.
     const card = pickByRarity(rng, pool, CPU_SHARE) ?? pool[Math.floor(rng() * pool.length)];
     pool.splice(pool.indexOf(card), 1);

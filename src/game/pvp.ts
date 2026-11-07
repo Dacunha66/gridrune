@@ -2,9 +2,9 @@
 // ("player" = the player who created the match, "cpu" = the one who joined) and applies every move with the
 // normal rules. Each player only ever gets a view from their own side: the board turned so that they are
 // "player", and the opponent's hand hidden (only the number of cards is visible).
-import { BattleState, HAND_SIZE, HandCard, Move, Side, createBattle, isGameOver, legalMoves, outcome, score } from './battle';
+import { BattleState, HandCard, Move, Side, createBattle, isGameOver, legalMoves, outcome, score } from './battle';
 import { ARENAS, Arena, leagueArena } from './arenas';
-import { CARDS, getCard } from './cards';
+import { CARDS, DECK_SIZE, getCard } from './cards';
 import { deriveRng, roundRock } from './league';
 import { Action, applyAction, isRuneUse } from './runes';
 import type { RunnerLayout } from './runner';
@@ -47,16 +47,17 @@ export function swapSides<T>(value: T): T {
 export function viewState(state: BattleState, seat: Seat): BattleState {
   const turned = seat === 'a' ? state : swapSides(state);
   const hide = (cards: HandCard[]) => cards.map(() => ({ cardId: HIDDEN, mod: 0 }));
-  // Nachziehen: both piles stay face down (the own one too – only its size is known).
+  // Both decks stay face down (the own one too – only its size is known); the reshuffle number stays on the server.
   return {
-    ...turned, hands: { player: turned.hands.player, cpu: hide(turned.hands.cpu) },
+    ...turned, seed: 0, hands: { player: turned.hands.player, cpu: hide(turned.hands.cpu) },
     ...(turned.piles ? { piles: { player: hide(turned.piles.player), cpu: hide(turned.piles.cpu) } } : {}),
   };
 }
 
 /** Is this a usable hand: 8 different active cards the player owns? */
 export function validPvpHand(hand: unknown, owned: readonly string[]): hand is string[] {
-  if (!Array.isArray(hand) || hand.length !== HAND_SIZE || new Set(hand).size !== HAND_SIZE) return false;
+  // The player's deck: 20 different owned, active cards (5 on the hand, the rest drawn).
+  if (!Array.isArray(hand) || hand.length !== DECK_SIZE || new Set(hand).size !== DECK_SIZE) return false;
   const active = new Set(CARDS.map((c) => c.id));
   const have = new Set(owned);
   return hand.every((id) => typeof id === 'string' && active.has(id) && have.has(id));

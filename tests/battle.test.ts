@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
+import { cardsLeft,
   BattleState, BoardCell, CELL_COUNT, applyMove, cardValue, coinToss, computeFlips, cpuChoosesFirst, createBattle, isGameOver, legalMoves, outcome, score, toHand,
 } from '../src/game/battle';
 import { chooseCpuMove, drawCpuHand } from '../src/game/ai';
@@ -116,8 +116,10 @@ describe('Kampf-Regeln', () => {
       }
       expect(moves).toBe(16);
       expect(s.board.every((c) => c !== null)).toBe(true);
-      expect(s.hands.player).toHaveLength(0);
-      expect(s.hands.cpu).toHaveLength(0);
+      // 20-card decks: 8 cards played by each side, 12 left (hand + deck); the hand never above 5.
+      expect(cardsLeft(s, 'player')).toBe(12);
+      expect(cardsLeft(s, 'cpu')).toBe(12);
+      expect(s.hands.player.length).toBeLessThanOrEqual(5);
       const sc = score(s);
       expect(sc.player + sc.cpu).toBe(16);
       expect(outcome(s)).toBe(sc.player > sc.cpu ? 'win' : sc.player < sc.cpu ? 'loss' : 'draw');
@@ -168,9 +170,9 @@ describe('Kampf-Regeln', () => {
     expect(next.lastFlips.length).toBeGreaterThan(0);
   });
 
-  it('Computerhand hat 8 unterschiedliche Karten', () => {
+  it('Computerdeck hat 20 unterschiedliche Karten', () => {
     const hand = drawCpuHand(createRng(9));
-    expect(new Set(hand.map((c) => c.cardId)).size).toBe(8);
+    expect(new Set(hand.map((c) => c.cardId)).size).toBe(20);
   });
 });
 

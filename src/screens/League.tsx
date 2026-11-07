@@ -7,16 +7,15 @@ import { Card } from '../components/Card';
 import { CARDS, RARITY_LABEL, RARITY_ORDER, Rarity, cardPower, getCard, ownedActiveIds } from '../game/cards';
 import { Outcome, Side } from '../game/battle';
 import { COLLECTION_LEAGUE_RULES, OwnedCounts, autoDeck, countCards, rarityCounts, validateDeck } from '../game/rules';
-import { deriveRng, leagueLayout, matchCode, newMatchSeed, seedFingerprint } from '../game/league';
+import { deriveRng, matchCode, newMatchSeed, seedFingerprint } from '../game/league';
 import { MatchProgress, emptyMatch, nextStep, recordRound, wins } from '../game/match';
-import { Pick, RunInput, replayRun } from '../game/runner';
+import { Pick } from '../game/runner';
 import { SaveData } from '../game/storage';
 import { Header } from './Header';
-import { Runner } from './Runner';
 import { Battle } from './Battle';
 import { RuneMatchup } from '../components/RuneBadge';
 import { findRune } from '../game/runes';
-import { DuelLog, LeagueTicket, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
+import { DuelLog, LeagueTicket, handPicks, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
 import { Reward } from '../game/rewards';
 import { CloudSave } from '../game/cloudSave';
 import { finishLeagueRemote, readPending, startLeague, writePending } from '../game/adventureApi';
@@ -44,7 +43,7 @@ function ownedCounts(save: SaveData): OwnedCounts {
   return Object.fromEntries(ownedActiveIds(save.unlocked).map((id) => [id, RULES.deck.maxCopies]));
 }
 
-export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, onExit, account = null }: Props) {
+export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, account = null }: Props) {
   const owned = useMemo(() => ownedCounts(save), [save]);
   const savedDeck = save.leagueDeck.length ? save.leagueDeck : autoDeck(RULES.deck, owned);
   const [stage, setStage] = useState<'deck' | 'intro' | 'run' | 'match' | 'done'>('deck');
@@ -52,18 +51,15 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
   const [seed, setSeed] = useState('');
   const [fingerprint, setFingerprint] = useState('');
   const [picks, setPicks] = useState<Pick[]>([]);
-  const [replayOk, setReplayOk] = useState<boolean | null>(null);
   const [match, setMatch] = useState<MatchProgress>(emptyMatch());
   const [roundScores, setRoundScores] = useState<string[]>([]);
   const [between, setBetween] = useState<string | null>(null);
   const [ticket, setTicket] = useState<LeagueTicket | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
-  const runInputs = useRef<RunInput[]>([]);
   const roundLogs = useRef<DuelLog[]>([]);
   const [payout, setPayout] = useState<Payout | null>(null);
   const [revealOpen, setRevealOpen] = useState(false);
 
-  const layout = useMemo(() => (seed ? leagueLayout(seed, 'du', deck) : null), [seed, deck]);
   const cpuHand = useMemo(() => (seed ? leagueCpuHand(seed) : []), [seed]);
   // The computer's rune: one basic rune per match, fixed by the match seed (same in every round); signed in: from the server.
   const cpuRune = ticket ? ticket.cpuRune : seed ? leagueCpuRune(seed, !!runes) : null;
@@ -93,7 +89,6 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
     }
     setStarting(null);
     setTicket(t);
-    runInputs.current = [];
     roundLogs.current = [];
     setPayout(null);
     setRevealOpen(false);
@@ -106,14 +101,6 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
     setStage('intro');
   }
 
-  function onRunFinished(p: Pick[], inputs: RunInput[]) {
-    // The same check the server will run: replay the inputs and compare.
-    const replay = replayRun(layout!, inputs);
-    setReplayOk(replay.error === null && JSON.stringify(replay.picks) === JSON.stringify(p));
-    runInputs.current = inputs;
-    setPicks(p);
-    setStage('match');
-  }
 
   const step = nextStep(match);
   const stepRound = step.kind === 'round' ? step.round : 0;
@@ -127,7 +114,7 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
       return;
     }
     setPayout({ status: 'checking' });
-    const log = { run: runInputs.current, rounds: roundLogs.current };
+    const log = { rounds: roundLogs.current };
     const r = await finishLeagueRemote(ticket.id, log);
     if (r.kind === 'paid') {
       account.adopt(r.cloud);
@@ -173,23 +160,18 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
             <h2>Match {matchCode(seed)}</h2>
             <p className="muted small">Fingerabdruck (vor dem Match festgelegt): <span className="mono break">{fingerprint || '…'}</span></p>
             <ul className="plain-list">
-              <li><GameIcon name="run" /> Lauf mit 8 Toren: je <b>2 Karten aus deinem Deck</b> und <b>1 neutrale Entdeckung</b> (für beide Spieler gleich).</li>
-              <li><GameIcon name="skip" /> Stolpersteine: −1 für die nächste Karte. Kein Vorspulen, kein Überspringen.</li>
-              <li><GameIcon name="swords" /> <b>2 Runden</b> mit derselben Hand, der Start wird getauscht. 2:0 gewinnt, bei 1:1 folgt ein <b>Entscheidungsduell</b>.</li>
+              <li><GameIcon name="cards" /> Du spielst mit deinem <b>Liga-Deck</b>: Es wird gemischt, <b>5 Karten</b> hast du auf der Hand, vor jedem Zug ziehst du nach.</li>
+              <li><GameIcon name="swords" /> <b>2 Runden</b> mit demselben Deck (jede Runde neu gemischt), der Start wird getauscht. 2:0 gewinnt, bei 1:1 folgt ein <b>Entscheidungsduell</b>.</li>
               <li><GameIcon name="lock" /> In jedem Duell blockiert ein <b>Fels</b> ein Feld: 15 Felder, kein Unentschieden, kein Startvorteil.</li>
             </ul>
             {runes && <RuneMatchup player={playerRune} cpu={cpuRune} note={runeNote} />}
-            <p className="league-prize"><GameIcon name="gift" /> <b>Gewinnst du das Match</b>, gehört dir die seltenste <b>neue Entdeckung</b> aus deinem Lauf. Ist keine neu, gibt es <Coin /> 50.</p>
-            <p className="muted small">{account ? 'Match gegen den Computer – der Server prüft Lauf und Duelle, bevor die Belohnung gutgeschrieben wird.' : 'Als Gast spielst du ohne Belohnung – melde dich an, um Karten zu gewinnen.'}</p>
+            <p className="league-prize"><GameIcon name="gift" /> <b>Gewinnst du das Match</b>, bekommst du eine <b>zufällige Karte, die du noch nicht hast</b>. Hast du schon alle, gibt es <Coin /> 50.</p>
+            <p className="muted small">{account ? 'Match gegen den Computer – der Server prüft die Duelle, bevor die Belohnung gutgeschrieben wird.' : 'Als Gast spielst du ohne Belohnung – melde dich an, um Karten zu gewinnen.'}</p>
           </section>
         </div>
-        <footer className="bottombar"><button type="button" className="btn btn-primary btn-wide" onClick={() => setStage('run')}>▶ Lauf starten</button></footer>
+        <footer className="bottombar"><button type="button" className="btn btn-primary btn-wide" onClick={() => { setPicks(handPicks(deck)); setStage('match'); }}>▶ Match starten</button></footer>
       </main>
     );
-  }
-
-  if (stage === 'run' && layout) {
-    return <Runner key={seed} layout={layout} markNew={!!account} deck={deck} unlocked={save.unlocked} reducedMotion={reducedMotion} skin={skin} onFinish={onRunFinished} onQuit={onExit} />;
   }
 
   if (stage === 'match' && step.kind === 'round') {
@@ -253,7 +235,7 @@ export function League({ save, reducedMotion, skin, runes = null, onSaveDeck, on
         <ul className="plain-list">{roundScores.map((r) => <li key={r}>{r}</li>)}</ul>
         {statusText && <p className={`result-status status-${payout?.status}`} role="status">{statusText.replace('🪙', '')}{payout?.status === 'paid' && !reward?.newCard && <> <Coin /></>}</p>}
         {reveal.length > 0 && payout?.status === 'paid' && !revealOpen && <button type="button" className="btn" onClick={() => setRevealOpen(true)}>🎁 Belohnung ansehen</button>}
-        <p className="muted small">Match {matchCode(seed)} · Lauf-Prüfung: {replayOk ? '✓ nachgespielt und bestätigt' : '⚠️ Abweichung'}</p>
+        <p className="muted small">Match {matchCode(seed)}</p>
         <p className="muted small">Seed zum Nachprüfen: <span className="mono break">{seed}</span></p>
       </div>
       <div className="menu-buttons">
