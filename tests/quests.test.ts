@@ -139,3 +139,18 @@ describe('Erfolge: gespeicherte Daten sind nicht vertrauenswürdig', () => {
     expect(parseQuestState({ titles: { owned: ['A'], equipped: 'A' } }).titles.equipped).toBe('A');
   });
 });
+
+describe('Erfolge: neue Zähler (v1.41)', () => {
+  it('Kantersiege, Runen, Geländeboni und Kristall-Siege werden gezählt', () => {
+    expect(eventDelta({ bigWins: 1, runesUsed: 2, terrainBonus: 3, kristallWins: 1 })).toEqual({ big_wins: 1, runes_used: 2, terrain: 3, kristall_wins: 1 });
+  });
+  it('Erfolgsreihen: eindeutige Kennungen, aufsteigende Stufen, Titel höchstens 24 Zeichen', () => {
+    const ids = DEFAULT_QUESTS.achievements.map((a) => a.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const chains = new Map<string, number[]>();
+    for (const a of DEFAULT_QUESTS.achievements) chains.set(a.chain ?? a.id, [...(chains.get(a.chain ?? a.id) ?? []), a.target]);
+    for (const targets of chains.values()) expect(targets).toEqual([...targets].sort((x, y) => x - y));
+    expect(DEFAULT_QUESTS.achievements.every((a) => a.reward.type !== 'title' || (a.reward.title ?? '').length <= 24)).toBe(true);
+    expect(DEFAULT_QUESTS.achievements.length).toBeGreaterThanOrEqual(50);
+  });
+});

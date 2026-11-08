@@ -21,13 +21,13 @@ import {
 import { Reward, applyReward, computeReward, grant, isAiLevel, leagueReward } from '../game/rewards';
 import { COLLECTION_LEAGUE_RULES, validateDeck } from '../game/rules';
 import { ownedActiveIds } from '../game/cards';
-import { Outcome, Side } from '../game/battle';
+import { KRISTALL_CELLS, Outcome, Side } from '../game/battle';
 import { PlayedDuel } from '../game/verify';
 import { duelStats } from '../game/campaignGoals';
 import { RaidCheck } from '../game/raid';
 import {
   QUESTS_COLLECTION, QUESTS_DOC, QuestConfig, QuestEvent, QuestState, Titles, claimQuests, eventDelta, parseQuestConfig, parseQuestState, questBoard,
-  questContext, questDay, questWeek, DEFAULT_QUESTS,
+  questContext, questDay, questWeek, DEFAULT_QUESTS, BIG_WIN_FIELDS,
 } from '../game/quests';
 import { EffectId } from '../game/effects';
 
@@ -72,15 +72,23 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
 let QUEST_CONFIG: QuestConfig = structuredClone(DEFAULT_QUESTS);
 
 /** Captures and effects of the player in replayed duels. */
-function duelTally(duels: readonly PlayedDuel[]): { captures: number; effects: Partial<Record<EffectId, number>> } {
+function duelTally(duels: readonly PlayedDuel[]): Pick<QuestEvent, 'captures' | 'effects' | 'bigWins' | 'runesUsed' | 'terrainBonus' | 'kristallWins'> {
   let captures = 0;
+  let bigWins = 0;
+  let runesUsed = 0;
+  let terrainBonus = 0;
+  let kristallWins = 0;
   const effects: Partial<Record<EffectId, number>> = {};
   for (const d of duels) {
     const st = duelStats(d.begin, d.moves);
     captures += st.captures;
+    runesUsed += st.runes ?? 0;
+    terrainBonus += st.terrainBonus;
+    if (st.outcome === 'win' && st.fields >= BIG_WIN_FIELDS) bigWins++;
+    if (st.outcome === 'win' && d.begin.board.length === KRISTALL_CELLS) kristallWins++;
     for (const [id, n] of Object.entries(st.effects)) effects[id as EffectId] = (effects[id as EffectId] ?? 0) + (n ?? 0);
   }
-  return { captures, effects };
+  return { captures, effects, bigWins, runesUsed, terrainBonus, kristallWins };
 }
 
 /** Day and week keys the counters belong to (German time). */

@@ -167,3 +167,13 @@ describe('Balance mit Deck-Regel (v1.40)', () => {
     expect(slowest).toBeLessThan(1500);
   });
 });
+
+describe('Erfolge aus geprüften Duellen', () => {
+  it('Runen-Einsätze des Spielers werden in der Duell-Statistik gezählt', async () => {
+    const { duelStats } = await import('../src/game/campaignGoals');
+    const s = createBattle(DECK, OTHER, 'player', [], undefined, { player: 'rn06', cpu: null }, deriveRng('q', 'deal'));
+    const after = applyRune(s, { rune: true });
+    const st = duelStats(s, [{ rune: true }, chooseCpuMove(after, createRng(1))]);
+    expect(st.runes).toBe(1);
+  });
+});

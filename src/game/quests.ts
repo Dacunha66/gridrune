@@ -53,9 +53,15 @@ export function msToNextDay(now: Date = new Date()): number {
  */
 export type QuestMetric =
   | 'games' | 'wins' | 'wins_strong' | 'captures' | 'effects' | 'missions' | 'stars' | 'raid_attacks' | 'online_games' | 'online_wins' | 'league_wins'
+  | 'big_wins' | 'runes_used' | 'terrain' | 'kristall_wins'
   | 'cards' | 'effects_distinct' | 'worlds_complete' | 'raids_defeated';
 
-export const COUNTED_METRICS: QuestMetric[] = ['games', 'wins', 'wins_strong', 'captures', 'effects', 'missions', 'stars', 'raid_attacks', 'online_games', 'online_wins', 'league_wins'];
+export const COUNTED_METRICS: QuestMetric[] = [
+  'games', 'wins', 'wins_strong', 'captures', 'effects', 'missions', 'stars', 'raid_attacks', 'online_games', 'online_wins', 'league_wins',
+  'big_wins', 'runes_used', 'terrain', 'kristall_wins',
+];
+/** A "Kantersieg": won with at least this many fields of the own colour. */
+export const BIG_WIN_FIELDS = 12;
 export const STATE_METRICS: QuestMetric[] = ['cards', 'effects_distinct', 'worlds_complete', 'raids_defeated'];
 export const QUEST_METRICS: QuestMetric[] = [...COUNTED_METRICS, ...STATE_METRICS];
 
@@ -72,6 +78,10 @@ export const METRIC_TEXT: Record<QuestMetric, (n: number) => string> = {
   online_games: (n) => `Spiele ${n} Online- oder Draft-${n === 1 ? 'Duell' : 'Duelle'}`,
   online_wins: (n) => `Gewinne ${n} Online- oder Draft-${n === 1 ? 'Duell' : 'Duelle'}`,
   league_wins: (n) => `Gewinne ${n} ${n === 1 ? 'Ranglistenspiel' : 'Ranglistenspiele'}`,
+  big_wins: (n) => `Gewinne ${n === 1 ? 'ein Duell' : `${n} Duelle`} mit mindestens ${BIG_WIN_FIELDS} Feldern`,
+  runes_used: (n) => `Setze ${n === 1 ? 'eine Rune' : `${n}× eine Rune`} ein`,
+  terrain: (n) => `Löse ${n} ${n === 1 ? 'Geländebonus' : 'Geländeboni'} aus`,
+  kristall_wins: (n) => `Gewinne ${n === 1 ? 'ein Duell' : `${n} Duelle`} in einer Kristall-Arena`,
   cards: (n) => `Besitze ${n} Karten`,
   effects_distinct: (n) => `Löse ${n} verschiedene Spezialeffekte aus`,
   worlds_complete: (n) => `Hole alle Sterne in ${n === 1 ? 'einer Kampagnen-Welt' : `${n} Kampagnen-Welten`}`,
@@ -82,7 +92,8 @@ export const METRIC_TEXT: Record<QuestMetric, (n: number) => string> = {
 export const METRIC_LABEL: Record<QuestMetric, string> = {
   games: 'Duelle gespielt', wins: 'Siege', wins_strong: 'Siege gegen KI Normal/Schwer', captures: 'Eroberte Karten', effects: 'Ausgelöste Effekte',
   missions: 'Kampagnen-Missionen', stars: 'Neue Kampagnen-Sterne', raid_attacks: 'Raid-Angriffe', online_games: 'Online-/Draft-Duelle',
-  online_wins: 'Online-/Draft-Siege', league_wins: 'Ranglisten-Siege', cards: 'Karten in der Sammlung (Stand)',
+  online_wins: 'Online-/Draft-Siege', league_wins: 'Ranglisten-Siege', big_wins: `Kantersiege (≥ ${BIG_WIN_FIELDS} Felder)`,
+  runes_used: 'Runen eingesetzt', terrain: 'Geländeboni ausgelöst', kristall_wins: 'Siege in Kristall-Arenen', cards: 'Karten in der Sammlung (Stand)',
   effects_distinct: 'Verschiedene Effekte (Stand)', worlds_complete: 'Welten mit allen Sternen (Stand)', raids_defeated: 'Besiegte Weltbosse (Stand)',
 };
 
@@ -101,6 +112,12 @@ export interface QuestEvent {
   onlineGames?: number;
   onlineWins?: number;
   leagueWins?: number;
+  /** Duels won with at least BIG_WIN_FIELDS fields. */
+  bigWins?: number;
+  runesUsed?: number;
+  terrainBonus?: number;
+  /** Duels won on the Kristall board shape. */
+  kristallWins?: number;
 }
 
 export function eventDelta(e: QuestEvent): Counters {
@@ -118,6 +135,10 @@ export function eventDelta(e: QuestEvent): Counters {
   add('online_games', e.onlineGames);
   add('online_wins', e.onlineWins);
   add('league_wins', e.leagueWins);
+  add('big_wins', e.bigWins);
+  add('runes_used', e.runesUsed);
+  add('terrain', e.terrainBonus);
+  add('kristall_wins', e.kristallWins);
   for (const [id, n] of Object.entries(e.effects ?? {})) {
     if (!EFFECT_IDS.includes(id as EffectId) || !n) continue;
     add('effects', n);
@@ -262,6 +283,8 @@ export const DEFAULT_QUESTS: QuestConfig = {
     q('d-fx3', 'effects', 3, coins(40)),
     q('d-mission', 'missions', 1, coins(40)),
     q('d-raid', 'raid_attacks', 1, coins(50)),
+    q('d-rune', 'runes_used', 1, coins(30)),
+    q('d-terrain', 'terrain', 3, coins(40)),
   ],
   weekly: [
     q('w-win10', 'wins', 10, coins(250)),
@@ -269,8 +292,11 @@ export const DEFAULT_QUESTS: QuestConfig = {
     q('w-stars5', 'stars', 5, coins(200)),
     q('w-cap100', 'captures', 100, { type: 'pack', packId: 'abenteurer', amount: 1 }),
     q('w-league', 'league_wins', 1, coins(200)),
+    q('w-big3', 'big_wins', 3, coins(250)),
+    q('w-kristall', 'kristall_wins', 2, coins(200)),
   ],
   achievements: [
+    q('a-win1', 'wins', 1, coins(30), 'Sieger'),
     q('a-win10', 'wins', 10, coins(100), 'Sieger'),
     q('a-win50', 'wins', 50, coins(300), 'Sieger'),
     q('a-win200', 'wins', 200, { type: 'pack', packId: 'helden', amount: 1 }, 'Sieger'),
@@ -281,14 +307,54 @@ export const DEFAULT_QUESTS: QuestConfig = {
     q('a-cards200', 'cards', 200, { type: 'pack', packId: 'helden', amount: 2 }, 'Sammler'),
     q('a-cards250', 'cards', 250, { type: 'title', title: 'Großsammler' }, 'Sammler'),
     q('a-cap100', 'captures', 100, coins(100), 'Eroberer'),
+    q('a-cap500', 'captures', 500, coins(200), 'Eroberer'),
     q('a-cap1000', 'captures', 1000, coins(400), 'Eroberer'),
     q('a-cap5000', 'captures', 5000, { type: 'title', title: 'Eroberer' }, 'Eroberer'),
+    q('a-fx5', 'effects_distinct', 5, coins(100), 'Effektmeister'),
+    q('a-fx10', 'effects_distinct', 10, coins(200), 'Effektmeister'),
     q('a-fx14', 'effects_distinct', 14, { type: 'title', title: 'Effektmeister' }, 'Effektmeister'),
+    q('a-fxn50', 'effects', 50, coins(100), 'Effektfeuerwerk'),
+    q('a-fxn300', 'effects', 300, coins(300), 'Effektfeuerwerk'),
+    q('a-fxn1000', 'effects', 1000, { type: 'pack', packId: 'helden', amount: 1 }, 'Effektfeuerwerk'),
+    q('a-games25', 'games', 25, coins(100), 'Stammgast'),
+    q('a-games100', 'games', 100, coins(250), 'Stammgast'),
+    q('a-games500', 'games', 500, { type: 'pack', packId: 'helden', amount: 1 }, 'Stammgast'),
+    q('a-games2000', 'games', 2000, { type: 'title', title: 'Stammgast' }, 'Stammgast'),
+    q('a-strong10', 'wins_strong', 10, coins(150), 'Stratege'),
+    q('a-strong50', 'wins_strong', 50, { type: 'pack', packId: 'abenteurer', amount: 1 }, 'Stratege'),
+    q('a-strong250', 'wins_strong', 250, { type: 'title', title: 'Stratege' }, 'Stratege'),
+    q('a-big5', 'big_wins', 5, coins(100), 'Kantersieg'),
+    q('a-big25', 'big_wins', 25, coins(250), 'Kantersieg'),
+    q('a-big100', 'big_wins', 100, { type: 'title', title: 'Feldherr' }, 'Kantersieg'),
+    q('a-rune10', 'runes_used', 10, coins(100), 'Runenkunde'),
+    q('a-rune50', 'runes_used', 50, { type: 'pack', packId: 'abenteurer', amount: 1 }, 'Runenkunde'),
+    q('a-rune200', 'runes_used', 200, { type: 'title', title: 'Runenmeister' }, 'Runenkunde'),
+    q('a-terrain25', 'terrain', 25, coins(100), 'Geländekunde'),
+    q('a-terrain150', 'terrain', 150, coins(250), 'Geländekunde'),
+    q('a-terrain500', 'terrain', 500, { type: 'title', title: 'Geländekenner' }, 'Geländekunde'),
+    q('a-kristall1', 'kristall_wins', 1, coins(50), 'Kristall-Arena'),
+    q('a-kristall10', 'kristall_wins', 10, coins(200), 'Kristall-Arena'),
+    q('a-kristall50', 'kristall_wins', 50, { type: 'title', title: 'Kristallherz' }, 'Kristall-Arena'),
+    q('a-mission10', 'missions', 10, coins(100), 'Abenteurer'),
+    q('a-mission50', 'missions', 50, coins(300), 'Abenteurer'),
+    q('a-stars15', 'stars', 15, coins(150), 'Sternenjäger'),
+    q('a-stars30', 'stars', 30, { type: 'pack', packId: 'abenteurer', amount: 1 }, 'Sternenjäger'),
+    q('a-stars60', 'stars', 60, { type: 'title', title: 'Sternenjäger' }, 'Sternenjäger'),
     q('a-world1', 'worlds_complete', 1, { type: 'pack', packId: 'abenteurer', amount: 1 }, 'Kampagne'),
     q('a-world2', 'worlds_complete', 2, { type: 'pack', packId: 'helden', amount: 1 }, 'Kampagne'),
     q('a-raid1', 'raids_defeated', 1, { type: 'title', title: 'Bossbezwinger' }, 'Weltboss'),
+    q('a-raid3', 'raids_defeated', 3, { type: 'pack', packId: 'helden', amount: 1 }, 'Weltboss'),
+    q('a-raidatk10', 'raid_attacks', 10, coins(150), 'Raid-Veteran'),
+    q('a-raidatk50', 'raid_attacks', 50, { type: 'pack', packId: 'helden', amount: 1 }, 'Raid-Veteran'),
+    q('a-raidatk200', 'raid_attacks', 200, { type: 'title', title: 'Raid-Veteran' }, 'Raid-Veteran'),
+    q('a-league1', 'league_wins', 1, coins(100), 'Rangliste'),
+    q('a-league10', 'league_wins', 10, { type: 'pack', packId: 'helden', amount: 1 }, 'Rangliste'),
+    q('a-league50', 'league_wins', 50, { type: 'title', title: 'Ranglistenheld' }, 'Rangliste'),
+    q('a-online1', 'online_wins', 1, coins(50), 'Duellant'),
     q('a-online10', 'online_wins', 10, coins(300), 'Duellant'),
     q('a-online50', 'online_wins', 50, { type: 'title', title: 'Duellant' }, 'Duellant'),
+    q('a-onplay10', 'online_games', 10, coins(100), 'Online-Spieler'),
+    q('a-onplay100', 'online_games', 100, { type: 'pack', packId: 'helden', amount: 1 }, 'Online-Spieler'),
   ],
 };
 

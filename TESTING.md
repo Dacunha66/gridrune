@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Mehr Erfolge (08.11.)
+
+- 59 Erfolge in 19 Reihen (vorher 18 in 7), 9 Tages- und 7 Wochenquests. Neue Zähler aus geprüften Duellen: Kantersiege
+  (≥ 12 Felder), Runen-Einsätze, Geländeboni, Siege in Kristall-Arenen. Neue Titel: Stammgast, Stratege, Feldherr,
+  Runenmeister, Geländekenner, Kristallherz, Sternenjäger, Raid-Veteran, Ranglistenheld.
+- Bestehende Erfolge behalten ihre Kennung (bereits abgeholte bleiben abgeholt).
+- Automatisch: neue Zähler, Reihen aufsteigend, Titel-Länge, Runen-Zählung in der Duell-Statistik.
+
 ## Balance nach der Deck-Regel (08.11.)
 
 - Simulation alt/neu (siehe BALANCING.md v1.40). Computer-Deck in Einfachem Spiel (Normal, Schwer) und Rangliste: nur

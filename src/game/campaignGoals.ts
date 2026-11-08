@@ -64,6 +64,8 @@ export interface DuelStats {
   effects: Partial<Record<EffectId, number>>;
   /** Stumbles in the runner before the duel (null = mission without runner). */
   stumbles: number | null;
+  /** Own rune uses (Erfolge). */
+  runes?: number;
 }
 
 /** Did the effect of the card just placed on `cell` work? (on-play: it did something; condition: its bonus is active). */
@@ -94,7 +96,10 @@ export function duelStats(start: BattleState, moves: readonly Action[], stumbles
     if (isRuneUse(move)) {
       // Captures by a rune (Nachhall) count for the player.
       const next = applyAction(state, move);
-      if (side === 'player') stats.captures += next.lastFlips.length;
+      if (side === 'player') {
+        stats.captures += next.lastFlips.length;
+        stats.runes = (stats.runes ?? 0) + 1;
+      }
       countReactive(stats, next);
       state = next;
       continue;
