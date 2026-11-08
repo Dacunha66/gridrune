@@ -2163,3 +2163,7 @@ label.btn.disabled { opacity: .45; }
 .tabbed-screen > .menu-tabs { margin: 0; }
 .avatars-current { display: flex; align-items: center; gap: 14px; margin: 4px 0 8px; }
 .avatars-current p { margin: 0; }
+
+/* Card thumbnails in lists (league deck, admin): the whole card in portrait, nothing cut off. */
+.admin-thumb:has(> .card) { flex: 0 0 46px; width: 46px; height: auto; aspect-ratio: 3 / 4; overflow: visible; background: none; border-radius: 0; display: block; }
+.admin-thumb > .card { width: 100%; }
