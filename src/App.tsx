@@ -47,10 +47,13 @@ import {
 } from './game/adventureApi';
 import { grantedText } from './game/campaignRewards';
 import { AdventureLog, AdventureTicket, handPicks } from './game/verify';
+import { DEFAULT_AVATAR } from './game/avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' | 'raid' | 'quests' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' | 'raid' }
+  /** tab = open on this tab (the account page opens the avatars under "Erfolge"). */
+  | { name: 'quests'; tab?: 'daily' | 'weekly' | 'achievements' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
   /** Admin: raid test fight with the raid as it is in the editor (nothing stored). */
@@ -139,6 +142,8 @@ export function App() {
   const cloud = useCloudSync({ account, save, setSave, progress: campaignProgress, setProgress: setCampaignProgress });
   // Erfolge: how many rewards are ready (badge on the menu button), looked up when the menu opens.
   const [questsReady, setQuestsReady] = useState(0);
+  /** The signed-in player's avatar (from the server, with the titles). */
+  const [myAvatar, setMyAvatar] = useState<string | null>(null);
   const [questDaily, setQuestDaily] = useState<QuestItem | null>(null);
   useEffect(() => {
     if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
@@ -146,6 +151,7 @@ export function App() {
     questOverview().then((r) => {
       if (alive && r !== 'offline') {
         setQuestsReady(claimable(r.board).length);
+        setMyAvatar(r.titles.avatar ?? DEFAULT_AVATAR);
         setQuestDaily(r.board.daily.find((i) => !i.done) ?? null);
       }
     });
@@ -333,7 +339,8 @@ export function App() {
       {account?.kind === 'recovery' && <NewPassword onDone={() => setAccount({ kind: 'signedIn', account: account.account })} />}
       {account?.kind === 'signedOut' && !guest && screen.name === 'menu' && <Welcome onGuest={() => setGuestState(true)} />}
       {screen.name === 'account' && account?.kind === 'signedIn' && (
-        <AccountPage account={account.account} onBack={toMenu} onRenamed={(name) => setAccount({ kind: 'signedIn', account: { ...account.account, name } })} />
+        <AccountPage account={account.account} onBack={toMenu} onRenamed={(name) => setAccount({ kind: 'signedIn', account: { ...account.account, name } })}
+          avatar={myAvatar} onAvatar={() => setScreen({ name: 'quests', tab: 'achievements' })} />
       )}
       {cloud.accountMode && cloud.phase !== 'ready' && account?.kind !== 'recovery' && (
         <CloudGate phase={cloud.phase} notice={cloud.notice} browserSave={loadSave()} onChoose={cloud.choose} onRetry={cloud.retry} />
@@ -359,6 +366,7 @@ export function App() {
           onRaid={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'raid' }) : undefined}
           onQuests={account ? () => setScreen({ name: 'quests' }) : undefined}
           questsReady={questsReady}
+          avatar={account?.kind === 'signedIn' ? myAvatar : null}
           nextSteps={nextSteps}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
@@ -404,7 +412,7 @@ export function App() {
       {screen.name === 'quests' && (
         <Quests signedIn={!!cloud.uid && cloud.phase === 'ready'} reducedMotion={reducedMotion}
           onAccount={account?.kind === 'signedOut' ? () => { setGuestState(false); toMenu(); } : undefined}
-          onAdopt={cloud.adoptServer} onBack={toMenu} />
+          onAdopt={cloud.adoptServer} onBack={toMenu} onAvatar={setMyAvatar} initialTab={screen.tab} />
       )}
       {screen.name === 'raid' && cloud.uid && (
         <Raid unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck} rune={duelRune('raid')} reducedMotion={reducedMotion}

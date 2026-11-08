@@ -113,7 +113,19 @@ export function onlineQuestEvent(won: boolean): QuestEvent {
 export function questOverview(saveRaw: unknown, campaignRaw: unknown, stateRaw: unknown, raidsDefeated: number, now: Date = new Date()) {
   const state = parseQuestState(stateRaw, now);
   const ctx = questContext(sanitize(saveRaw), CAMPAIGN, sanitizeProgress(campaignRaw), raidsDefeated);
-  return { board: questBoard(QUEST_CONFIG, state, ctx, now), titles: state.titles };
+  return { board: questBoard(QUEST_CONFIG, state, ctx, now), titles: state.titles, avatars: unlockedAvatars(state.claimed) };
+}
+
+/** Chooses an avatar the player has unlocked (start avatars, or the achievement was collected); null = not allowed. */
+export function questEquipAvatar(stateRaw: unknown, avatar: unknown): Titles | null {
+  const state = parseQuestState(stateRaw);
+  return typeof avatar === 'string' && unlockedAvatars(state.claimed).includes(avatar) ? { ...state.titles, avatar } : null;
+}
+
+/** The avatar a player shows (from the stored titles; start avatar if none or not known). */
+export function shownAvatar(titlesRaw: unknown): string {
+  const t = (titlesRaw && typeof titlesRaw === 'object' ? titlesRaw : {}) as { avatar?: unknown };
+  return isAvatarId(t.avatar) ? t.avatar : DEFAULT_AVATAR;
 }
 
 /** Collects ready rewards (all, or the given keys): new save and titles; null = nothing to collect. */
@@ -132,6 +144,7 @@ export function questEquipTitle(stateRaw: unknown, title: unknown): Titles | nul
 }
 
 export { DEFAULT_QUESTS, parseQuestConfig, questDay, questWeek } from '../game/quests';
+import { DEFAULT_AVATAR, isAvatarId, unlockedAvatars } from '../game/avatars';
 
 export function cleanSave(raw: unknown): SaveData {
   return sanitize(raw);

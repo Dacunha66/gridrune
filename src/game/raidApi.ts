@@ -72,7 +72,7 @@ export interface RaidResult {
   granted: GrantedReward[];
 }
 
-export interface LeaderRow { rank: number; name: string; me: boolean; attacks: number; totalDamage: number; average: number }
+export interface LeaderRow { rank: number; name: string; me: boolean; attacks: number; totalDamage: number; average: number; avatar?: string | null }
 
 async function call(body: Record<string, unknown>): Promise<{ status: number; data: Record<string, unknown> | null } | null> {
   const sb = (await webBackend())?.supabase();

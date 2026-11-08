@@ -1,6 +1,7 @@
 // Weltboss-Raid for players: overview (boss, shared life points, phase, attacks left, own damage), choosing the
 // 8 cards, the fight (the normal duel against the boss AI – continued after reloading), the server-confirmed
 // result, the leaderboard and the rewards. Everything that counts comes from the server function "raid".
+import { Avatar } from '../components/Avatar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ClassGlyph } from '../components/GlyphIcons';
 import { GameIcon } from '../components/GameIcon';
@@ -340,7 +341,7 @@ function RaidLeaderboard({ raid, onBack }: { raid: RaidInfo | null; onBack: () =
             <tbody>
               {rows.map((r) => (
                 <tr key={r.rank} className={r.me ? 'me' : ''}>
-                  <td>{r.rank}</td><td>{r.name}</td><td>{fmt(r.totalDamage)}</td><td>{r.attacks}</td><td>{fmt(r.average)}</td>
+                  <td>{r.rank}</td><td className="lb-name">{r.avatar && <Avatar id={r.avatar} size={22} />}{r.name}</td><td>{fmt(r.totalDamage)}</td><td>{r.attacks}</td><td>{fmt(r.average)}</td>
                 </tr>
               ))}
             </tbody>

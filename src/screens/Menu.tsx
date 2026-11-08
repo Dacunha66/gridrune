@@ -1,4 +1,5 @@
 import { RuneBadge } from '../components/RuneBadge';
+import { Avatar } from '../components/Avatar';
 import { Coin, CoinText } from '../components/Coin';
 import { findRune } from '../game/runes';
 import { LogoMark } from '../components/LogoMark';
@@ -46,6 +47,8 @@ interface Props {
   onPlayOpen?: (open: boolean) => void;
   /** Erfolge: how many rewards are ready to collect (signed in). */
   questsReady?: number;
+  /** The signed-in player's avatar (shown instead of the account icon). */
+  avatar?: string | null;
   onQuests?: () => void;
   /** "Dein nächster Schritt": what the player can do next (campaign, quests, rewards). */
   nextSteps?: NextStep[];
@@ -62,7 +65,7 @@ export interface NextStep {
 
 type MenuTab = 'start' | 'cards' | 'more';
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests, nextSteps = [] }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests, nextSteps = [], avatar = null }: Props) {
   const equipped = findRune(equippedRune);
   const [chooseLevel, setChooseLevel] = useState(false);
   const [tab, setTab] = useState<MenuTab>('start');
@@ -104,7 +107,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
           <span className="menu-coins" aria-label={`${save.coins} Münzen`}><Coin /> {save.coins}</span>
           {account && (
             <button type="button" className={`menu-account ${account === 'guest' ? 'guest' : ''}`} onClick={onAccount} aria-label={account === 'guest' ? 'Anmelden oder Konto erstellen' : `Konto ${account}`}>
-              <GameIcon name="user" />{account === 'guest' && <span>Anmelden</span>}
+              {avatar && account !== 'guest' ? <Avatar id={avatar} size={34} /> : <GameIcon name="user" />}{account === 'guest' && <span>Anmelden</span>}
             </button>
           )}
         </span>

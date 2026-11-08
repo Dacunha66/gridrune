@@ -1,9 +1,10 @@
 // Erfolge: the player's quest board and collecting rewards. Counters are raised only by the other server functions
 // after a checked result (quest_add); here the board is computed with the game's own rules (engine.js) and rewards
-// are paid exactly once (quest_claim: claim rows, save and titles in one step). "overview", "claim", "equip-title".
+// are paid exactly once (quest_claim: claim rows, save and titles in one step). "overview", "claim", "equip-title",
+// "equip-avatar" (only avatars unlocked by collected achievements).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { loadContent, questClaim, questDay, questEquipTitle, questOverview, questWeek } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@8ccd548e841ecb085f4d0457f5ac3e8b0989c5fb/public/server/engine-2ce3d2c9573b.js';
+import { loadContent, questClaim, questDay, questEquipAvatar, questEquipTitle, questOverview, questWeek } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@8ccd548e841ecb085f4d0457f5ac3e8b0989c5fb/public/server/engine-2ce3d2c9573b.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -94,6 +95,14 @@ Deno.serve(async (req) => {
     const state = await readState();
     const titles = questEquipTitle(state, body.title ?? null);
     if (!titles) return json({ error: 'title' }, 422);
+    const { error } = await db.from('quest_progress').upsert({ player_id: uid, day: (state as Row).day ?? day, week: (state as Row).week ?? week, titles, updated_at: now.toISOString() });
+    if (error) return json({ error: 'database' }, 500);
+    return json({ ok: true, titles });
+  }
+  if (body.action === 'equip-avatar') {
+    const state = await readState();
+    const titles = questEquipAvatar(state, body.avatar ?? null);
+    if (!titles) return json({ error: 'avatar' }, 422);
     const { error } = await db.from('quest_progress').upsert({ player_id: uid, day: (state as Row).day ?? day, week: (state as Row).week ?? week, titles, updated_at: now.toISOString() });
     if (error) return json({ error: 'database' }, 500);
     return json({ ok: true, titles });

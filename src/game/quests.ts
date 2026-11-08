@@ -2,6 +2,7 @@
 // quests are, which ones are active today, how far a player is and what a reward adds to the save. The server
 // counts only results it has checked itself (adventure, campaign, league, raid, online duels) and pays every reward
 // exactly once (claim keys); the game only shows the board.
+import { isAvatarId } from './avatars';
 import { CampaignContent, STARS_PER_MISSION } from './campaign';
 import { CampaignProgress, missionStars } from './campaignProgress';
 import { worldMissions, visibleWorlds } from './campaign';
@@ -189,6 +190,8 @@ export function rewardText(r: QuestReward): string {
 export interface Titles {
   owned: string[];
   equipped: string | null;
+  /** Chosen avatar (unlocked by collected achievements, see avatars.ts); absent = the first start avatar. */
+  avatar?: string | null;
 }
 
 export interface QuestGranted extends GrantedReward {
@@ -200,7 +203,7 @@ export interface QuestGranted extends GrantedReward {
 export function grantQuestRewards(save: SaveData, titles: Titles, list: { key: string; reward: QuestReward; source: string }[], rng: Rng):
   { save: SaveData; titles: Titles; granted: QuestGranted[] } {
   let s = save;
-  const t: Titles = { owned: [...titles.owned], equipped: titles.equipped };
+  const t: Titles = { ...titles, owned: [...titles.owned], equipped: titles.equipped };
   const granted: QuestGranted[] = [];
   for (const o of list) {
     const r = o.reward;
@@ -587,7 +590,7 @@ export function parseQuestState(raw: unknown, now: Date = new Date()): QuestStat
     weekly: counters(r.weekly),
     total: counters(r.total),
     claimed: Array.isArray(r.claimed) ? r.claimed.filter((x): x is string => typeof x === 'string') : [],
-    titles: { owned, equipped: typeof t.equipped === 'string' && owned.includes(t.equipped) ? t.equipped : null },
+    titles: { owned, equipped: typeof t.equipped === 'string' && owned.includes(t.equipped) ? t.equipped : null, ...(isAvatarId(t.avatar) ? { avatar: t.avatar } : {}) },
   };
 }
 

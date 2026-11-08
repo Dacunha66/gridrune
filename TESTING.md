@@ -1,5 +1,15 @@
 # Testprotokoll
 
+## Avatare (08.11.)
+
+- 32 runde Avatare (Figur auf Farbe, Rahmen Einfach/Silber/Gold/Runenglanz): 6 zum Start, 26 über Erfolge. Ein Avatar
+  gilt als frei, sobald sein Erfolg abgeholt ist (auch rückwirkend). Die Wahl speichert der Server bei den Titeln
+  (Funktion quests, "equip-avatar"; gesperrte werden abgelehnt).
+- Anzeige: Hauptmenü (statt Konto-Symbol), Mein Konto („Avatar ändern“ → Erfolge), Erfolge (Auswahl mit Hinweis, wie
+  man gesperrte freischaltet), Online-/Draft-Duell (beide Spieler, Migration 018: avatar_a/avatar_b), Raid-Bestenliste.
+- Automatisch (tests/avatars.test.ts): Freischalten, Auswahl nur freigeschalteter, Avatar übersteht Laden und Abholen.
+- Browser: Avatar-Raster (Testseite, iPhone-Größe).
+
 ## Mehr Erfolge (08.11.)
 
 - 59 Erfolge in 19 Reihen (vorher 18 in 7), 9 Tages- und 7 Wochenquests. Neue Zähler aus geprüften Duellen: Kantersiege

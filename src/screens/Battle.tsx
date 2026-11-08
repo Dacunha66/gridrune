@@ -1,4 +1,5 @@
 import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Avatar } from '../components/Avatar';
 import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { Coin, coinLargeImg } from '../components/Coin';
 import { Card } from '../components/Card';
@@ -55,6 +56,9 @@ export interface OnlineLink {
   /** When the current move must be made (ISO time); a random card is played after that. */
   deadline: string | null;
   opponentName: string;
+  /** Avatars shown next to the scores (online duels). */
+  myAvatar?: string | null;
+  opponentAvatar?: string | null;
   /** `before` = the duel just before this action (the server checks it is still current). */
   onAction: (action: Action, before: BattleState) => void;
 }
@@ -424,11 +428,11 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       <header className="battle-top">
         <ConfirmButton label={<GameIcon name="close" />} ariaLabel="Duell abbrechen (keine Belohnung)" confirmLabel="Aufgeben?" onConfirm={onQuit} skipConfirm={over} />
         <div className="scorebar" aria-live="polite">
-          <span key={`p${sc.player}`} className="score blue pop">Du {sc.player}</span>
+          <span key={`p${sc.player}`} className="score blue pop">{online?.myAvatar && <Avatar id={online.myAvatar} size={26} />}Du {sc.player}</span>
           <span className="moves" aria-label={`Zug ${Math.min(state.moveCount + 1, totalMoves(state))} von ${totalMoves(state)}, Gegner hat noch ${cardsLeft(state, 'cpu')} Karten`}>
             Zug {Math.min(state.moveCount + 1, totalMoves(state))}/{totalMoves(state)}
           </span>
-          <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner</span>
+          <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner{online?.opponentAvatar && <Avatar id={online.opponentAvatar} size={26} label={`Avatar von ${online.opponentName}`} />}</span>
         </div>
         {devTools && (
           <button type="button" className="btn btn-small style-btn" aria-label={`Kartendesign wechseln, jetzt ${CARD_STYLE_LABEL[cardStyle]}`} onClick={() => setStyleToast(CARD_STYLE_LABEL[cycleCardStyle()])}>🎨</button>

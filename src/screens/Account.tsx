@@ -1,5 +1,6 @@
 // Account screens of the web version: welcome (sign in / create account / play as guest), forgotten password,
 // the new password after the e-mail link, and the player's own account page.
+import { Avatar } from '../components/Avatar';
 import { Coin } from '../components/Coin';
 import { GameIcon } from '../components/GameIcon';
 import { FormEvent, ReactNode, useState } from 'react';
@@ -153,7 +154,7 @@ export function NewPassword({ onDone }: { onDone: () => void }) {
 }
 
 /** The signed-in player's account page: name, e-mail, new password, sign out. */
-export function AccountPage({ account, onBack, onRenamed }: { account: Account; onBack: () => void; onRenamed: (name: string) => void }) {
+export function AccountPage({ account, onBack, onRenamed, avatar = null, onAvatar }: { account: Account; onBack: () => void; onRenamed: (name: string) => void; avatar?: string | null; onAvatar?: () => void }) {
   const [name, setName] = useState(account.name);
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -178,6 +179,12 @@ export function AccountPage({ account, onBack, onRenamed }: { account: Account; 
       <Header title="Mein Konto" onBack={onBack} />
       <div className="scroll">
         <div className="account-card">
+          {onAvatar && (
+            <div className="account-avatar">
+              <Avatar id={avatar} size={64} />
+              <button type="button" className="btn btn-small" onClick={onAvatar}>Avatar ändern</button>
+            </div>
+          )}
           <Field label="Spielername">
             <input className="admin-input" value={name} maxLength={NAME_MAX} onChange={(e) => setName(e.target.value)} />
           </Field>

@@ -141,6 +141,9 @@ export interface PvpView {
   opponentName: string | null;
   /** Title the opponent shows (Erfolge), or null. */
   opponentTitle?: string | null;
+  /** Avatars of both players (chosen under Erfolge). */
+  opponentAvatar?: string | null;
+  myAvatar?: string | null;
   state: BattleState | null;
   /** Arena name (the cells are in the state). */
   arenaName: string | null;

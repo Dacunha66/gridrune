@@ -9,7 +9,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
   checkRaid, expiredDamage, loadContent, parseRaid, payRaidRewards, phaseIndex, prepareRaid, questDelta, questPeriod, raidDay, raidOpen, raidProblems,
-  raidQuestEvent, raidSnapshot,
+  raidQuestEvent, raidSnapshot, shownAvatar,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@8ccd548e841ecb085f4d0457f5ac3e8b0989c5fb/public/server/engine-2ce3d2c9573b.js';
 
 const CORS = {
@@ -254,12 +254,16 @@ Deno.serve(async (req) => {
     const { data: list } = await db.from('raid_player_stats').select('player_id, attacks, total_damage, last_damage_at')
       .eq('instance', cur.st.id).order('total_damage', { ascending: false }).order('last_damage_at', { ascending: true }).range(offset, offset + limit - 1);
     const ids = (list ?? []).map((r: Row) => r.player_id);
-    const { data: names } = ids.length ? await db.from('profiles').select('id, display_name').in('id', ids) : { data: [] };
+    const [{ data: names }, { data: badges }] = ids.length
+      ? await Promise.all([db.from('profiles').select('id, display_name').in('id', ids), db.from('quest_progress').select('player_id, titles').in('player_id', ids)])
+      : [{ data: [] }, { data: [] }];
     const nameOf = new Map((names ?? []).map((n: Row) => [n.id, n.display_name]));
+    // Avatars chosen under Erfolge (start avatar for players without one).
+    const avatarOf = new Map((badges ?? []).map((b: Row) => [b.player_id, shownAvatar(b.titles)]));
     const stats = await myStats(cur.st.id);
     return json({
       rows: (list ?? []).map((r: Row, i: number) => ({
-        rank: offset + i + 1, name: nameOf.get(r.player_id) ?? 'Spieler', me: r.player_id === uid, attacks: r.attacks,
+        rank: offset + i + 1, name: nameOf.get(r.player_id) ?? 'Spieler', avatar: avatarOf.get(r.player_id) ?? shownAvatar(null), me: r.player_id === uid, attacks: r.attacks,
         totalDamage: Number(r.total_damage), average: r.attacks ? Math.round(Number(r.total_damage) / r.attacks) : 0,
       })),
       me: stats ? { rank: await myRank(cur.st.id, stats), totalDamage: Number(stats.total_damage), attacks: stats.attacks } : null,

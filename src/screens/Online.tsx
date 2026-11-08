@@ -1,5 +1,6 @@
 // Online duel against a real player: choose 8 cards, then challenge a friend (invite code), enter a friend's
 // code, or look for a random opponent. The server is the referee; this screen shows its view live.
+import { Avatar } from '../components/Avatar';
 import { Coin } from '../components/Coin';
 import { GameIcon } from '../components/GameIcon';
 import { ResultIcon } from '../components/ResultIcon';
@@ -146,7 +147,7 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
         <div className="scroll result-body">
           <ResultIcon outcome={r.outcome} />
           <h1>{title}</h1>
-          <p className="muted">gegen {view.opponentName ?? 'Gegner'}{view.opponentTitle && <span className="opponent-title"> · {view.opponentTitle}</span>}</p>
+          <p className="muted">gegen {view.opponentAvatar && <Avatar id={view.opponentAvatar} size={24} />} {view.opponentName ?? 'Gegner'}{view.opponentTitle && <span className="opponent-title"> · {view.opponentTitle}</span>}</p>
           <p className="result-score"><span className="blue">{r.score.me}</span> : <span className="red">{r.score.opponent}</span></p>
           {why && <p className="small">{why}</p>}
           {r.outcome === 'win' && (
@@ -275,8 +276,9 @@ function OnlineDuel({ view, reducedMotion, onView, onDone, onQuit }: {
       onView(r.view);
     });
   }, [view.matchId, onView]);
-  const online = useMemo(() => ({ state, deadline: view.status === 'playing' ? view.turnDeadline : null, opponentName: `${view.opponentName ?? 'Gegner'}${view.opponentTitle ? ` (${view.opponentTitle})` : ''}`, onAction: send }),
-    [state, view.status, view.turnDeadline, view.opponentName, view.opponentTitle, send]);
+  const online = useMemo(() => ({ state, deadline: view.status === 'playing' ? view.turnDeadline : null, opponentName: `${view.opponentName ?? 'Gegner'}${view.opponentTitle ? ` (${view.opponentTitle})` : ''}`, onAction: send,
+    myAvatar: view.myAvatar ?? null, opponentAvatar: view.opponentAvatar ?? null }),
+    [state, view.status, view.turnDeadline, view.opponentName, view.opponentTitle, view.myAvatar, view.opponentAvatar, send]);
   return <Battle picks={picks} unlocked={[]} reducedMotion={reducedMotion} setup={setup} online={online} onEnd={onDone} onQuit={onQuit} />;
 }
 

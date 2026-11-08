@@ -9,6 +9,8 @@ import type { QuestBoard, QuestGranted, Titles } from './quests';
 export interface QuestOverview {
   board: QuestBoard;
   titles: Titles;
+  /** Avatars the player may choose (start avatars and those of collected achievements). */
+  avatars: string[];
 }
 
 async function call(body: Record<string, unknown>): Promise<{ status: number; data: Record<string, unknown> | null } | null> {
@@ -22,7 +24,7 @@ async function call(body: Record<string, unknown>): Promise<{ status: number; da
 }
 
 const overviewOf = (d: Record<string, unknown>): QuestOverview | null =>
-  d.board && d.titles ? { board: d.board as QuestBoard, titles: d.titles as Titles } : null;
+  d.board && d.titles ? { board: d.board as QuestBoard, titles: d.titles as Titles, avatars: Array.isArray(d.avatars) ? (d.avatars as string[]) : [] } : null;
 
 export async function questOverview(): Promise<QuestOverview | 'offline'> {
   const r = await call({ action: 'overview' });
@@ -48,6 +50,11 @@ export async function claimQuestRewards(keys: string[] | null): Promise<ClaimRep
     };
   }
   return { ok: false, error: 'Das Abholen hat nicht geklappt. Bitte versuche es noch einmal.' };
+}
+
+export async function equipAvatar(avatar: string): Promise<Titles | null> {
+  const r = await call({ action: 'equip-avatar', avatar });
+  return r?.data?.ok === true ? (r.data.titles as Titles) : null;
 }
 
 export async function equipTitle(title: string | null): Promise<Titles | null> {
