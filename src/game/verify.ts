@@ -3,7 +3,8 @@
 // records the player's lane changes and actions; the server replays everything with exactly this code and only
 // then pays the reward. The same functions run in the game (to play) and on the server (to check).
 import { ARENAS, Arena, pickArena } from './arenas';
-import { AiLevel, AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from './ai';
+import { AiLevel, AiOptions, CPU_DECK_SHARE, chooseCpuMove, chooseCpuRune, cpuDeckShare, drawCpuHand } from './ai';
+import { DECK_SIZE } from './cards';
 import { BattleState, HAND_SIZE, HandCard, Outcome, Side, coinToss, cpuChoosesFirst, createBattle, isGameOver, outcome, score, toHand } from './battle';
 import { CLASSIC_ARENA } from './arenas';
 import { Mission, Opponent, findArena, missionPool } from './campaign';
@@ -78,7 +79,7 @@ export function adventureDuel(ticket: AdventureTicket, picks: Pick[], rngs = adv
   const basic = basicRunes().map((r) => r.id);
   const cpuRune = ticket.cpuRune === 'random' && basic.length > 0 ? basic[Math.floor(rngs.cpuRune() * basic.length)] : null;
   const hand: HandCard[] = picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
-  const start = createBattle(hand, drawCpuHand(rngs.cpuHand), 'player', [], arena.cells, { player: ticket.playerRune, cpu: cpuRune }, rngs.deal);
+  const start = createBattle(hand, drawCpuHand(rngs.cpuHand, DECK_SIZE, cpuDeckShare(ticket.level ?? 'medium')), 'player', [], arena.cells, { player: ticket.playerRune, cpu: cpuRune }, rngs.deal);
   return { arena, start };
 }
 
@@ -198,7 +199,7 @@ export interface LeagueLog {
 }
 
 /** The computer's deck (the same in every round of the match). */
-export const leagueCpuHand = (seed: string): HandCard[] => drawCpuHand(deriveRng(seed, 'cpu-hand'));
+export const leagueCpuHand = (seed: string): HandCard[] => drawCpuHand(deriveRng(seed, 'cpu-hand'), DECK_SIZE, CPU_DECK_SHARE);
 
 /** The computer's basic rune for a match (only when runes are in play for the player). */
 export function leagueCpuRune(seed: string, runesOn: boolean): string | null {

@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Balance nach der Deck-Regel (08.11.)
+
+- Simulation alt/neu (siehe BALANCING.md v1.40). Computer-Deck in Einfachem Spiel (Normal, Schwer) und Rangliste: nur
+  gewöhnliche Karten. KI „Schwer“: Endspiel-Suche mit Obergrenze (längster Zug 33 ms statt 11 s).
+- Automatisch (tests/deck.test.ts): Computer-Deck je Stufe, schwere KI über ein ganzes Duell ohne langen Zug.
+
 ## Deck statt Lauf: 5 Handkarten, Rest wird gezogen, Rune der Hand (07.11.)
 
 - Feste Regel (kein Admin-Schalter mehr): Jede Seite spielt mit ihrem Deck; es wird gemischt, 5 Karten auf der Hand, vor

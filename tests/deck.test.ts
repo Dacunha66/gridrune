@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DRAW_HAND_SIZE, HandCard, applyMove, cardsLeft, coinToss, cpuChoosesFirst, createBattle, isGameOver, legalMoves, outcome, toHand } from '../src/game/battle';
-import { chooseCpuMove, chooseCpuRune, publicView } from '../src/game/ai';
+import { chooseCpuMove, chooseCpuRune, drawCpuHand, publicView } from '../src/game/ai';
 import { BUILTIN_ARENAS } from '../src/game/arenas';
 import { CARDS, STARTER_DECK, STARTING_UNLOCKED, cardPower } from '../src/game/cards';
 import { deriveRng } from '../src/game/league';
@@ -137,5 +137,33 @@ describe('Rune der Hand', () => {
       expect(check.ok, JSON.stringify(check).slice(0, 200)).toBe(true);
       if (check.ok) expect(check.outcome).toBe(outcome(state));
     }
+  });
+});
+
+describe('Balance mit Deck-Regel (v1.40)', () => {
+  it('Computer-Deck: Normal, Schwer und Rangliste nur gewöhnliche Karten, Leicht gemischt', async () => {
+    const { cpuDeckShare } = await import('../src/game/ai');
+    const { leagueCpuHand } = await import('../src/game/verify');
+    const { getCard } = await import('../src/game/cards');
+    for (const level of ['medium', 'hard'] as const) {
+      const d = drawCpuHand(createRng(4), 20, cpuDeckShare(level));
+      expect(d).toHaveLength(20);
+      expect(d.every((c) => getCard(c.cardId).rarity === 'common')).toBe(true);
+    }
+    expect(drawCpuHand(createRng(4), 20, cpuDeckShare('easy')).some((c) => getCard(c.cardId).rarity !== 'common')).toBe(true);
+    expect(leagueCpuHand('s1').every((c) => getCard(c.cardId).rarity === 'common')).toBe(true);
+  });
+
+  it('die schwere KI rechnet auch mit 5 Handkarten bis zum Schluss schnell (kein Hängen am Spielende)', () => {
+    const rng = createRng(3);
+    let s = createBattle(DECK, drawCpuHand(rng), 'player', [], undefined, {}, rng);
+    let slowest = 0;
+    while (!isGameOver(s)) {
+      const t = performance.now();
+      const m = chooseCpuMove(s, rng, { level: 'hard' });
+      slowest = Math.max(slowest, performance.now() - t);
+      s = applyMove(s, m);
+    }
+    expect(slowest).toBeLessThan(1500);
   });
 });

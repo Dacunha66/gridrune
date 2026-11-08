@@ -127,3 +127,31 @@ Kampfgeist 7 · Arkane Kraft 5 · ohne 58.
 Effekten: gewöhnlich 43,2 → 43,8 % · ungewöhnlich 49,2 → 48,7 % · selten 52,6 → 52,6 % · episch 55,0 → 54,8 % ·
 legendär 56,7 → 56,0 % · mystisch 57,3 → 57,3 %. Innerhalb einer Seltenheit liegen die Effekt-Gruppen meist höchstens
 etwa 3 Prozentpunkte neben den Karten ohne Effekt; am schwächsten sind Karten mit Standhaft.
+
+## Deck-Regel: 5 Handkarten, Rest wird gezogen (v1.40, Simulation)
+
+Vergleich alt (Lauf: an jedem Tor die stärkste der 3 Karten, alle 8 auf der Hand) mit neu (20er-Deck gemischt, 5 auf der
+Hand). Mittlere KI spielt den Spieler; Kartenstand live (250 Karten). Siege / Unentschieden / Niederlagen.
+
+| Modus | alt | neu (ohne Anpassung) | neu mit Anpassung |
+|---|---|---|---|
+| Einfaches Spiel, Startdeck, Leicht | 88 / 9 / 3 | 87 / 9 / 4 | unverändert gelassen |
+| Einfaches Spiel, Startdeck, Normal | 46 / 23 / 30 | 26 / 24 / 50 | 44 / 25 / 32 |
+| Einfaches Spiel, Startdeck, Schwer | 46 / 26 / 28 | 23 / 23 / 54 | 43 / 25 / 32 |
+| Einfaches Spiel, Zufallsdeck, Normal / Schwer | 88 / 86 | 69 / 65 | 83 / 81 |
+| Rangliste, Startdeck (ein Duell, Fels) | 69 / 31 | 55 / 45 | 72 / 28 |
+| Rangliste, Zufallsdeck | 96 / 4 | 88 / 13 | 93 / 7 |
+| Kampagne, Schnitt aller 20 Missionen (Startdeck) | 41 / 43 | 41 / 42 | – |
+| Raid „Waldwächter“ Phase 1 / 2 / 3 (Ø Felder) | 10,2 / 7,6 / 5,2 | 10,5 / 7,8 / 5,2 | – |
+
+**Anpassung:** Im Einfachen Spiel (Normal, Schwer) und in der Rangliste spielt der Computer mit einem Deck aus
+gewöhnlichen Karten (vorher 60 % gewöhnlich, 35 % ungewöhnlich, 5 % selten). Grund: Der Spieler kann im Lauf nicht mehr
+die besten Karten wählen. „Leicht“ bleibt beim alten Mix. Kampagne und Raid bleiben im Schnitt gleich; einzelne Missionen
+verschieben sich: schwerer Wächtertor (64 → 39 % Siege), Meteorfall (21 → 7 %), Aschenwüste (30 → 20 %); leichter
+Glutwiesen (30 → 50 %), Alte Ruinen (4 → 16 %), Schmiede am Berg (17 → 26 %).
+
+**Rune der Hand:** +3,6 Prozentpunkte Siege / −4,2 Niederlagen (gepaarte Duelle, 1500) – etwas stärker als Verdrehung
+(KI nutzt sie kaum) und Fluch (+0,5), deutlich schwächer als Nachhall (+17,8). Bleibt so.
+
+**KI „Schwer“:** Mit 5 Handkarten bis zum Ende dauerte die Endspiel-Suche bis zu 11 s pro Zug (Server-CPU). Neu: die
+Suche läuft nur, wenn sie höchstens 20 000 Stellungen braucht (meist ab 4 statt 5 restlichen Zügen) → längster Zug 33 ms.

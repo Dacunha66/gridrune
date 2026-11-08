@@ -13,12 +13,12 @@ import { Arena, pickArena } from '../game/arenas';
 import { CLASS_INFO, CLASS_TERRAIN, EFFECTS, TERRAIN_INFO, Terrain } from '../game/effects';
 import { AbilityMedallion } from '../components/cardIcons';
 import { activations } from '../game/activations';
-import { getCard } from '../game/cards';
+import { DECK_SIZE, getCard } from '../game/cards';
 import { CardInspect } from '../components/CardInspect';
 import { BoardArt } from '../components/DesignArt';
 import { isSymbolTipOpen } from '../components/SymbolTips';
 import { ACTIVE, layoutVars } from '../game/designs';
-import { AiOptions, chooseCpuMove, chooseCpuRune, drawCpuHand } from '../game/ai';
+import { AiOptions, chooseCpuMove, chooseCpuRune, cpuDeckShare, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
 import { AdventureTicket, adventureDuel, adventureRngs } from '../game/verify';
@@ -130,7 +130,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     const basic = basicRunes().map((x) => x.id);
     const cpuRune = r?.cpu === 'random' ? basic[Math.floor(rng() * basic.length)] : r?.cpu ?? null;
     return createBattle(
-      picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells,
+      picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng, DECK_SIZE, cpuDeckShare(aiOptions?.level)), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells,
       { player: r?.player ?? null, cpu: cpuRune }, setup?.deal?.() ?? createRng(),
     );
   });

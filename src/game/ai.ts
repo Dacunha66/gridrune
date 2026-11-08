@@ -105,6 +105,28 @@ export function publicView(state: BattleState, side: Side): BattleState {
 const ENDGAME_MOVES = 5;
 /** Above this many possibilities per move (e.g. Wirbelwind turns) the endgame search waits one more move. */
 const ENDGAME_BRANCH_LIMIT = 40;
+/**
+ * Most positions the full endgame search may visit for one decision. With 5 cards on the hand to the very end
+ * (deck rule) the search grows fast; above this budget the computer waits one more move (fast on phones, and the
+ * same decision in the game and on the server, since it depends only on the position).
+ */
+const ENDGAME_BUDGET = 20000;
+
+/** Rough number of positions the endgame search would visit from this position (all moves to the end). */
+function endgameCost(state: BattleState): number {
+  const left = totalMoves(state) - state.moveCount;
+  const played: Record<Side, number> = { player: 0, cpu: 0 };
+  let side = state.turn;
+  let cost = 1;
+  for (let k = 0; k < left; k++) {
+    const hand = Math.min(state.hands[side].length, cardsLeft(state, side) - played[side]);
+    cost *= Math.max(1, (left - k) * Math.max(1, hand));
+    if (cost > ENDGAME_BUDGET * 10) return cost;
+    played[side]++;
+    side = side === 'player' ? 'cpu' : 'player';
+  }
+  return cost;
+}
 
 /** Board difference from `side`'s point of view after perfect play by both sides. */
 function solve(state: BattleState, side: Side): number {
@@ -130,7 +152,7 @@ function hardScore(state: BattleState, move: Move, prefer: ReadonlySet<CardClass
   const side = state.turn;
   const next = applyMove(state, move);
   const left = totalMoves(state) - state.moveCount;
-  if (left <= ENDGAME_MOVES && legalMoves(state).length <= ENDGAME_BRANCH_LIMIT) return solve(next, side) * 1000;
+  if (left <= ENDGAME_MOVES && legalMoves(state).length <= ENDGAME_BRANCH_LIMIT && endgameCost(state) <= ENDGAME_BUDGET) return solve(next, side) * 1000;
   const card = state.hands[side][move.handIndex];
   const flips = next.lastFlips.length;
   const info = cellBreakdown(next.board, next.terrain, move.cell);
@@ -248,13 +270,25 @@ function mulliganChoice(state: BattleState, side: Side): RuneUse | null {
 /** Chance per rarity for the computer's cards – tuned (by simulation) to match the difficulty of version 1.1. */
 export const CPU_SHARE: Record<Rarity, number> = { common: 60, uncommon: 35, rare: 5, epic: 0, legendary: 0, mythic: 0 };
 
+/**
+ * The computer's deck in the simple game (Normal, Schwer) and the league: common cards only. With 5 cards on the hand
+ * and a 20-card deck the player can no longer pick the best cards in a run; measured (BALANCING.md, v1.40) this keeps
+ * the win rates of before. "Leicht" keeps the old mix (its rates did not change).
+ */
+export const CPU_DECK_SHARE: Partial<Record<Rarity, number>> = { common: 100 };
+
+/** Rarity mix of the computer's deck for a difficulty of the simple game. */
+export function cpuDeckShare(level: AiLevel = 'medium'): Partial<Record<Rarity, number>> {
+  return level === 'easy' ? CPU_SHARE : CPU_DECK_SHARE;
+}
+
 /** Draws a deck of distinct cards for the computer (20 like the player's), mostly commons and uncommons. */
-export function drawCpuHand(rng: Rng, size: number = DECK_SIZE): HandCard[] {
+export function drawCpuHand(rng: Rng, size: number = DECK_SIZE, shares: Partial<Record<Rarity, number>> = CPU_SHARE): HandCard[] {
   const pool = [...CARDS];
   const hand: string[] = [];
   while (hand.length < Math.min(size, CARDS.length)) {
     // Fall back to any card if the active catalog has none of the usual rarities left.
-    const card = pickByRarity(rng, pool, CPU_SHARE) ?? pool[Math.floor(rng() * pool.length)];
+    const card = pickByRarity(rng, pool, shares) ?? pool[Math.floor(rng() * pool.length)];
     pool.splice(pool.indexOf(card), 1);
     hand.push(card.id);
   }
