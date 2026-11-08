@@ -180,7 +180,7 @@ export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, onAvatar, 
                 <h2><Avatar id={data.titles.avatar} size={28} /> Dein Avatar</h2>
                 <p className="muted small">Erscheint im Hauptmenü, im Online-Duell und in der Raid-Bestenliste. Neue Avatare schaltest du mit Erfolgen frei.</p>
                 <div className="avatar-grid" role="group" aria-label="Avatar wählen">
-                  {AVATARS.map((av) => {
+                  {AVATARS.filter((av) => av.active !== false).map((av) => {
                     const open = data.avatars.includes(av.id);
                     const on = (data.titles.avatar ?? DEFAULT_AVATAR) === av.id;
                     const need = av.quest ? b.achievements.find((i) => i.key === `a:${av.quest}`) : null;

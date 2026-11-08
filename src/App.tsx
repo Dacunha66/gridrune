@@ -19,7 +19,7 @@ import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
 import { CARDS, getCard, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
-import { getDb, isAdmin, loadArenas, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks } from './game/cardStore';
+import { getDb, isAdmin, loadArenas, loadAvatars, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks } from './game/cardStore';
 import { setPackLooks } from './game/shop';
 import { ACTIVE, Design, DesignState, setActiveDesigns } from './game/designs';
 import { PageArt } from './components/DesignArt';
@@ -47,7 +47,7 @@ import {
 } from './game/adventureApi';
 import { grantedText } from './game/campaignRewards';
 import { AdventureLog, AdventureTicket, handPicks } from './game/verify';
-import { DEFAULT_AVATAR } from './game/avatars';
+import { DEFAULT_AVATAR, setAvatars } from './game/avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
@@ -174,10 +174,11 @@ export function App() {
     let alive = true;
     (async () => {
       const db = await getDb();
-      const [records, settings, arenas, designs, designState, savedCampaign, savedRunes, shopLooks] = await Promise.all([
+      const [records, settings, arenas, designs, designState, savedCampaign, savedRunes, shopLooks, savedAvatars] = await Promise.all([
         loadCardRecords(db), loadGameSettings(db), loadArenas(db), loadDesigns(db), loadDesignState(db), loadCampaign(db), loadRunes(db),
-        loadShopLooks(db),
+        loadShopLooks(db), loadAvatars(db),
       ]);
+      if (alive && savedAvatars) setAvatars(savedAvatars);
       if (alive && shopLooks) setPackLooks(shopLooks);
       if (alive && savedCampaign) applyCampaign(mergeContent(savedCampaign));
       if (alive && savedRunes) setRunes(savedRunes);

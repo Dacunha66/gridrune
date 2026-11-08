@@ -35,7 +35,7 @@ export interface ImageRef {
   fit: ImageFit;
 }
 
-export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground' | 'runeArt' | 'runeIcon' | 'packArt' | 'raidBoss';
+export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground' | 'runeArt' | 'runeIcon' | 'packArt' | 'raidBoss' | 'playerAvatar';
 
 /**
  * Recommended sizes, derived from the layout: the world map and boss background fill a phone screen
@@ -47,6 +47,7 @@ export const IMAGE_SPECS: Record<ImageKind, { label: string; w: number; h: numbe
   worldMap: { label: 'Weltkarte (Hintergrund)', w: 1290, h: 2796, ratio: 'ca. 9:19,5 (Hochformat)', aspect: 1290 / 2796 },
   missionIcon: { label: 'Missions-Icon', w: 512, h: 512, ratio: '1:1 (quadratisch)', aspect: 1 },
   avatar: { label: 'Gegner-Avatar', w: 512, h: 512, ratio: '1:1 (quadratisch)', aspect: 1 },
+  playerAvatar: { label: 'Avatar-Bild (wird rund ausgeschnitten)', w: 512, h: 512, ratio: '1:1 (quadratisch)', aspect: 1 },
   bossPortrait: { label: 'Boss-Porträt', w: 1024, h: 1365, ratio: '3:4 (Hochformat)', aspect: 3 / 4 },
   bossBackground: { label: 'Boss-Hintergrund', w: 1290, h: 2796, ratio: 'ca. 9:19,5 (Hochformat)', aspect: 1290 / 2796 },
   // Rune artwork: round medallion up to ~320 points in the details (1024 px is sharp at 3×).

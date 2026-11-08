@@ -1,6 +1,8 @@
 // Avatars: a round picture with a creature (emoji, like the card pictures) on a coloured background, framed by
-// rarity. Six are there from the start; the others unlock when the matching achievement (Erfolge) was collected –
-// also for players who collected it before avatars existed. The choice is kept by the server with the titles.
+// rarity, or an uploaded picture. Six are there from the start; the others unlock when the matching achievement
+// (Erfolge) was collected – also for players who collected it before avatars existed. The choice is kept by the
+// server with the titles. The admin can change every avatar, upload pictures and add new ones (content_docs avatars).
+import { ImageRef, parseImage } from './campaign';
 
 export type AvatarFrame = 'none' | 'silver' | 'gold' | 'rune';
 export const FRAME_LABEL: Record<AvatarFrame, string> = { none: 'Einfach', silver: 'Silber', gold: 'Gold', rune: 'Runenglanz' };
@@ -14,11 +16,16 @@ export interface AvatarDef {
   frame: AvatarFrame;
   /** Achievement id (without "a:") that unlocks it; none = from the start. */
   quest?: string;
+  /** Uploaded picture (replaces the emoji). */
+  image?: ImageRef | null;
+  /** Switched off by the admin: not offered and not shown (players who chose it show the first start avatar). */
+  active?: boolean;
+  updatedAt?: string;
 }
 
 const a = (id: string, name: string, art: string, bg: [string, string], frame: AvatarFrame, quest?: string): AvatarDef => ({ id, name, art, bg, frame, ...(quest ? { quest } : {}) });
 
-export const AVATARS: readonly AvatarDef[] = [
+export const BUILTIN_AVATARS: readonly AvatarDef[] = [
   // Start
   a('av01', 'Fuchs', '🦊', ['#f59e0b', '#7c2d12'], 'none'),
   a('av02', 'Wolf', '🐺', ['#64748b', '#1e293b'], 'none'),
@@ -56,12 +63,58 @@ export const AVATARS: readonly AvatarDef[] = [
   a('av36', 'Fechter', '🤺', ['#93c5fd', '#1e3a8a'], 'rune', 'a-online50'),
 ];
 
-export const DEFAULT_AVATAR = 'av01';
-export const isAvatarId = (id: unknown): id is string => typeof id === 'string' && AVATARS.some((x) => x.id === id);
-export const findAvatar = (id: string | null | undefined): AvatarDef => AVATARS.find((x) => x.id === id) ?? AVATARS[0];
+/** Avatars in use: the built-in ones, changed or extended by the admin (same id = replaced). */
+export const AVATARS: AvatarDef[] = [...BUILTIN_AVATARS];
+export const AVATARS_COLLECTION = 'avatars';
+export const AVATAR_ID_RE = /^av\d{2,4}$/;
+export const AVATAR_FRAMES: AvatarFrame[] = ['none', 'silver', 'gold', 'rune'];
 
-/** Avatars the player may choose: the start ones and those whose achievement was collected ("a:<id>" keys). */
+export function setAvatars(saved: readonly AvatarDef[]): void {
+  const byId = new Map<string, AvatarDef>(BUILTIN_AVATARS.map((x) => [x.id, x]));
+  for (const x of saved) byId.set(x.id, x);
+  AVATARS.splice(0, AVATARS.length, ...[...byId.values()].sort((x, y) => x.id.localeCompare(y.id)));
+}
+
+export const DEFAULT_AVATAR = 'av01';
+const live = (x: AvatarDef) => x.active !== false;
+export const isAvatarId = (id: unknown): id is string => typeof id === 'string' && AVATARS.some((x) => x.id === id && live(x));
+export const findAvatar = (id: string | null | undefined): AvatarDef => AVATARS.find((x) => x.id === id && live(x)) ?? AVATARS.find((x) => x.id === DEFAULT_AVATAR) ?? BUILTIN_AVATARS[0];
+
+/** Avatars the player may choose: the active start ones and those whose achievement was collected ("a:<id>" keys). */
 export function unlockedAvatars(claimed: readonly string[]): string[] {
   const done = new Set(claimed);
-  return AVATARS.filter((x) => !x.quest || done.has(`a:${x.quest}`)).map((x) => x.id);
+  return AVATARS.filter((x) => live(x) && (!x.quest || done.has(`a:${x.quest}`))).map((x) => x.id);
+}
+
+const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+/** Turns a stored avatar document (untrusted) into a valid avatar, or null. */
+export function parseAvatar(id: string, raw: unknown): AvatarDef | null {
+  if (!AVATAR_ID_RE.test(id) || !raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const name = typeof r.name === 'string' ? r.name.trim().slice(0, 24) : '';
+  if (!name) return null;
+  const art = typeof r.art === 'string' && r.art.trim() ? [...r.art.trim()].slice(0, 4).join('') : '🙂';
+  const bg = Array.isArray(r.bg) && r.bg.length === 2 && r.bg.every((c) => typeof c === 'string' && COLOR_RE.test(c)) ? [r.bg[0], r.bg[1]] as [string, string] : ['#475569', '#0f172a'] as [string, string];
+  const frame = AVATAR_FRAMES.includes(r.frame as AvatarFrame) ? (r.frame as AvatarFrame) : 'none';
+  const quest = typeof r.quest === 'string' && /^[a-z0-9_-]{1,32}$/.test(r.quest) ? r.quest : undefined;
+  return {
+    id, name, art, bg, frame, ...(quest ? { quest } : {}), image: parseImage(r.image), active: r.active !== false,
+    updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt.slice(0, 40) : '',
+  };
+}
+
+export function avatarToDoc(x: AvatarDef): Record<string, unknown> {
+  const { id: _id, ...rest } = x;
+  void _id;
+  return JSON.parse(JSON.stringify({ ...rest, image: rest.image ?? null, active: rest.active !== false }));
+}
+
+export function nextAvatarId(existing: Iterable<string>): string {
+  let max = 0;
+  for (const id of existing) {
+    const n = Number(id.slice(2));
+    if (Number.isFinite(n)) max = Math.max(max, n);
+  }
+  return `av${String(max + 1).padStart(2, '0')}`;
 }

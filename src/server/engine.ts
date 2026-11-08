@@ -54,6 +54,7 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
     opponents: of<Opponent>('campaign_opponents', parseOpponent),
   }));
   setRunes(of<RuneDef>('runes', parseRune));
+  setAvatars(of<AvatarDef>(AVATARS_COLLECTION, parseAvatar));
   // Booster prices set by the admin (settings/shop) – buying costs the same as the shop shows.
   const shopRow = rows.find((r) => r.collection === 'settings' && r.id === SHOP_DOC);
   setPackLooks(shopRow ? parseShopDoc(shopRow.data) : {});
@@ -144,7 +145,7 @@ export function questEquipTitle(stateRaw: unknown, title: unknown): Titles | nul
 }
 
 export { DEFAULT_QUESTS, parseQuestConfig, questDay, questWeek } from '../game/quests';
-import { DEFAULT_AVATAR, isAvatarId, unlockedAvatars } from '../game/avatars';
+import { AVATARS_COLLECTION, AvatarDef, DEFAULT_AVATAR, isAvatarId, parseAvatar, setAvatars, unlockedAvatars } from '../game/avatars';
 
 export function cleanSave(raw: unknown): SaveData {
   return sanitize(raw);

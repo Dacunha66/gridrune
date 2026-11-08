@@ -1,5 +1,14 @@
 # Testprotokoll
 
+## Avatare im Admin, eigene Bilder (08.11.)
+
+- Admin → Avatare: Übersicht aller Avatare; Editor mit Bild-Upload (rund ausgeschnitten, Ausschnitt mit dem Finger),
+  Name, Symbol, Hintergrundfarben, Rahmen, freischaltender Erfolg, An/Aus; „+ Neuer Avatar“. Gespeichert in
+  content_docs avatars/<id> (Migration 019 erlaubt die Sammlung); Spiel und Server-Funktionen lesen sie.
+- Ausgeschaltete Avatare werden nicht angeboten; wer einen trägt, zeigt den Start-Avatar.
+- Automatisch: Admin-Änderungen ersetzen eingebaute, neue kommen dazu, ausgeschaltete sind gesperrt, ungültige Daten
+  werden bereinigt. Browser (Testseite mit Test-Datenbank): Liste, Bearbeiten, Speichern.
+
 ## Avatare (08.11.)
 
 - 32 runde Avatare (Figur auf Farbe, Rahmen Einfach/Silber/Gold/Runenglanz): 6 zum Start, 26 über Erfolge. Ein Avatar

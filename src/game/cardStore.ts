@@ -2,6 +2,7 @@
 // Writes are enforced server-side: the database only accepts them from admins (Owner/Editor),
 // and only admins get the picture storage at all. Without the platform (local development)
 // every function degrades to "no database" and the game uses its built-in cards.
+import { AVATARS_COLLECTION, AvatarDef, avatarToDoc, parseAvatar } from './avatars';
 import { CardRecord, parseCardRecord, recordToDoc, setImageBase } from './catalog';
 import { GameSettings, parseSettings } from './settings';
 import { ARENAS_COLLECTION, Arena, arenaToDoc, parseArena } from './arenas';
@@ -297,6 +298,24 @@ export async function loadRunes(db: Db | null): Promise<RuneDef[] | null> {
   } catch {
     return null;
   }
+}
+
+/** Avatars saved by the admin (changed built-in ones and new ones). null = no database. */
+export async function loadAvatars(db: Db | null): Promise<AvatarDef[] | null> {
+  if (!db) return null;
+  try {
+    const snap = await db.collection(AVATARS_COLLECTION).get();
+    return snap.docs.flatMap((d) => {
+      const x = d.exists ? parseAvatar(d.id, d.data()) : null;
+      return x ? [x] : [];
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function saveAvatar(db: Db, x: AvatarDef): Promise<void> {
+  await db.collection(AVATARS_COLLECTION).doc(x.id).set(avatarToDoc(x));
 }
 
 export async function saveRune(db: Db, r: RuneDef): Promise<void> {

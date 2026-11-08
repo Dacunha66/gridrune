@@ -41,3 +41,30 @@ describe('Avatare', () => {
     expect(shownAvatar({ avatar: 'x' })).toBe(DEFAULT_AVATAR);
   });
 });
+
+describe('Avatare im Admin', () => {
+  it('gespeicherte Avatare ersetzen eingebaute oder kommen neu dazu; ausgeschaltete werden nicht angeboten', async () => {
+    const { parseAvatar, setAvatars, AVATARS, findAvatar, isAvatarId } = await import('../src/game/avatars');
+    const changed = parseAvatar('av01', { name: 'Rotfuchs', art: '🦊', bg: ['#ff0000', '#000000'], frame: 'gold', image: { id: 'abcdefgh1234', w: 512, h: 512 } })!;
+    const added = parseAvatar('av40', { name: 'Neu', art: '✨', frame: 'rune', quest: 'a-win10' })!;
+    const off = parseAvatar('av02', { name: 'Wolf', active: false })!;
+    setAvatars([changed, added, off]);
+    expect(findAvatar('av01')).toMatchObject({ name: 'Rotfuchs', frame: 'gold' });
+    expect(findAvatar('av01').image?.id).toBe('abcdefgh1234');
+    expect(AVATARS.some((x) => x.id === 'av40')).toBe(true);
+    expect(unlockedAvatars([])).not.toContain('av02');
+    expect(isAvatarId('av02')).toBe(false);
+    expect(unlockedAvatars(['a:a-win10'])).toEqual(expect.arrayContaining(['av10', 'av40']));
+    setAvatars([]);
+    expect(AVATARS.length).toBe((await import('../src/game/avatars')).BUILTIN_AVATARS.length);
+  });
+
+  it('ungültige Dokumente werden abgelehnt oder bereinigt', async () => {
+    const { parseAvatar } = await import('../src/game/avatars');
+    expect(parseAvatar('x1', { name: 'A' })).toBeNull();
+    expect(parseAvatar('av50', { name: '' })).toBeNull();
+    expect(parseAvatar('av50', { name: 'A', bg: ['red', 'blue'], frame: 'platin', quest: 'DROP TABLE', image: { id: '../x' } })).toMatchObject({
+      bg: ['#475569', '#0f172a'], frame: 'none', image: null, active: true,
+    });
+  });
+});

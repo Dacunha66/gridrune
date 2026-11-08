@@ -2143,3 +2143,16 @@ label.btn.disabled { opacity: .45; }
 .battle-top .scorebar .score { display: inline-flex; align-items: center; gap: 5px; }
 .lb-name { display: flex; align-items: center; gap: 6px; }
 .avatar-pick span { max-width: 100%; overflow-wrap: anywhere; text-align: center; line-height: 1.2; }
+.avatar { overflow: hidden; }
+.avatar .avatar-img { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
+.avatar.locked::after { z-index: 2; }
+
+/* Admin: avatars */
+.admin-avatars, .admin-avatar-editor { display: flex; flex-direction: column; gap: 12px; padding-bottom: 24px; }
+.admin-avatar-list { display: flex; flex-direction: column; gap: 6px; }
+.admin-avatar-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid var(--line, rgba(255,255,255,0.12)); border-radius: 12px; background: rgba(10, 14, 26, 0.55); color: inherit; text-align: left; cursor: pointer; }
+.admin-avatar-row.off { opacity: 0.5; }
+.admin-avatar-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.admin-avatar-text small { overflow: hidden; text-overflow: ellipsis; }
+.admin-avatar-preview { display: flex; align-items: center; gap: 16px; }
+.image-frame.kind-playerAvatar { border-radius: 50%; overflow: hidden; max-width: 240px; }
