@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Menüleiste unter Shop/Erfolge, eigener Avatar-Bildschirm (08.11.)
+
+- Die Leiste unten (Start, Karten, Shop, Erfolge, Mehr) bleibt unter Shop und Erfolge sichtbar; der aktive Bereich ist
+  hervorgehoben, der gewählte Menü-Bereich bleibt beim Zurückwechseln erhalten.
+- Avatar-Auswahl als eigener Bildschirm „Dein Avatar“ (Mehr → Avatar wählen, Mein Konto → Avatar ändern); nicht mehr
+  unter Erfolge.
+- Browser (echte App als Gast, iPhone-Größe): Leiste auf Menü, Shop, Erfolge; Wechsel Shop → Erfolge → Karten → Mehr.
+
 ## Avatare im Admin, eigene Bilder (08.11.)
 
 - Admin → Avatare: Übersicht aller Avatare; Editor mit Bild-Upload (rund ausgeschnitten, Ausschnitt mit dem Finger),

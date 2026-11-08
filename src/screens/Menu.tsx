@@ -49,6 +49,11 @@ interface Props {
   questsReady?: number;
   /** The signed-in player's avatar (shown instead of the account icon). */
   avatar?: string | null;
+  /** Open tab (kept by the app across Shop/Erfolge). */
+  tab?: MenuTab;
+  onTab?: (t: MenuTab) => void;
+  /** Opens the avatar choice (signed in). */
+  onAvatars?: () => void;
   onQuests?: () => void;
   /** "Dein nächster Schritt": what the player can do next (campaign, quests, rewards). */
   nextSteps?: NextStep[];
@@ -63,12 +68,35 @@ export interface NextStep {
   onClick: () => void;
 }
 
-type MenuTab = 'start' | 'cards' | 'more';
+export type MenuTab = 'start' | 'cards' | 'more';
+/** The tab shown as active in the bottom bar (Shop and Erfolge are their own screens). */
+export type TabBarItem = MenuTab | 'shop' | 'quests';
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests, nextSteps = [], avatar = null }: Props) {
+/** The bottom bar of the main menu – also under Shop and Erfolge, so it never disappears there. */
+export function MenuTabBar({ active, onTab, questsReady = 0, showQuests }: { active: TabBarItem | null; onTab: (t: TabBarItem) => void; questsReady?: number; showQuests: boolean }) {
+  const cls = (t: TabBarItem) => `menu-tab ${active === t ? 'on' : ''}`;
+  return (
+    <nav className="menu-tabs" aria-label="Bereiche">
+      <button type="button" className={cls('start')} aria-current={active === 'start' ? 'page' : undefined} onClick={() => onTab('start')}><GameIcon name="play" /><span>Start</span></button>
+      <button type="button" className={cls('cards')} aria-current={active === 'cards' ? 'page' : undefined} onClick={() => onTab('cards')}><GameIcon name="cards" /><span>Karten</span></button>
+      <button type="button" className={cls('shop')} aria-current={active === 'shop' ? 'page' : undefined} onClick={() => onTab('shop')}><GameIcon name="shop" /><span>Shop</span></button>
+      {showQuests && (
+        <button type="button" className={cls('quests')} aria-current={active === 'quests' ? 'page' : undefined} onClick={() => onTab('quests')}>
+          <GameIcon name="trophy" /><span>Erfolge</span>{questsReady > 0 && <b className="menu-tab-badge" aria-label={`${questsReady} bereit`}>{questsReady}</b>}
+        </button>
+      )}
+      <button type="button" className={cls('more')} aria-current={active === 'more' ? 'page' : undefined} onClick={() => onTab('more')}><GameIcon name="gear" /><span>Mehr</span></button>
+    </nav>
+  );
+}
+
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests, nextSteps = [], avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
   const equipped = findRune(equippedRune);
   const [chooseLevel, setChooseLevel] = useState(false);
-  const [tab, setTab] = useState<MenuTab>('start');
+  // The open tab is kept by the app, so coming back from Shop or Erfolge opens the tab chosen in the bar.
+  const [ownTab, setOwnTab] = useState<MenuTab>('start');
+  const tab = tabProp ?? ownTab;
+  const setTab = (t: MenuTab) => (onTab ? onTab(t) : setOwnTab(t));
   const { wins, draws, losses } = save.stats;
   const owned = ownedActiveIds(save.unlocked).length;
 
@@ -163,6 +191,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
               <span><GameIcon name="skull" label="Niederlagen" /> {losses}</span>
             </div>
             {account && <button type="button" className="btn" onClick={onAccount}><GameIcon name="user" /> {account === 'guest' ? 'Anmelden / Konto erstellen' : 'Konto'}</button>}
+            {onAvatars && <button type="button" className="btn" onClick={onAvatars}>{avatar ? <Avatar id={avatar} size={24} /> : <GameIcon name="user" />} Avatar wählen</button>}
             <button type="button" className="btn" onClick={() => onNavigate('rules')}><GameIcon name="scroll" /> Regeln</button>
             {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}><GameIcon name="gear" /> Kartenverwaltung</button>}
             <label className="toggle">
@@ -182,17 +211,12 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         )}
       </div>
 
-      <nav className="menu-tabs" aria-label="Bereiche">
-        <button type="button" className={`menu-tab ${tab === 'start' && !playOpen ? 'on' : ''}`} onClick={() => { setTab('start'); onPlayOpen?.(false); }}><GameIcon name="play" /><span>Start</span></button>
-        <button type="button" className={`menu-tab ${tab === 'cards' && !playOpen ? 'on' : ''}`} onClick={() => { setTab('cards'); onPlayOpen?.(false); }}><GameIcon name="cards" /><span>Karten</span></button>
-        <button type="button" className="menu-tab" onClick={() => onNavigate('shop')}><GameIcon name="shop" /><span>Shop</span></button>
-        {onQuests && (
-          <button type="button" className="menu-tab" onClick={onQuests}>
-            <GameIcon name="trophy" /><span>Erfolge</span>{questsReady > 0 && <b className="menu-tab-badge" aria-label={`${questsReady} bereit`}>{questsReady}</b>}
-          </button>
-        )}
-        <button type="button" className={`menu-tab ${tab === 'more' && !playOpen ? 'on' : ''}`} onClick={() => { setTab('more'); onPlayOpen?.(false); }}><GameIcon name="gear" /><span>Mehr</span></button>
-      </nav>
+      <MenuTabBar active={playOpen ? null : tab} questsReady={questsReady} showQuests={!!onQuests} onTab={(t) => {
+        if (t === 'shop') return onNavigate('shop');
+        if (t === 'quests') return onQuests?.();
+        setTab(t);
+        onPlayOpen?.(false);
+      }} />
     </main>
   );
 }

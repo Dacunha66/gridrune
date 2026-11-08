@@ -4,7 +4,7 @@ import { Reward, applyReward, computeReward } from './game/rewards';
 import type { AiLevel } from './game/ai';
 import { Pick } from './game/runner';
 import { SaveData, loadSave, writeSave } from './game/storage';
-import { Menu } from './screens/Menu';
+import { Menu, MenuTab, MenuTabBar, TabBarItem } from './screens/Menu';
 import { Raid, RaidTestFight } from './screens/Raid';
 import type { RaidConfig } from './game/raid';
 import { Online } from './screens/Online';
@@ -48,10 +48,11 @@ import {
 import { grantedText } from './game/campaignRewards';
 import { AdventureLog, AdventureTicket, handPicks } from './game/verify';
 import { DEFAULT_AVATAR, setAvatars } from './game/avatars';
+import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' | 'raid' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' | 'raid' | 'avatars' }
   /** tab = open on this tab (the account page opens the avatars under "Erfolge"). */
   | { name: 'quests'; tab?: 'daily' | 'weekly' | 'achievements' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
@@ -144,6 +145,8 @@ export function App() {
   const [questsReady, setQuestsReady] = useState(0);
   /** The signed-in player's avatar (from the server, with the titles). */
   const [myAvatar, setMyAvatar] = useState<string | null>(null);
+  /** Open tab of the main menu (kept while Shop or Erfolge is open). */
+  const [menuTab, setMenuTab] = useState<MenuTab>('start');
   const [questDaily, setQuestDaily] = useState<QuestItem | null>(null);
   useEffect(() => {
     if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
@@ -248,6 +251,16 @@ export function App() {
     const pending = pendingRecords.current;
     if (pending) setTimeout(() => applyRecords(pending), 0);
   }, [applyRecords]);
+  /** The menu's bottom bar under Shop and Erfolge (same tabs as in the menu). */
+  const tabBar = (active: TabBarItem) => (
+    <MenuTabBar active={active} questsReady={questsReady} showQuests={!!account} onTab={(t) => {
+      if (t === 'shop') return setScreen({ name: 'shop' });
+      if (t === 'quests') return setScreen({ name: 'quests' });
+      setMenuTab(t);
+      setPlayMenu(false);
+      toMenu();
+    }} />
+  );
 
   const finishBattle = async (level: AiLevel, outcome: Outcome, score: { player: number; cpu: number }, ticket?: AdventureTicket, run?: AdventureLog['run'], record?: DuelRecord) => {
     const reward = computeReward(outcome, level);
@@ -341,7 +354,7 @@ export function App() {
       {account?.kind === 'signedOut' && !guest && screen.name === 'menu' && <Welcome onGuest={() => setGuestState(true)} />}
       {screen.name === 'account' && account?.kind === 'signedIn' && (
         <AccountPage account={account.account} onBack={toMenu} onRenamed={(name) => setAccount({ kind: 'signedIn', account: { ...account.account, name } })}
-          avatar={myAvatar} onAvatar={() => setScreen({ name: 'quests', tab: 'achievements' })} />
+          avatar={myAvatar} onAvatar={() => setScreen({ name: 'avatars' })} />
       )}
       {cloud.accountMode && cloud.phase !== 'ready' && account?.kind !== 'recovery' && (
         <CloudGate phase={cloud.phase} notice={cloud.notice} browserSave={loadSave()} onChoose={cloud.choose} onRetry={cloud.retry} />
@@ -368,6 +381,9 @@ export function App() {
           onQuests={account ? () => setScreen({ name: 'quests' }) : undefined}
           questsReady={questsReady}
           avatar={account?.kind === 'signedIn' ? myAvatar : null}
+          tab={menuTab}
+          onTab={setMenuTab}
+          onAvatars={account?.kind === 'signedIn' && cloud.uid ? () => setScreen({ name: 'avatars' }) : undefined}
           nextSteps={nextSteps}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
           runes={runesOn}
@@ -386,7 +402,13 @@ export function App() {
           } : null} />
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} runes={runesOn} />}
-      {screen.name === 'shop' && <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} />}
+      {screen.name === 'shop' && (
+        <div className="tabbed-screen">
+          <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} />
+          {tabBar('shop')}
+        </div>
+      )}
+      {screen.name === 'avatars' && <Avatars onAvatar={setMyAvatar} onBack={toMenu} />}
       {screen.name === 'online' && cloud.uid && (
         <Online
           uid={cloud.uid}
@@ -411,9 +433,12 @@ export function App() {
         />
       )}
       {screen.name === 'quests' && (
-        <Quests signedIn={!!cloud.uid && cloud.phase === 'ready'} reducedMotion={reducedMotion}
-          onAccount={account?.kind === 'signedOut' ? () => { setGuestState(false); toMenu(); } : undefined}
-          onAdopt={cloud.adoptServer} onBack={toMenu} onAvatar={setMyAvatar} initialTab={screen.tab} />
+        <div className="tabbed-screen">
+          <Quests signedIn={!!cloud.uid && cloud.phase === 'ready'} reducedMotion={reducedMotion}
+            onAccount={account?.kind === 'signedOut' ? () => { setGuestState(false); toMenu(); } : undefined}
+            onAdopt={cloud.adoptServer} onBack={toMenu} initialTab={screen.tab} />
+          {tabBar('quests')}
+        </div>
       )}
       {screen.name === 'raid' && cloud.uid && (
         <Raid unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck} rune={duelRune('raid')} reducedMotion={reducedMotion}

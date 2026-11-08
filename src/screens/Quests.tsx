@@ -8,9 +8,7 @@ import { Card } from '../components/Card';
 import { Burst } from '../components/Effects';
 import { CloudSave } from '../game/cloudSave';
 import { QuestGranted, QuestItem, QuestReward, claimable, msToNextDay, rewardText } from '../game/quests';
-import { QuestOverview, claimQuestRewards, equipAvatar, equipTitle, questOverview } from '../game/questApi';
-import { Avatar } from '../components/Avatar';
-import { AVATARS, DEFAULT_AVATAR } from '../game/avatars';
+import { QuestOverview, claimQuestRewards, equipTitle, questOverview } from '../game/questApi';
 
 type Tab = 'daily' | 'weekly' | 'achievements';
 const TABS: { id: Tab; label: string; icon: GameIconName }[] = [
@@ -26,8 +24,6 @@ interface Props {
   onAccount?: () => void;
   /** Rewards were paid: take over the new save. */
   onAdopt: (c: CloudSave) => void;
-  /** A new avatar was chosen (the menu shows it). */
-  onAvatar?: (id: string) => void;
   initialTab?: Tab;
   onBack: () => void;
 }
@@ -80,7 +76,7 @@ function hoursText(ms: number): string {
   return h > 0 ? `${h} Std. ${m} Min.` : `${m} Min.`;
 }
 
-export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, onAvatar, initialTab = 'daily', onBack }: Props) {
+export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, initialTab = 'daily', onBack }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [data, setData] = useState<QuestOverview | null>(null);
   const [error, setError] = useState('');
@@ -112,17 +108,6 @@ export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, onAvatar, 
     onAdopt(r.cloud);
     if (r.overview) setData(r.overview);
     if (r.granted.length) setReveal({ granted: r.granted, key: Date.now() });
-  }
-
-  async function pickAvatar(avatar: string) {
-    if (!data) return;
-    setBusy(true);
-    const t = await equipAvatar(avatar);
-    setBusy(false);
-    if (t) {
-      setData({ ...data, titles: t });
-      onAvatar?.(avatar);
-    } else setError('Der Avatar konnte nicht gesetzt werden.');
   }
 
   async function pickTitle(title: string | null) {
@@ -176,25 +161,6 @@ export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, onAvatar, 
           )}
           {b && data && tab === 'achievements' && (
             <>
-              <section className="quest-titles">
-                <h2><Avatar id={data.titles.avatar} size={28} /> Dein Avatar</h2>
-                <p className="muted small">Erscheint im Hauptmenü, im Online-Duell und in der Raid-Bestenliste. Neue Avatare schaltest du mit Erfolgen frei.</p>
-                <div className="avatar-grid" role="group" aria-label="Avatar wählen">
-                  {AVATARS.filter((av) => av.active !== false).map((av) => {
-                    const open = data.avatars.includes(av.id);
-                    const on = (data.titles.avatar ?? DEFAULT_AVATAR) === av.id;
-                    const need = av.quest ? b.achievements.find((i) => i.key === `a:${av.quest}`) : null;
-                    return (
-                      <button key={av.id} type="button" className={`avatar-pick ${on ? 'on' : ''}`} disabled={!open || busy || on} aria-pressed={on}
-                        onClick={() => void pickAvatar(av.id)} aria-label={open ? `${av.name}${on ? ', gewählt' : ''}` : `${av.name}, gesperrt${need ? `: ${need.text}` : ''}`}>
-                        <Avatar id={av.id} size={52} locked={!open} />
-                        <span>{av.name}</span>
-                        {!open && need && <small>{need.chain ? `${need.chain}: ` : ''}{need.text}</small>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
               <section className="quest-titles">
                 <h2><GameIcon name="crown" /> Dein Titel</h2>
                 {data.titles.owned.length === 0 ? (

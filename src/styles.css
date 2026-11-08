@@ -2156,3 +2156,10 @@ label.btn.disabled { opacity: .45; }
 .admin-avatar-text small { overflow: hidden; text-overflow: ellipsis; }
 .admin-avatar-preview { display: flex; align-items: center; gap: 16px; }
 .image-frame.kind-playerAvatar { border-radius: 50%; overflow: hidden; max-width: 240px; }
+
+/* Shop and Erfolge keep the menu's bottom bar. */
+.tabbed-screen { height: 100%; display: flex; flex-direction: column; }
+.tabbed-screen > .screen { flex: 1; min-height: 0; height: auto; padding-bottom: 8px; }
+.tabbed-screen > .menu-tabs { margin: 0; }
+.avatars-current { display: flex; align-items: center; gap: 14px; margin: 4px 0 8px; }
+.avatars-current p { margin: 0; }
