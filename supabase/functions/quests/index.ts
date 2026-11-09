@@ -4,7 +4,7 @@
 // "equip-avatar" (only avatars unlocked by collected achievements).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { loadContent, questClaim, questDay, questEquipAvatar, questEquipTitle, questOverview, questWeek } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@74fc71f859bc09cf8f20b8c7c76b2dfa31d393cf/public/server/engine-058e75862acf.js';
+import { loadContent, questClaim, questDay, questEquipAvatar, questEquipTitle, questOverview, questWeek } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@505c8c96728039138ba24ba779df3e6fecf54c42/public/server/engine-009c8815623d.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
