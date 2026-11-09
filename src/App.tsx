@@ -295,28 +295,40 @@ export function App() {
     const flush = async () => {
       if (busy) return;
       busy = true;
-      let list = readPending(uid);
-      for (const p of list) {
-        if (p.kind === 'league') {
-          const r = await finishLeagueRemote(p.ticketId, p.log);
-          if (r.kind === 'offline') break;
-          if (r.cloud) cloud.adoptServer(r.cloud);
-          if (r.kind === 'paid' && r.won) cloud.notify(`Rangliste nachträglich gewertet: ${r.reward.newCard ? `neue Karte „${getCard(r.reward.newCard).name}“` : `🪙 ${r.reward.coins}`}.`);
-        } else if (p.kind === 'mission') {
-          const r = await finishMissionRemote(p.ticketId, p.log);
-          if (r.kind === 'offline') break;
-          if (r.cloud) cloud.adoptServer(r.cloud);
-          if (r.kind === 'paid') cloud.notify(`Kampagnen-Duell nachträglich gewertet${r.granted.length ? ` – ${grantedText(r.granted)}` : ''}.`);
-        } else {
-          const r = await finishAdventureRemote(p.ticketId, p.log);
-          if (r.kind === 'offline') break;
-          if (r.cloud) cloud.adoptServer(r.cloud);
-          if (r.kind === 'paid') cloud.notify(`Nachträglich gutgeschrieben: 🪙 ${r.reward.coins}${r.reward.newCard ? ' und eine neue Karte' : ''}.`);
+      try {
+        for (const p of readPending(uid)) {
+          // The text is built after the entry is gone: a problem in the text must not keep the result in the queue.
+          let message: (() => string) | null = null;
+          if (p.kind === 'league') {
+            const r = await finishLeagueRemote(p.ticketId, p.log);
+            if (r.kind === 'offline') break;
+            if (r.cloud) cloud.adoptServer(r.cloud);
+            if (r.kind === 'paid' && r.won) message = () => `Rangliste nachträglich gewertet: ${r.reward.newCard ? `neue Karte „${getCard(r.reward.newCard).name}“` : `🪙 ${r.reward.coins}`}.`;
+          } else if (p.kind === 'mission') {
+            const r = await finishMissionRemote(p.ticketId, p.log);
+            if (r.kind === 'offline') break;
+            if (r.cloud) cloud.adoptServer(r.cloud);
+            if (r.kind === 'paid') message = () => `Kampagnen-Duell nachträglich gewertet${r.granted.length ? ` – ${grantedText(r.granted)}` : ''}.`;
+          } else {
+            const r = await finishAdventureRemote(p.ticketId, p.log);
+            if (r.kind === 'offline') break;
+            if (r.cloud) cloud.adoptServer(r.cloud);
+            if (r.kind === 'paid') message = () => `Nachträglich gutgeschrieben: 🪙 ${r.reward.coins}${r.reward.newCard ? ' und eine neue Karte' : ''}.`;
+          }
+          // Read the list again: a result finished offline while this one was being sent must not be dropped.
+          writePending(uid, readPending(uid).filter((x) => x.ticketId !== p.ticketId));
+          if (message) {
+            try {
+              cloud.notify(message());
+            } catch {
+              cloud.notify('Ein Ergebnis wurde nachträglich gewertet.');
+            }
+          }
         }
-        list = list.filter((x) => x.ticketId !== p.ticketId);
-        writePending(uid, list);
+      } finally {
+        // Never stay blocked: the next attempt follows in a minute.
+        busy = false;
       }
-      busy = false;
       // Campaign rewards earned before they were paid out (once per account; the server knows what is paid).
       if (!claimed.current.has(uid)) {
         const c = await claimCampaignRewards();

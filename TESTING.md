@@ -1,5 +1,30 @@
 # Testprotokoll
 
+## Fehlersuche (09.11.)
+
+Geprüft: Server-Protokolle der letzten 24 Stunden (keine Fehler außer den eigenen Start-Prüfungen), Regeln/KI/Prüfung,
+Speichern im Konto, nachgereichte Ergebnisse, alle Spielmodi im Browser.
+
+Gefunden und behoben (nur Spiel-Code, keine Regel- oder Kartenänderung, Server unverändert):
+- **Speichern im Konto:** Zwei Änderungen kurz hintereinander bei langsamer Verbindung (Server antwortet nach mehr als
+  1,2 s) – die zweite wurde mit der alten Versionsnummer geschickt, der Server meldete einen Konflikt, die Änderung ging
+  verloren und es erschien fälschlich „Spielstand von einem anderen Gerät wurde geladen“. Jetzt wartet jede Speicherung
+  auf die Antwort der vorigen. Nachgestellt mit einem simulierten langsamen Server: vorher Konflikt + Verlust, jetzt
+  kommen beide Änderungen an (Test nicht im Repo, braucht zusätzliche Test-Bibliotheken).
+- **Nachgereichte Ergebnisse (offline beendete Spiele):** Endete ein Spiel offline, während gerade ältere Ergebnisse
+  nachgeschickt wurden, konnte es aus der Warteschlange fallen. Außerdem blieb die Warteschlange bis zum Neuladen
+  stehen, wenn beim Erstellen der Meldung ein Fehler auftrat. Beides behoben. Nicht mit echtem Konto getestet.
+
+Ohne Befund geprüft:
+- 150 Zufallsduelle (alle Arenen, Runen, Deckgrößen 8–40, Fels, alle KI-Stufen): kein Absturz, Kartenzahl stimmt immer,
+  jedes Duell wird von der Server-Prüfung angenommen.
+- KI nutzt keine verdeckten Infos: in denselben Duellen bei jedem Computerzug Hand/Stapel des Spielers und die
+  Reihenfolge des eigenen Stapels ausgetauscht – die Entscheidung blieb immer gleich.
+- Wochen-/Tageszählung der Erfolge (2024–2030) gegen eine zweite Berechnung.
+- Browser als Gast (iPhone-Größe): Einfaches Spiel Leicht/Normal/Schwer, Rangliste (ganzes Match), Kampagne „Erstes
+  Duell“, Draft-Übung, Karten, Shop, Erfolge, Mehr – keine Fehlermeldungen.
+- Nicht auf einem echten Gerät getestet.
+
 ## Menüleiste unter Shop/Erfolge, eigener Avatar-Bildschirm (08.11.)
 
 - Die Leiste unten (Start, Karten, Shop, Erfolge, Mehr) bleibt unter Shop und Erfolge sichtbar; der aktive Bereich ist

@@ -31,6 +31,10 @@ export function useCloudSync({ account, save, setSave, progress, setProgress }: 
   const synced = useRef('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [kick, setKick] = useState(0);
+  /** A save is on its way to the server: the next one waits for its answer (it needs the new version as its base). */
+  const pushing = useRef(false);
+  /** The newest local state (save + campaign as JSON), to tell whether it changed while a save was on its way. */
+  const latest = useRef('');
 
   const adopt = useCallback((c: CloudSave) => {
     version.current = c.version;
@@ -99,24 +103,32 @@ export function useCloudSync({ account, save, setSave, progress, setProgress }: 
   useEffect(() => {
     if (phase !== 'ready' || !uid) return;
     const json = JSON.stringify([save, progress]);
+    latest.current = json;
     if (json === synced.current) return;
     writeCache(uid, { version: version.current ?? 0, save, campaign: progress }, true);
     setSync('waiting');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
+      // Still waiting for the previous save: try again right after its answer (see the kick below).
+      if (pushing.current) return;
+      pushing.current = true;
       setSync('saving');
       const r = await pushCloudSave(save, progress, version.current);
+      pushing.current = false;
+      // Changed again while this save was on its way: the newer state is sent next, on top of this version.
+      const newer = latest.current !== json;
+      if (newer) setKick((k) => k + 1);
       if (r.kind === 'saved') {
         // The server keeps only the player's choices; anything else it changed back is taken over.
-        if (r.cloud && JSON.stringify([r.cloud.save, r.cloud.campaign]) !== json) {
+        if (r.cloud && JSON.stringify([r.cloud.save, r.cloud.campaign]) !== json && !newer) {
           adopt(r.cloud);
           writeCache(uid, r.cloud, false);
         } else {
           version.current = r.version;
           synced.current = json;
-          writeCache(uid, { version: r.version, save, campaign: progress }, false);
+          if (!newer) writeCache(uid, { version: r.version, save, campaign: progress }, false);
         }
-        setSync('saved');
+        if (!newer) setSync('saved');
       } else if (r.kind === 'conflict') {
         adopt(r.cloud);
         writeCache(uid, r.cloud, false);
