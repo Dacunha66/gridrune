@@ -2222,3 +2222,34 @@ label.btn.disabled { opacity: .45; }
 .menu-sub .btn-primary.btn-big .btn-sub { white-space: nowrap; }
 .admin-thumb.league-thumb > .card { width: 100%; }
 .admin-row.league-row { grid-template-columns: 76px 1fr auto; }
+
+/* ---------- Pack opening: cards come out face down, a tap turns each one over ---------- */
+.flip-slot { background: none; border: none; padding: 0; color: inherit; cursor: pointer; perspective: 900px; -webkit-tap-highlight-color: transparent; }
+.flip-slot.is-up { cursor: default; }
+.flip-inner { position: relative; display: block; width: 100%; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(.2, .8, .25, 1.15); }
+.flip-slot.is-up .flip-inner { transform: rotateY(180deg); }
+.flip-face { display: block; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip-front { transform: rotateY(180deg); }
+.flip-back {
+  position: absolute; inset: 0; z-index: 2; border-radius: 10px; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 38%, var(--b3, #9cc3ff) 0%, var(--b1, #4f8ff7) 32%, var(--b2, #1e3a8a) 78%);
+  border: 3px solid var(--gold); box-shadow: inset 0 0 0 3px rgba(11, 17, 32, 0.55), inset 0 0 0 6px var(--gold-faint), 0 6px 16px rgba(0, 0, 0, 0.55);
+}
+.flip-back::before { content: ''; position: absolute; inset: 9px; border: 1px solid rgba(255, 241, 194, 0.45); border-radius: 6px; }
+.flip-rune { font: 700 clamp(30px, 11vw, 48px)/1 var(--f-display); color: #fff1c2; text-shadow: 0 0 12px rgba(255, 241, 194, 0.8), 0 2px 0 rgba(0, 0, 0, 0.4); }
+/* Face down, the rarer cards already glow a little – a hint, not the answer. */
+.flip-slot:not(.is-up) .flip-back { animation: back-breathe 1.8s ease-in-out infinite; }
+.flip-slot.hint-rare:not(.is-up) .flip-back { --hint: rgba(34, 211, 238, 0.75); }
+.flip-slot.hint-epic:not(.is-up) .flip-back { --hint: rgba(192, 132, 252, 0.9); }
+.flip-slot.hint-legendary:not(.is-up) .flip-back { --hint: rgba(251, 191, 36, 0.95); }
+.flip-slot.hint-mythic:not(.is-up) .flip-back { --hint: rgba(255, 122, 217, 0.95); }
+@keyframes back-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 3px rgba(11, 17, 32, 0.55), inset 0 0 0 6px var(--gold-faint), 0 6px 16px rgba(0, 0, 0, 0.55), 0 0 6px var(--hint, transparent); }
+  50% { box-shadow: inset 0 0 0 3px rgba(11, 17, 32, 0.55), inset 0 0 0 6px var(--gold-faint), 0 6px 16px rgba(0, 0, 0, 0.55), 0 0 22px 4px var(--hint, transparent); }
+}
+.flip-slot:not(.is-up):active .flip-inner { transform: scale(0.95); }
+.flip-slot.is-up .reveal-tag { animation: reveal-drop 0.35s ease-out 0.45s both; }
+.flip-slot .slot-rays { animation-delay: 0.4s, 0s; }
+.flip-hint { margin: 0 0 6px; text-align: center; font-size: 14px; color: var(--muted); }
+.reduced-motion .flip-inner { transition: none; }
+.reduced-motion .flip-slot:not(.is-up) .flip-back { animation: none; }

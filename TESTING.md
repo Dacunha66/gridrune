@@ -1,5 +1,14 @@
 # Testprotokoll
 
+## Booster verdeckt aufdecken (09.11.)
+
+- Nach dem Öffnen liegen die 3 Karten verdeckt (Rückseite in den Farben des ausgerüsteten Kartenrückens); seltene,
+  epische, legendäre und mystische Karten leuchten verdeckt in ihrer Farbe. Tippen dreht die Karte um (bei Episch+
+  Strahlen und Funken), „NEU!“/„Doppelt“ erscheint danach. „Alle aufdecken“ dreht den Rest um; „Noch eins“ und
+  „Super!“ erst, wenn alle Karten offen sind. Kauf und Inhalt unverändert (Server bestimmt die Karten wie bisher).
+- Browser (Gast mit Test-Münzen, iPhone-Größe): Pack öffnen, einzeln aufdecken, „Noch eins“ (wieder verdeckt),
+  „Alle aufdecken“ – keine Fehlermeldungen. Nicht auf einem echten Gerät getestet.
+
 ## Design-Abgleich (09.11.)
 
 - Spielen-Menü: Einfaches Spiel (gegen die KI: Leicht/Normal/Schwer · gegen Spieler: Einladungscode oder Zufall),

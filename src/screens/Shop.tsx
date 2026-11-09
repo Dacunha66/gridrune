@@ -11,7 +11,7 @@ import { buyPackRemote, buySkinRemote } from '../game/adventureApi';
 import type { CloudSave } from '../game/cloudSave';
 import { DUPLICATE_REFUND, PACKS, PackCard, PackDef, PackLook, buyPack, buySkin, equipSkin, packPrice, packView } from '../game/shop';
 import { CampaignImage } from './Campaign';
-import { SKINS, SkinDef } from '../game/skins';
+import { SKINS, SkinDef, getSkin } from '../game/skins';
 import { SaveData } from '../game/storage';
 import { Header } from './Header';
 
@@ -66,7 +66,8 @@ function odds(pack: PackDef): { rarity: Rarity; text: string }[] {
 export function Shop({ save, onChange, onBack, server = null, top }: Props) {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<'packs' | 'skins'>('packs');
-  const [opened, setOpened] = useState<{ pack: PackDef; cards: PackCard[]; key: number; stage: 'shake' | 'open' } | null>(null);
+  /** flipped = which cards are already turned over (they come out of the pack face down). */
+  const [opened, setOpened] = useState<{ pack: PackDef; cards: PackCard[]; key: number; stage: 'shake' | 'open'; flipped: boolean[] } | null>(null);
   const [justBought, setJustBought] = useState<string | null>(null);
   const coins = useCountUp(save.coins, 600);
   const reducedMotion = typeof document !== 'undefined' && document.documentElement.classList.contains('reduced-motion');
@@ -98,14 +99,24 @@ export function Shop({ save, onChange, onBack, server = null, top }: Props) {
       if (r.cloud) server.adopt(r.cloud);
       if (!r.ok) return setMessage(r.reason);
       setMessage('');
-      setOpened({ pack, cards: r.cards, key: Date.now(), stage: 'shake' });
+      setOpened({ pack, cards: r.cards, key: Date.now(), stage: 'shake', flipped: r.cards.map(() => false) });
       return;
     }
     const r = buyPack(save, pack.id, rng);
     if (!r.ok) return setMessage(r.reason);
     setMessage('');
     onChange(r.save);
-    setOpened({ pack, cards: r.cards, key: Date.now(), stage: 'shake' });
+    setOpened({ pack, cards: r.cards, key: Date.now(), stage: 'shake', flipped: r.cards.map(() => false) });
+  }
+
+  /** The equipped card back (colours of the card skin) – the cards lie face down on it. */
+  const back = getSkin(save.skins.card).colors;
+  const allUp = !!opened && opened.flipped.every(Boolean);
+  function flipCard(i: number) {
+    setOpened((o) => (o && !o.flipped[i] ? { ...o, flipped: o.flipped.map((f, k) => f || k === i) } : o));
+  }
+  function flipAll() {
+    setOpened((o) => (o ? { ...o, flipped: o.flipped.map(() => true) } : o));
   }
 
   async function skinAction(skin: SkinDef) {
@@ -244,18 +255,32 @@ export function Shop({ save, onChange, onBack, server = null, top }: Props) {
                 <span className="pack-flash" aria-hidden="true" />
                 {opened.cards.map((c, i) => {
                   const rarity = getCard(c.cardId).rarity;
+                  const up = opened.flipped[i];
+                  const big = RARITY_ORDER[rarity] >= RARITY_ORDER.epic;
                   return (
-                    <div key={c.cardId} className={`reveal-slot rarity-bg-${rarity}`} style={{ animationDelay: `${0.25 + i * 0.35}s` } as CSSProperties}>
-                      {RARITY_ORDER[rarity] >= RARITY_ORDER.epic && <span className="slot-rays" aria-hidden="true" style={{ animationDelay: `${0.25 + i * 0.35}s` }} />}
-                      <Card id={c.cardId} size="md" showName />
-                      <span className={`reveal-tag ${c.isNew ? 'new' : ''}`}>{c.isNew ? 'NEU!' : <>Doppelt +<Coin /> {c.refund}</>}</span>
-                    </div>
+                    <button key={`${c.cardId}-${i}`} type="button" className={`reveal-slot flip-slot hint-${rarity} ${up ? 'is-up' : ''}`}
+                      style={{ animationDelay: `${0.15 + i * 0.22}s` } as CSSProperties}
+                      onClick={() => flipCard(i)} aria-label={up ? `${getCard(c.cardId).name}, ${RARITY_LABEL[rarity]}` : `Karte ${i + 1} aufdecken`}>
+                      {up && big && <span className="slot-rays" aria-hidden="true" />}
+                      {up && big && !reducedMotion && <Burst x="50%" y="40%" colors={RARITY_COLORS[rarity]} count={22} spread={90} />}
+                      <span className="flip-inner">
+                        <span className="flip-face flip-back" aria-hidden="true" style={{ '--b1': back[0], '--b2': back[1], '--b3': back[2] } as CSSProperties}>
+                          <span className="flip-rune">ᚱ</span>
+                        </span>
+                        <span className="flip-face flip-front"><Card id={c.cardId} size="md" showName /></span>
+                      </span>
+                      <span className={`reveal-tag ${c.isNew ? 'new' : ''}`} style={{ visibility: up ? 'visible' : 'hidden' }}>{c.isNew ? 'NEU!' : <>Doppelt +<Coin /> {c.refund}</>}</span>
+                    </button>
                   );
                 })}
               </div>
             )}
-            <p className="muted small" style={{ visibility: opened.stage === 'open' ? 'visible' : 'hidden' }}>{opened.cards.filter((c) => c.isNew).map((c) => getCard(c.cardId).name).join(', ') || 'Keine neuen Karten – dafür Münzen.'}</p>
-            <div className="modal-actions" style={{ visibility: opened.stage === 'open' ? 'visible' : 'hidden' }}>
+            {opened.stage === 'open' && !allUp ? (
+              <p className="flip-hint">Tippe auf eine Karte, um sie aufzudecken · <button type="button" className="link-btn" onClick={flipAll}>Alle aufdecken</button></p>
+            ) : (
+              <p className="muted small" style={{ visibility: opened.stage === 'open' ? 'visible' : 'hidden' }}>{opened.cards.filter((c) => c.isNew).map((c) => getCard(c.cardId).name).join(', ') || 'Keine neuen Karten – dafür Münzen.'}</p>
+            )}
+            <div className="modal-actions" style={{ visibility: opened.stage === 'open' && allUp ? 'visible' : 'hidden' }}>
               {save.coins >= packPrice(opened.pack) && (
                 <button type="button" className="btn" onClick={() => openPack(opened.pack)}>Noch eins (<Coin /> {packPrice(opened.pack)})</button>
               )}
