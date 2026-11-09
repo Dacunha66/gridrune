@@ -357,7 +357,7 @@ function WorldMap({ world, content, progress, preview, runesOn, onMission, onBac
   const points = missions.map((m) => `${(m.pos.x * 100).toFixed(1)},${(m.pos.y * 100).toFixed(1)}`).join(' ');
   return (
     <main className="screen campaign world-screen">
-      <Header title={world.name} onBack={onBack} right={<span className="pct">{worldPercent(content, progress, world.id, preview)} %</span>} />
+      <Header title={world.name} onBack={onBack} right={<span className="pill pct">{worldPercent(content, progress, world.id, preview)} %</span>} />
       {preview && <p className="test-banner">Testmodus – alle Missionen offen, nichts wird gespeichert</p>}
       <StarBar world={world} stars={stars} max={max} />
       {current && (() => {
@@ -432,7 +432,7 @@ function Briefing({ mission, opponent, content, progress, deck, preview, playerR
   const world = content.worlds.find((w) => w.id === mission.worldId);
   return (
     <main className={`screen campaign briefing kind-${mission.kind}`}>
-      <Header title={mission.name} onBack={onBack} right={<span className={`kind-pill kind-${mission.kind}`}>{KIND_LABEL[mission.kind]}</span>} />
+      <Header title={mission.name} onBack={onBack} right={<span className={`pill kind-pill kind-${mission.kind}`}>{KIND_LABEL[mission.kind]}</span>} />
       {preview && <p className="test-banner">Testmodus – zählt nicht für den Fortschritt</p>}
       <div className="scroll brief-body">
         <section className={`brief-opponent rank-${opponent.rank}`}>

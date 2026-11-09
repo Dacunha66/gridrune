@@ -21,13 +21,13 @@ export interface RuleSet {
 }
 
 export const ADVENTURE_RULES: RuleSet = {
-  id: 'adventure', name: 'Abenteuer',
+  id: 'adventure', name: 'Einfaches Spiel',
   deck: { size: DECK_SIZE, maxCopies: 1, rarityLimits: {} },
   rock: false, bestOf: 1,
 };
 
 export const COLLECTION_LEAGUE_RULES: RuleSet = {
-  id: 'collection-league', name: 'Collection League',
+  id: 'collection-league', name: 'Rangliste',
   deck: { size: DECK_SIZE, maxCopies: 2, rarityLimits: { mythic: 1, legendary: 1, epic: 4 } },
   rock: true, bestOf: 3,
 };

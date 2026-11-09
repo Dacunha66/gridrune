@@ -48,7 +48,7 @@ export function Avatars({ onAvatar, onBack }: { onAvatar: (id: string) => void; 
           <>
             <div className="avatars-current">
               <Avatar id={current} size={88} />
-              <p className="muted small">Dein Avatar erscheint im Hauptmenü, im Online-Duell und in der Raid-Bestenliste. Neue Avatare schaltest du mit Erfolgen frei.</p>
+              <p className="muted small">Dein Avatar erscheint im Hauptmenü, im Duell gegen Spieler und in der Raid-Bestenliste. Neue Avatare schaltest du mit Erfolgen frei.</p>
             </div>
             <div className="avatar-grid" role="group" aria-label="Avatar wählen">
               {all.map((av) => {

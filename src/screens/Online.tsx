@@ -34,6 +34,8 @@ interface Props {
   /** Rune for online duels (league rules: owned basic runes), null = none. */
   rune: string | null;
   reducedMotion: boolean;
+  /** Einfaches Spiel → Gegen Spieler → Zufall: start looking for a random opponent right away. */
+  autoQueue?: boolean;
   /** A duel ended: the server may have paid coins – reload the account save. */
   onFinished: () => void;
   onExit: () => void;
@@ -41,9 +43,9 @@ interface Props {
 
 const SITE = typeof location !== 'undefined' ? location.origin : 'https://gridrune.pages.dev';
 
-export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMotion, onFinished, onExit }: Props) {
+export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMotion, autoQueue = false, onFinished, onExit }: Props) {
   const draftMode = mode === 'draft';
-  const title = draftMode ? 'Draft-Liga' : 'Online-Duell';
+  const title = draftMode ? 'Draft' : 'Gegen Spieler';
   // Online duels are played with the whole deck (5 on the hand, the rest drawn).
   const hand = deck;
   const [code, setCode] = useState(() => normalizeCode(new URLSearchParams(location.search).get('duell') ?? ''));
@@ -112,6 +114,15 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
     else setError(pvpErrorText(r.error));
   }
 
+  // Zufall from the menu: look for an opponent at once (once; the lobby stays as the way back).
+  const queued = useRef(false);
+  useEffect(() => {
+    if (!autoQueue || queued.current || draftMode || hand.length !== DECK_SIZE) return;
+    queued.current = true;
+    start('queue');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoQueue]);
+
   async function leave() {
     if (!matchId) return;
     const r = await pvpLeave(matchId);
@@ -156,7 +167,7 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
           {stats && <p className="muted small">{draftMode ? 'Draft' : 'Online'}-Bilanz: <GameIcon name="crown" /> {stats.wins} · <GameIcon name="handshake" /> {stats.draws} · <GameIcon name="skull" /> {stats.losses}</p>}
         </div>
         <div className="menu-buttons">
-          <button type="button" className="btn btn-primary btn-big" onClick={() => { setView(null); setDuelDone(false); }}>{draftMode ? 'Neuer Draft' : 'Neues Online-Duell'}</button>
+          <button type="button" className="btn btn-primary btn-big" onClick={() => { setView(null); setDuelDone(false); }}>{draftMode ? 'Neuer Draft' : 'Neues Duell gegen Spieler'}</button>
           <button type="button" className="btn" onClick={onExit}>Zum Menü</button>
         </div>
       </main>
@@ -166,7 +177,7 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
   // ---------- Waiting ----------
   if (view && view.status === 'waiting') {
     const link = view.code ? `${SITE}/?duell=${view.code}` : '';
-    const text = view.code ? `Fordere mich in GridRune heraus! Öffne ${link} → „${title}“ → Code ${view.code}` : '';
+    const text = view.code ? `Fordere mich in GridRune heraus! Öffne ${link} → ${draftMode ? '„Spielen“ → „Draft“' : '„Spielen“ → „Einfaches Spiel“ → „Einladungscode“'} → Code ${view.code}` : '';
     const share = async () => {
       try {
         if (navigator.share) await navigator.share({ title: 'GridRune-Duell', text });
@@ -187,7 +198,7 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
               <p>Dein Einladungs-Code:</p>
               <p className="invite-code" aria-label={`Code ${view.code?.split('').join(' ')}`}>{view.code}</p>
               <button type="button" className="btn btn-primary" onClick={share}><GameIcon name="share" /> Einladung teilen</button>
-              <p className="muted small">Dein Freund öffnet GridRune, meldet sich an, tippt auf „{title}“ und gibt den Code ein. Das Duell startet automatisch.</p>
+              <p className="muted small">Dein Freund öffnet GridRune, meldet sich an, tippt auf {draftMode ? '„Spielen“ → „Draft“' : '„Spielen“ → „Einfaches Spiel“ → „Einladungscode“'} und gibt den Code ein. Das Duell startet automatisch.</p>
             </section>
           ) : (
             <section className="online-card">
@@ -308,7 +319,7 @@ function DraftPrep({ view, onView, onQuit }: {
   }
   return (
     <main className="screen online">
-      <Header title="Draft-Liga" onBack={onQuit} />
+      <Header title="Draft" onBack={onQuit} />
       <div className="scroll online-body">
         <section className="online-card">
           <p className="searching" aria-live="polite">Warte auf {opponent} …</p>

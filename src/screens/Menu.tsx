@@ -36,8 +36,8 @@ interface Props {
   sync?: 'saved' | 'saving' | 'waiting' | 'offline' | null;
   notice?: string;
   onNotice?: () => void;
-  /** Signed in: online duels against real players. */
-  onOnline?: () => void;
+  /** Signed in: online duels against real players (invite code or random opponent). */
+  onOnline?: (start: 'code' | 'random') => void;
   /** Draft League (online when signed in, practice against the computer for everyone). */
   onDraft?: () => void;
   /** Signed in: the Weltboss-Raid. */
@@ -90,6 +90,23 @@ export function MenuTabBar({ active, onTab, questsReady = 0, showQuests }: { act
   );
 }
 
+/** Top line of the five areas of the bottom bar (Start, Karten, Shop, Erfolge, Mehr): logo, coins, account. */
+export function MenuTop({ coins, account = null, avatar = null, onAccount }: { coins: number; account?: string | 'guest' | null; avatar?: string | null; onAccount?: () => void }) {
+  return (
+    <header className="menu-top">
+      <span className="menu-brand"><LogoMark className="menu-mark" /> <span>GridRune</span></span>
+      <span className="menu-top-right">
+        <span key={coins} className="menu-coins" aria-label={`${coins} Münzen`}><Coin /> {coins}</span>
+        {account && (
+          <button type="button" className={`menu-account ${account === 'guest' ? 'guest' : ''}`} onClick={onAccount} aria-label={account === 'guest' ? 'Anmelden oder Konto erstellen' : `Konto ${account}`}>
+            {avatar && account !== 'guest' ? <Avatar id={avatar} size={34} /> : <GameIcon name="user" />}{account === 'guest' && <span>Anmelden</span>}
+          </button>
+        )}
+      </span>
+    </header>
+  );
+}
+
 export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests, nextSteps = [], avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
   const equipped = findRune(equippedRune);
   const [chooseLevel, setChooseLevel] = useState(false);
@@ -100,46 +117,58 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
   const { wins, draws, losses } = save.stats;
   const owned = ownedActiveIds(save.unlocked).length;
 
+  const closePlay = () => { setChooseLevel(false); onPlayOpen?.(false); };
   const playMenu = (
     <nav className="menu-buttons menu-sub" aria-label="Spielen">
-      <h2 className="menu-sub-title">Spielen</h2>
+      <div className="sub-head">
+        <button type="button" className="btn btn-small btn-back" onClick={closePlay} aria-label="Zurück"><GameIcon name="back" /> Zurück</button>
+        <h2 className="menu-sub-title">Spielen</h2>
+        <span aria-hidden="true" />
+      </div>
       <div className="rune-rule" aria-hidden="true">ᚠ ᚱ ᛟ ᚦ ᛉ</div>
       <button type="button" className={`btn btn-primary ${chooseLevel ? '' : 'btn-big'}`} aria-expanded={chooseLevel} onClick={() => setChooseLevel(!chooseLevel)}>
-        <GameIcon name="run" /> Einfaches Spiel <span className="btn-sub">gegen die KI</span>
+        <GameIcon name="swords" /> Einfaches Spiel <span className="btn-sub">KI oder Spieler</span>
       </button>
       {chooseLevel && (
-        <div className="level-pick" role="group" aria-label="Schwierigkeit wählen">
-          {LEVELS.map((l) => (
-            <button key={l.level} type="button" className={`btn level-btn level-${l.level}`} onClick={() => onPlay(l.level)}>
-              <span className="level-name"><GameIcon name={l.icon} /> {l.label}</span>
-              <span className="level-coins">Sieg <Coin /> {AI_COINS[l.level].win}</span>
-              <span className="level-text">{l.text}</span>
+        <div className="simple-pick">
+          <p className="pick-label"><GameIcon name="bot" /> Gegen die KI</p>
+          <div className="level-pick" role="group" aria-label="Schwierigkeit wählen">
+            {LEVELS.map((l) => (
+              <button key={l.level} type="button" className={`btn level-btn level-${l.level}`} onClick={() => onPlay(l.level)}>
+                <span className="level-name"><GameIcon name={l.icon} /> {l.label}</span>
+                <span className="level-coins">Sieg <Coin /> {AI_COINS[l.level].win}</span>
+                <span className="level-text">{l.text}</span>
+              </button>
+            ))}
+          </div>
+          <p className="pick-label"><GameIcon name="user" /> Gegen Spieler</p>
+          <div className="player-pick" role="group" aria-label="Gegen echte Spieler">
+            <button type="button" className="btn" disabled={!onOnline} onClick={() => onOnline?.('code')}>
+              <span className="level-name"><GameIcon name="share" /> Einladungscode</span>
+              <span className="level-text">Freund herausfordern oder Code eingeben</span>
             </button>
-          ))}
+            <button type="button" className="btn" disabled={!onOnline} onClick={() => onOnline?.('random')}>
+              <span className="level-name"><GameIcon name="dice" /> Zufall</span>
+              <span className="level-text">gegen einen zufälligen Gegner</span>
+            </button>
+          </div>
+          {!onOnline && (
+            account === 'guest'
+              ? <button type="button" className="link-btn" onClick={onAccount}>Gegen Spieler nur mit Konto – jetzt anmelden</button>
+              : <p className="muted small center">Gegen Spieler braucht eine Verbindung zum Server.</p>
+          )}
         </div>
       )}
       <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}><GameIcon name="map" /> Kampagne <span className="btn-sub">Welten und Bosse</span></button>
-      {onOnline && <button type="button" className="btn btn-online" onClick={onOnline}><GameIcon name="swords" /> Online-Duell <span className="btn-sub">gegen echte Spieler</span></button>}
-      {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}><GameIcon name="draft" /> Draft-Liga <span className="btn-sub">gleicher Pool für beide</span></button>}
-      {onRaid && <button type="button" className="btn btn-raid" onClick={onRaid}><GameIcon name="raid" /> Weltboss-Raid <span className="btn-sub">alle gegen einen</span></button>}
       <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}><GameIcon name="trophy" /> Rangliste <span className="btn-sub">Sieg = neue Karte</span></button>
-      <button type="button" className="btn menu-back" onClick={() => { setChooseLevel(false); onPlayOpen?.(false); }}><GameIcon name="back" /> Zurück</button>
+      {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}><GameIcon name="draft" /> Draft <span className="btn-sub">gleicher Pool für beide</span></button>}
+      {onRaid && <button type="button" className="btn btn-raid" onClick={onRaid}><GameIcon name="raid" /> Raid <span className="btn-sub">alle gegen einen Weltboss</span></button>}
     </nav>
   );
 
   return (
     <main className="screen menu menu-v2">
-      <header className="menu-top">
-        <span className="menu-brand"><LogoMark className="menu-mark" /> <span>GridRune</span></span>
-        <span className="menu-top-right">
-          <span className="menu-coins" aria-label={`${save.coins} Münzen`}><Coin /> {save.coins}</span>
-          {account && (
-            <button type="button" className={`menu-account ${account === 'guest' ? 'guest' : ''}`} onClick={onAccount} aria-label={account === 'guest' ? 'Anmelden oder Konto erstellen' : `Konto ${account}`}>
-              {avatar && account !== 'guest' ? <Avatar id={avatar} size={34} /> : <GameIcon name="user" />}{account === 'guest' && <span>Anmelden</span>}
-            </button>
-          )}
-        </span>
-      </header>
+      <MenuTop coins={save.coins} account={account} avatar={avatar} onAccount={onAccount} />
 
       {notice && (
         <button type="button" className="menu-notice" onClick={onNotice}><CoinText text={notice} /> <b>OK</b></button>
@@ -149,10 +178,10 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         {playOpen ? playMenu : tab === 'start' ? (
           <>
             <section className="menu-hero">
-              <p className="tagline">Renne. Sammle. Erobere das Raster.</p>
+              <p className="tagline">Sammle. Lege. Erobere das Raster.</p>
               <button type="button" className="btn btn-primary menu-play" onClick={() => onPlayOpen?.(true)}>
                 <span className="menu-play-title"><GameIcon name="play" /> Spielen</span>
-                <span className="menu-play-sub">Duell gegen die KI · Kampagne{onOnline ? ' · Online' : ''}</span>
+                <span className="menu-play-sub">Einfaches Spiel · Kampagne · Rangliste</span>
               </button>
             </section>
             {nextSteps.length > 0 && (
@@ -174,7 +203,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
           </>
         ) : tab === 'cards' ? (
           <nav className="menu-buttons menu-sub" aria-label="Karten">
-            <h2 className="menu-sub-title">Deine Karten</h2>
+            <h2 className="menu-sub-title tab-title">Karten</h2>
             <p className="muted">{owned} von {CARDS.length} Karten gesammelt</p>
             <button type="button" className="btn btn-big" onClick={() => onNavigate('collection')}><GameIcon name="book" /> Sammlung <span className="btn-sub">alle Karten ansehen</span></button>
             <button type="button" className="btn btn-big btn-deck" onClick={() => onNavigate('deck')}>
@@ -184,11 +213,11 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
           </nav>
         ) : (
           <nav className="menu-buttons menu-sub" aria-label="Mehr">
-            <h2 className="menu-sub-title">Mehr</h2>
-            <div className="wallet" aria-label="Statistik">
-              <span><GameIcon name="crown" label="Siege" /> {wins} Siege</span>
-              <span><GameIcon name="handshake" label="Unentschieden" /> {draws}</span>
-              <span><GameIcon name="skull" label="Niederlagen" /> {losses}</span>
+            <h2 className="menu-sub-title tab-title">Mehr</h2>
+            <div className="record" aria-label="Deine Bilanz">
+              <div><b>{wins}</b><span><GameIcon name="crown" /> Siege</span></div>
+              <div><b>{draws}</b><span><GameIcon name="handshake" /> Unentschieden</span></div>
+              <div><b>{losses}</b><span><GameIcon name="skull" /> Niederlagen</span></div>
             </div>
             {account && <button type="button" className="btn" onClick={onAccount}><GameIcon name="user" /> {account === 'guest' ? 'Anmelden / Konto erstellen' : 'Konto'}</button>}
             {onAvatars && <button type="button" className="btn" onClick={onAvatars}>{avatar ? <Avatar id={avatar} size={24} /> : <GameIcon name="user" />} Avatar wählen</button>}
@@ -211,7 +240,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         )}
       </div>
 
-      <MenuTabBar active={playOpen ? null : tab} questsReady={questsReady} showQuests={!!onQuests} onTab={(t) => {
+      <MenuTabBar active={playOpen ? 'start' : tab} questsReady={questsReady} showQuests={!!onQuests} onTab={(t) => {
         if (t === 'shop') return onNavigate('shop');
         if (t === 'quests') return onQuests?.();
         setTab(t);

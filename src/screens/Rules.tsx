@@ -1,3 +1,4 @@
+import { PVP_WIN_COINS } from '../game/pvp';
 import { AbilityMedallion, ClassShield } from '../components/cardIcons';
 import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { Coin } from '../components/Coin';
@@ -16,7 +17,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
       <Header title="Regeln" onBack={onBack} />
       <div className="scroll prose">
         <h2>1 · Dein Deck</h2>
-        <p>Stell dir unter „Deck bearbeiten“ ein Deck aus <b>{DECK_SIZE} Karten</b> zusammen. Mit diesem Deck spielst du in allen Modi (in der Rangliste mit deinem Liga-Deck, im Draft mit dem Draft-Deck).</p>
+        <p>Stell dir unter „Deck bearbeiten“ ein Deck aus <b>{DECK_SIZE} Karten</b> zusammen. Mit diesem Deck spielst du in allen Modi (in der Rangliste mit deinem Ranglisten-Deck, im Draft mit dem Draft-Deck).</p>
 
         <h2>2 · Das Duell</h2>
         <p>Ihr legt abwechselnd eine Karte aus der Hand auf ein freies Feld, bis das Spielfeld voll ist (16 Felder, mit Fels 15).</p>
@@ -65,7 +66,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
                 </li>
               ))}
             </ul>
-            <p>Die Rune der Verdrehung und die <b>Rune der Hand</b> (alle Handkarten zurück ins Deck mischen und genauso viele neu ziehen) hast du von Anfang an. Weitere Runen spielst du in der <b>Kampagne</b> frei – jeweils in Level 5 und Level 10 einer Welt. Ohne Rune spielst du ohne. In der Liga sind nur Grundrunen erlaubt, die du freigespielt hast. Runen gibt es nie für Echtgeld, Varianten sind nie stärker.</p>
+            <p>Die Rune der Verdrehung und die <b>Rune der Hand</b> (alle Handkarten zurück ins Deck mischen und genauso viele neu ziehen) hast du von Anfang an. Weitere Runen spielst du in der <b>Kampagne</b> frei – jeweils in Level 5 und Level 10 einer Welt. Ohne Rune spielst du ohne. In der Rangliste sind nur Grundrunen erlaubt, die du freigespielt hast. Runen gibt es nie für Echtgeld, Varianten sind nie stärker.</p>
           </>
         )}
 
@@ -76,14 +77,15 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
             <li key={l}><b>{{ easy: 'Leicht', medium: 'Normal', hard: 'Schwer' }[l]}</b>: Sieg <Coin /> {AI_COINS[l].win} · Unentschieden <Coin /> {AI_COINS[l].draw} · Niederlage <Coin /> {AI_COINS[l].loss}</li>
           ))}
         </ul>
-        <p><b>Rangliste</b> (Collection League, mit Konto) – gewinnst du das Match, bekommst du eine <b>zufällige Karte, die du noch nicht hast</b>. Hast du schon alle, gibt es <Coin /> {LEAGUE_NO_CARD_COINS}. Der Server prüft die Duelle vorher.</p>
+        <p><b>Einfaches Spiel gegen Spieler</b> (mit Konto) – per Einladungscode gegen Freunde oder gegen einen zufälligen Gegner. Ein Sieg bringt <Coin /> {PVP_WIN_COINS}.</p>
+        <p><b>Rangliste</b> (mit Konto) – gewinnst du das Match, bekommst du eine <b>zufällige Karte, die du noch nicht hast</b>. Hast du schon alle, gibt es <Coin /> {LEAGUE_NO_CARD_COINS}. Der Server prüft die Duelle vorher.</p>
         <p>Neue Karten gibt es außerdem im <b>Shop</b> und als Belohnung in der <b>Kampagne</b>.</p>
 
         <h2>Shop</h2>
         <p>Im Shop kaufst du mit Münzen <b>Booster-Packs</b> (3 Karten, neue Karten werden sofort freigeschaltet, doppelte in Münzen umgetauscht) und <b>Skins</b>, die nur das Aussehen ändern.</p>
 
         <h2>Symbole auf Karten</h2>
-        <p><b style={{ color: 'var(--accent)' }}>★</b> in der Ecke = Entdeckung (gold leuchtend: neue Karte) · <b style={{ color: '#22d3ee' }}>◆</b> = neutrale Entdeckung in der Liga · orange Zahl = geschwächt (Stolperstein) · Zahnrad oben links = Klasse · Edelstein = Seltenheit · goldenes Symbol unten rechts = Spezialeffekt.</p>
+        <p><b style={{ color: 'var(--accent)' }}>★</b> in der Ecke = Entdeckung (gold leuchtend: neue Karte) · <b style={{ color: '#22d3ee' }}>◆</b> = neutrale Entdeckung in der Rangliste · orange Zahl = geschwächt (Stolperstein) · Zahnrad oben links = Klasse · Edelstein = Seltenheit · goldenes Symbol unten rechts = Spezialeffekt.</p>
 
         <h2>Deck</h2>
         <p>Dein Deck besteht aus genau 20 verschiedenen Karten aus deiner Sammlung.</p>

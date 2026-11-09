@@ -4,7 +4,7 @@ import { Reward, applyReward, computeReward } from './game/rewards';
 import type { AiLevel } from './game/ai';
 import { Pick } from './game/runner';
 import { SaveData, loadSave, writeSave } from './game/storage';
-import { Menu, MenuTab, MenuTabBar, TabBarItem } from './screens/Menu';
+import { Menu, MenuTab, MenuTabBar, MenuTop, TabBarItem } from './screens/Menu';
 import { Raid, RaidTestFight } from './screens/Raid';
 import type { RaidConfig } from './game/raid';
 import { Online } from './screens/Online';
@@ -52,7 +52,9 @@ import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'online' | 'draft' | 'draftPractice' | 'raid' | 'avatars' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' }
+  /** Einfaches Spiel gegen Spieler: random = look for a random opponent right away. */
+  | { name: 'online'; random?: boolean }
   /** tab = open on this tab (the account page opens the avatars under "Erfolge"). */
   | { name: 'quests'; tab?: 'daily' | 'weekly' | 'achievements' }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
@@ -251,6 +253,12 @@ export function App() {
     const pending = pendingRecords.current;
     if (pending) setTimeout(() => applyRecords(pending), 0);
   }, [applyRecords]);
+  /** Shared top line of the bottom-bar areas (Shop and Erfolge use it too). */
+  const menuTop = (
+    <MenuTop coins={save.coins} account={account?.kind === 'signedIn' ? account.account.name : account?.kind === 'signedOut' ? 'guest' : null}
+      avatar={account?.kind === 'signedIn' ? myAvatar : null}
+      onAccount={() => (account?.kind === 'signedIn' ? setScreen({ name: 'account' }) : setGuestState(false))} />
+  );
   /** The menu's bottom bar under Shop and Erfolge (same tabs as in the menu). */
   const tabBar = (active: TabBarItem) => (
     <MenuTabBar active={active} questsReady={questsReady} showQuests={!!account} onTab={(t) => {
@@ -354,7 +362,7 @@ export function App() {
     if (next) nextSteps.push({ icon: 'map', title: next.number === 1 && next.world.order <= 1 ? 'Kampagne beginnen' : 'Kampagne fortsetzen', sub: `${next.world.name} · ${next.mission.name}`, onClick: () => setScreen({ name: 'campaign' }) });
     if (questsReady > 0) nextSteps.push({ icon: 'gift', title: questsReady === 1 ? '1 Belohnung bereit' : `${questsReady} Belohnungen bereit`, sub: 'Erfolge – jetzt abholen', onClick: () => setScreen({ name: 'quests' }) });
     if (questDaily) nextSteps.push({ icon: 'hourglass', title: questDaily.text, sub: `Tagesquest · ${rewardText(questDaily.reward)}`, progress: questDaily.progress / questDaily.target, onClick: () => setScreen({ name: 'quests' }) });
-    if (account?.kind === 'signedOut') nextSteps.push({ icon: 'user', title: 'Konto erstellen', sub: 'Für Erfolge, Online-Duelle und Speichern auf allen Geräten', onClick: () => setGuestState(false) });
+    if (account?.kind === 'signedOut') nextSteps.push({ icon: 'user', title: 'Konto erstellen', sub: 'Für Erfolge, Duelle gegen Spieler und Speichern auf allen Geräten', onClick: () => setGuestState(false) });
   }
 
   return (
@@ -387,7 +395,7 @@ export function App() {
           onPlay={startRun}
           playOpen={playMenu}
           onPlayOpen={setPlayMenu}
-          onOnline={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'online' }) : undefined}
+          onOnline={cloud.uid && cloud.phase === 'ready' ? (start) => setScreen({ name: 'online', random: start === 'random' }) : undefined}
           onDraft={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'draftPractice' })}
           onRaid={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'raid' }) : undefined}
           onQuests={account ? () => setScreen({ name: 'quests' }) : undefined}
@@ -416,7 +424,7 @@ export function App() {
       {screen.name === 'rules' && <Rules onBack={toMenu} runes={runesOn} />}
       {screen.name === 'shop' && (
         <div className="tabbed-screen">
-          <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} />
+          <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} top={menuTop} />
           {tabBar('shop')}
         </div>
       )}
@@ -427,6 +435,7 @@ export function App() {
           deck={repairDeck(save.deck, save.unlocked, CARDS).deck}
           rune={duelRune('league')}
           reducedMotion={reducedMotion}
+          autoQueue={screen.random}
           onFinished={cloud.retry}
           onExit={toMenu}
         />
@@ -448,7 +457,7 @@ export function App() {
         <div className="tabbed-screen">
           <Quests signedIn={!!cloud.uid && cloud.phase === 'ready'} reducedMotion={reducedMotion}
             onAccount={account?.kind === 'signedOut' ? () => { setGuestState(false); toMenu(); } : undefined}
-            onAdopt={cloud.adoptServer} onBack={toMenu} initialTab={screen.tab} />
+            onAdopt={cloud.adoptServer} onBack={toMenu} initialTab={screen.tab} top={menuTop} />
           {tabBar('quests')}
         </div>
       )}

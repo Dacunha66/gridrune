@@ -85,7 +85,7 @@ export function pvpWatch(uid: string, onView: (v: PvpView) => void): () => void 
 /** Error codes in German for players. */
 export function pvpErrorText(code: string): string {
   switch (code) {
-    case 'offline': return 'Keine Verbindung – für Online-Duelle brauchst du Internet.';
+    case 'offline': return 'Keine Verbindung – für Duelle gegen Spieler brauchst du Internet.';
     case 'hand': return 'Bitte wähle 8 verschiedene eigene Karten.';
     case 'unknown_code': return 'Diesen Code gibt es nicht (mehr). Bitte prüfe ihn.';
     case 'own_code': return 'Das ist dein eigener Code – schick ihn einem Freund.';

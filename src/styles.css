@@ -2167,3 +2167,58 @@ label.btn.disabled { opacity: .45; }
 /* Card thumbnails in lists (league deck, admin): the whole card in portrait, nothing cut off. */
 .admin-thumb:has(> .card) { flex: 0 0 46px; width: 46px; height: auto; aspect-ratio: 3 / 4; overflow: visible; background: none; border-radius: 0; display: block; }
 .admin-thumb > .card { width: 100%; }
+
+/* ---------- Design-Abgleich (v1.42): one look for buttons, pills, switches and headings ---------- */
+/* Buttons: one typeface for every plaque (gold or dark); only the small number steppers keep the body font. */
+.btn { font-family: var(--f-display); letter-spacing: 0.03em; }
+.btn-step, .btn .btn-sub, .btn .level-text, .btn .level-coins { font-family: var(--f-body); letter-spacing: 0; }
+/* Not usable right now: a neutral grey plaque instead of a faded gold one (looked broken). */
+.btn:disabled, .btn-primary:disabled {
+  opacity: 1; color: #8b8676; background: linear-gradient(180deg, #232a3c, #1a2030); border-color: rgba(179, 170, 146, 0.25);
+  box-shadow: inset 0 0 0 3px #141a29; filter: none;
+}
+.btn:disabled .gi { color: #8b8676; filter: none; }
+/* Pills (counts, status, coins): one rounded shape everywhere. */
+.pill, .menu-coins, .wallet span { border-radius: 999px; }
+.topbar-right .pill { white-space: nowrap; }
+/* Switches between views (Booster/Skins, Täglich/…, Karten/Rune) and filter chips: the same active look. */
+.seg, .chip { border-radius: 6px; }
+.chip.active, .seg.active {
+  background: #1d2c4a; color: var(--gold-light); border-color: var(--glow); box-shadow: 0 0 12px var(--glow-soft);
+}
+/* Headings of the bottom-bar areas (Spielen, Karten, Shop, Erfolge, Mehr). */
+.tab-title { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 6px 0 10px; flex-shrink: 0; }
+.tab-title .pill { font-family: var(--f-body); font-size: 13px; padding: 3px 10px; }
+.sub-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.sub-head .btn-back { justify-self: start; }
+.sub-head .menu-sub-title { margin: 0; }
+/* Einfaches Spiel: against the computer or against players. */
+.simple-pick { display: flex; flex-direction: column; gap: 8px; animation: menu-sub-in .18s ease-out; }
+.pick-label { display: flex; align-items: center; gap: 6px; margin: 4px 2px 0; font: 700 13px var(--f-display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--glow); }
+.player-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.player-pick .btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; min-height: 0; }
+.player-pick .level-name { display: inline-flex; align-items: center; gap: 6px; }
+.player-pick .level-text { font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.25; }
+.link-btn { background: none; border: none; padding: 6px; color: var(--glow); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+/* Mehr: the record as one labelled panel; the setting as a switch. */
+.record { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 6px 0 4px; border: 1px solid var(--gold-line); border-radius: var(--radius); background: rgba(10, 14, 26, 0.75); }
+.record > div { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; }
+.record > div + div { border-left: 1px solid var(--gold-faint); }
+.record b { font: 700 22px/1.1 var(--f-display); color: var(--gold-light); }
+.record span { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+.toggle input { appearance: none; -webkit-appearance: none; flex: 0 0 auto; width: 46px; height: 26px; margin: 0; border-radius: 999px; background: #232a3c; border: 1px solid var(--gold-line); position: relative; cursor: pointer; transition: background .15s; }
+.toggle input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.toggle input:checked { background: #1d3b4a; border-color: var(--glow); }
+.toggle input:checked::after { transform: translateX(20px); background: var(--glow); }
+.toggle input:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+/* Duel: the chosen hand card rises only as far as the hand row allows (the hint above stays readable). */
+.hand.fan .hand-slot.sel { transform: translateY(calc(var(--hand-w) * -0.2)) scale(1.1); }
+/* Tablets: hand cards as large as a board field. */
+.play-area { --hand-w: clamp(62px, min(23cqw, 14.5cqh), 150px); }
+/* Ranglisten-Deck: card pictures large enough to read the values (like in the deck editor). */
+.admin-thumb.league-thumb { flex: 0 0 76px; width: 76px; }
+.bottombar .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.screen.shop > .tab-title, .screen.quests > .tab-title { margin-top: 20px; }
+.menu-sub .btn-primary.btn-big .btn-sub { white-space: nowrap; }
+.admin-thumb.league-thumb > .card { width: 100%; }
+.admin-row.league-row { grid-template-columns: 76px 1fr auto; }

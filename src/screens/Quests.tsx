@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 // Erfolge: daily quests, weekly quests and lasting achievements. The server counts and pays; here the player sees
 // the progress, collects rewards (with a small celebration) and chooses the title shown in online duels.
 import { useEffect, useMemo, useState } from 'react';
@@ -26,6 +27,8 @@ interface Props {
   onAdopt: (c: CloudSave) => void;
   initialTab?: Tab;
   onBack: () => void;
+  /** Opened from the bottom bar: the shared top line (logo, coins, account) replaces the back button. */
+  top?: ReactNode;
 }
 
 const REWARD_ICON: Record<QuestReward['type'], GameIconName> = { coins: 'gift', card: 'cards', pack: 'gift', skin: 'deck', rune: 'scroll', title: 'crown' };
@@ -76,7 +79,7 @@ function hoursText(ms: number): string {
   return h > 0 ? `${h} Std. ${m} Min.` : `${m} Min.`;
 }
 
-export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, initialTab = 'daily', onBack }: Props) {
+export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, initialTab = 'daily', onBack, top }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [data, setData] = useState<QuestOverview | null>(null);
   const [error, setError] = useState('');
@@ -122,7 +125,7 @@ export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, initialTab
   const b = data?.board;
   return (
     <main className="screen quests">
-      <Header title="Erfolge" onBack={onBack} right={ready.length > 0 ? <span className="pill ok">{ready.length} bereit</span> : undefined} />
+      {top ? <>{top}<h2 className="menu-sub-title tab-title">Erfolge {ready.length > 0 && <span className="pill ok">{ready.length} bereit</span>}</h2></> : <Header title="Erfolge" onBack={onBack} right={ready.length > 0 ? <span className="pill ok">{ready.length} bereit</span> : undefined} />}
       <div className="segmented quest-tabs" role="tablist">
         {TABS.map((t) => {
           const n = t.id === 'daily' ? readyIn('daily') : t.id === 'weekly' ? readyIn('weekly') : readyIn('achievement');
@@ -164,7 +167,7 @@ export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, initialTab
               <section className="quest-titles">
                 <h2><GameIcon name="crown" /> Dein Titel</h2>
                 {data.titles.owned.length === 0 ? (
-                  <p className="muted small">Noch keine Titel – manche Erfolge schenken dir einen. Er erscheint im Online-Duell neben deinem Namen.</p>
+                  <p className="muted small">Noch keine Titel – manche Erfolge schenken dir einen. Er erscheint im Duell gegen Spieler neben deinem Namen.</p>
                 ) : (
                   <div className="chips" role="group" aria-label="Titel wählen">
                     <button type="button" className={`chip ${data.titles.equipped === null ? 'active' : ''}`} disabled={busy} onClick={() => void pickTitle(null)}>Kein Titel</button>

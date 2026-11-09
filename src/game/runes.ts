@@ -22,7 +22,7 @@ export const RUNE_EFFECT_LABEL: Record<RuneEffect, string> = {
 
 export type GameMode = 'adventure' | 'campaign' | 'league' | 'raid';
 export const GAME_MODES: GameMode[] = ['adventure', 'campaign', 'league', 'raid'];
-export const MODE_NAME: Record<GameMode, string> = { adventure: 'Abenteuer', campaign: 'Kampagne', league: 'Liga', raid: 'Weltboss-Raid' };
+export const MODE_NAME: Record<GameMode, string> = { adventure: 'Einfaches Spiel', campaign: 'Kampagne', league: 'Rangliste', raid: 'Raid' };
 
 /** How a player gets the rune: from the start, or later in the campaign. */
 export type RuneUnlock = { kind: 'start' } | { kind: 'mission'; missionId: string } | { kind: 'stars'; n: number };

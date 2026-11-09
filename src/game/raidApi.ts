@@ -154,6 +154,6 @@ export const raidErrorText = (e: string): string => ({
   ended: 'Der Raid wurde beendet.',
   closed: 'Der Raid ist gerade nicht offen.',
   busy: 'Einen Moment – bitte noch einmal versuchen.',
-  no_raid: 'Gerade läuft kein Weltboss-Raid.',
+  no_raid: 'Gerade läuft kein Raid.',
   no_save: 'Dein Spielstand ist noch nicht im Konto gespeichert – bitte kurz warten.',
 } as Record<string, string>)[e] ?? `Das hat nicht geklappt (${e}).`;

@@ -221,7 +221,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
   // ---------- Overview ----------
   return (
     <main className="screen raid">
-      <Header title="Weltboss-Raid" onBack={onExit} />
+      <Header title="Raid" onBack={onExit} />
       <div className="scroll raid-body">
         {!data && !error && <p className="muted center">Lade den Raid …</p>}
         {error && <p className="hint warn-text" role="alert">{error}</p>}

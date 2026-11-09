@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { GameIcon } from '../components/GameIcon';
 import { CSSProperties, useEffect, useMemo, useState } from 'react';
 import { Coin, CoinText } from '../components/Coin';
@@ -20,6 +21,8 @@ interface Props {
   /** Signed in: purchases happen on the server (it draws the cards); the returned save is taken over. */
   server?: { adopt: (c: CloudSave) => void } | null;
   onBack: () => void;
+  /** Opened from the bottom bar: the shared top line (logo, coins, account) replaces the back button. */
+  top?: ReactNode;
 }
 
 export function skinStyle(colors: [string, string, string]): CSSProperties {
@@ -60,7 +63,7 @@ function odds(pack: PackDef): { rarity: Rarity; text: string }[] {
   return RARITIES.map((r) => ({ rarity: r, text: pct(pack.weights[r]) }));
 }
 
-export function Shop({ save, onChange, onBack, server = null }: Props) {
+export function Shop({ save, onChange, onBack, server = null, top }: Props) {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<'packs' | 'skins'>('packs');
   const [opened, setOpened] = useState<{ pack: PackDef; cards: PackCard[]; key: number; stage: 'shake' | 'open' } | null>(null);
@@ -132,7 +135,7 @@ export function Shop({ save, onChange, onBack, server = null }: Props) {
 
   return (
     <main className="screen shop">
-      <Header title="Shop" onBack={onBack} right={<span key={save.coins} className="pill coin-pill"><Coin /> {coins}</span>} />
+      {top ? <>{top}<h2 className="menu-sub-title tab-title">Shop</h2></> : <Header title="Shop" onBack={onBack} right={<span key={save.coins} className="pill coin-pill"><Coin /> {coins}</span>} />}
       <div className="segmented deck-tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'packs'} className={`seg ${tab === 'packs' ? 'active' : ''}`} onClick={() => { setTab('packs'); setMessage(''); }}><GameIcon name="gift" /> Booster</button>
         <button type="button" role="tab" aria-selected={tab === 'skins'} className={`seg ${tab === 'skins' ? 'active' : ''}`} onClick={() => { setTab('skins'); setMessage(''); }}><GameIcon name="crown" /> Skins</button>

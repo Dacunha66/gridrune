@@ -24,7 +24,7 @@ export function RunePicker({ owned, equipped, onEquip, lockText }: RuneChoicePro
     <div className="rune-list">
       <p className="muted small">
         {anyOwned
-          ? 'Wähle die Rune für deine Duelle. Im Duell setzt du sie einmal in deinem Zug ein – vor dem Legen einer Karte, ohne den Zug zu verbrauchen. Die Rune bleibt in deiner Sammlung. In der Liga sind nur freigespielte Grundrunen erlaubt.'
+          ? 'Wähle die Rune für deine Duelle. Im Duell setzt du sie einmal in deinem Zug ein – vor dem Legen einer Karte, ohne den Zug zu verbrauchen. Die Rune bleibt in deiner Sammlung. In der Rangliste sind nur freigespielte Grundrunen erlaubt.'
           : 'Du besitzt noch keine Rune – du spielst ohne Rune. Runen spielst du in der Kampagne frei.'}
       </p>
       {visible.map((r) => {

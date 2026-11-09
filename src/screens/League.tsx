@@ -7,7 +7,7 @@ import { Card } from '../components/Card';
 import { CARDS, RARITY_LABEL, RARITY_ORDER, Rarity, cardPower, getCard, ownedActiveIds } from '../game/cards';
 import { Outcome, Side } from '../game/battle';
 import { COLLECTION_LEAGUE_RULES, OwnedCounts, autoDeck, countCards, rarityCounts, validateDeck } from '../game/rules';
-import { deriveRng, matchCode, newMatchSeed, seedFingerprint } from '../game/league';
+import { deriveRng, matchCode, newMatchSeed } from '../game/league';
 import { MatchProgress, emptyMatch, nextStep, recordRound, wins } from '../game/match';
 import { Pick } from '../game/runner';
 import { SaveData } from '../game/storage';
@@ -49,7 +49,6 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
   const [stage, setStage] = useState<'deck' | 'intro' | 'run' | 'match' | 'done'>('deck');
   const [deck, setDeck] = useState<string[]>(savedDeck);
   const [seed, setSeed] = useState('');
-  const [fingerprint, setFingerprint] = useState('');
   const [picks, setPicks] = useState<Pick[]>([]);
   const [match, setMatch] = useState<MatchProgress>(emptyMatch());
   const [roundScores, setRoundScores] = useState<string[]>([]);
@@ -69,8 +68,8 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
   const runeNote = runes && !runes.equipped
     ? 'Du hast noch keine Rune – Grundrunen spielst du in der Kampagne frei.'
     : runes && !runes.player
-      ? `In der Liga sind nur die Grundrunen erlaubt – „${findRune(runes.equipped)?.name ?? 'deine Rune'}“ bleibt hier draußen. Ändern unter „Deck bearbeiten“ → „Rune“.`
-      : 'Jede Rune einmal pro Duell (in jeder Runde neu). In der Liga nur Grundrunen, die du in der Kampagne freigespielt hast. Ändern unter „Deck bearbeiten“ → „Rune“.';
+      ? `In der Rangliste sind nur die Grundrunen erlaubt – „${findRune(runes.equipped)?.name ?? 'deine Rune'}“ bleibt hier draußen. Ändern unter „Deck bearbeiten“ → „Rune“.`
+      : 'Jede Rune einmal pro Duell (in jeder Runde neu). In der Rangliste nur Grundrunen, die du in der Kampagne freigespielt hast. Ändern unter „Deck bearbeiten“ → „Rune“.';
 
   async function startMatch() {
     let s = newMatchSeed();
@@ -82,7 +81,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
       if (r.kind !== 'ticket') {
         setStarting(r.kind === 'offline'
           ? 'Keine Verbindung – für ein Ranglisten-Match brauchst du kurz Internet.'
-          : r.error === 'deck' ? 'Das Deck passt nicht zu den Liga-Regeln oder deiner Sammlung.' : `Das Match konnte nicht gestartet werden (${r.error}).`);
+          : r.error === 'deck' ? 'Das Deck passt nicht zu den Ranglisten-Regeln oder deiner Sammlung.' : `Das Match konnte nicht gestartet werden (${r.error}).`);
         setStage('deck');
         return;
       }
@@ -95,8 +94,6 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
     setPayout(null);
     setRevealOpen(false);
     setSeed(s);
-    setFingerprint('');
-    seedFingerprint(s).then(setFingerprint).catch(() => setFingerprint('–'));
     setMatch(emptyMatch());
     setRoundScores([]);
     setBetween(null);
@@ -156,13 +153,12 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
   if (stage === 'intro') {
     return (
       <main className="screen league">
-        <Header title="Rangliste" onBack={() => setStage('deck')} right={<span className="pill">Collection League</span>} />
+        <Header title="Rangliste" onBack={() => setStage('deck')} />
         <div className="scroll league-intro">
           <section className="runner-info">
             <h2>Match {matchCode(seed)}</h2>
-            <p className="muted small">Fingerabdruck (vor dem Match festgelegt): <span className="mono break">{fingerprint || '…'}</span></p>
             <ul className="plain-list">
-              <li><GameIcon name="cards" /> Du spielst mit deinem <b>Liga-Deck</b>: Es wird gemischt, <b>5 Karten</b> hast du auf der Hand, vor jedem Zug ziehst du nach.</li>
+              <li><GameIcon name="cards" /> Du spielst mit deinem <b>Ranglisten-Deck</b>: Es wird gemischt, <b>5 Karten</b> hast du auf der Hand, vor jedem Zug ziehst du nach.</li>
               <li><GameIcon name="swords" /> <b>2 Runden</b> mit demselben Deck (jede Runde neu gemischt), der Start wird getauscht. 2:0 gewinnt, bei 1:1 folgt ein <b>Entscheidungsduell</b>.</li>
               <li><GameIcon name="swords" /> Der Computer spielt auf <b>Schwer</b> mit einem <b>Spiegel-Deck</b>: genauso viele Karten jeder Seltenheit wie dein Deck, aber andere Karten.</li>
               <li><GameIcon name="lock" /> In jedem Duell blockiert ein <b>Fels</b> ein Feld: 15 Felder, kein Unentschieden, kein Startvorteil.</li>
@@ -172,7 +168,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
             <p className="muted small">{account ? 'Match gegen den Computer – der Server prüft die Duelle, bevor die Belohnung gutgeschrieben wird.' : 'Als Gast spielst du ohne Belohnung – melde dich an, um Karten zu gewinnen.'}</p>
           </section>
         </div>
-        <footer className="bottombar"><button type="button" className="btn btn-primary btn-wide" onClick={() => { setPicks(handPicks(deck)); setStage('match'); }}>▶ Match starten</button></footer>
+        <footer className="bottombar"><button type="button" className="btn btn-primary btn-wide" onClick={() => { setPicks(handPicks(deck)); setStage('match'); }}><GameIcon name="swords" /> Match starten</button></footer>
       </main>
     );
   }
@@ -285,7 +281,7 @@ function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay, busy = false,
 
   return (
     <main className="screen league">
-      <Header title="Liga-Deck" onBack={onBack} right={<span className={`pill ${errors.length ? 'warn' : 'ok'}`}>{deck.length}/{RULES.deck.size}</span>} />
+      <Header title="Dein Deck" onBack={onBack} right={<span className={`pill ${errors.length ? 'warn' : 'ok'}`}>{deck.length}/{RULES.deck.size}</span>} />
       <div className="limit-row">
         {(['mythic', 'legendary', 'epic'] as Rarity[]).map((r) => (
           <span key={r} className={`chip-mini ${rc[r] > (limit(r) ?? 99) ? 'warn' : ''}`}>
@@ -305,7 +301,7 @@ function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay, busy = false,
             const n = counts.get(c.id) ?? 0;
             return (
               <li key={c.id} className={`admin-row league-row ${n ? 'in-deck-row' : ''}`}>
-                <span className="admin-thumb"><Card id={c.id} size="xs" /></span>
+                <span className="admin-thumb league-thumb"><Card id={c.id} size="sm" /></span>
                 <span className="admin-row-main">
                   <strong>{c.name}</strong>
                   <span className="admin-row-meta"><span className={`rarity-text rarity-${c.rarity}`}>{RARITY_LABEL[c.rarity]}</span> · Σ {cardPower(c)}</span>
@@ -324,7 +320,7 @@ function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay, busy = false,
       <footer className="bottombar">
         {notice && <p className="league-notice" role="alert">{notice}</p>}
         <button type="button" className="btn btn-primary btn-wide" disabled={errors.length > 0 || busy} onClick={onPlay}>
-          {errors.length ? 'Deck ist noch nicht gültig' : busy ? 'Match wird vorbereitet …' : 'Match starten'}
+          {errors.length ? 'Deck ist noch nicht gültig' : busy ? 'Match wird vorbereitet …' : <><GameIcon name="swords" /> Match starten</>}
         </button>
       </footer>
     </main>

@@ -1,5 +1,21 @@
 # Testprotokoll
 
+## Design-Abgleich (09.11.)
+
+- Spielen-Menü: Einfaches Spiel (gegen die KI: Leicht/Normal/Schwer · gegen Spieler: Einladungscode oder Zufall),
+  Kampagne, Rangliste, Draft, Raid. „Zufall“ sucht sofort einen Gegner. Gegen Spieler nur mit Konto (Gäste sehen den
+  Hinweis mit Anmelde-Link). Zurück oben links wie überall, „Start“ in der Leiste bleibt markiert.
+- Namen überall: Einfaches Spiel, Rangliste, Draft, Raid (statt Abenteuer, Liga, Collection League, Draft-Liga,
+  Weltboss-Raid, Online-Duell). Spruch: „Sammle. Lege. Erobere das Raster.“ Prüfnummer der Rangliste ausgeblendet.
+- Einheitlich: Kopfzeile (Logo, Münzen, Konto) auf allen fünf Bereichen der Leiste – auch Shop und Erfolge, ohne
+  „Zurück“; eine Schrift auf allen Knöpfen; gesperrte Knöpfe grau statt blassem Gold; runde Kästchen; ein Stil für
+  Umschalter und Filter; Start-Knöpfe mit demselben Symbol.
+- Mehr: Bilanz als beschriftete Leiste, Schalter statt Häkchen. Ranglisten-Deck: größere, lesbare Kartenbilder.
+- Duell: die gewählte Handkarte verdeckt den Hinweis nicht mehr; auf dem iPad größere Handkarten.
+- Browser (Gast, iPhone- und iPad-Größe): alle Bereiche, Spielen-Menü, Duell, Rangliste (ganzes Match), Draft – keine
+  Fehlermeldungen; 328 Tests ok. Konto-Ansichten (Gegen Spieler, Raid) nur im Code geprüft, nicht im Browser.
+  Nicht auf einem echten Gerät getestet.
+
 ## Fehlersuche (09.11.)
 
 Geprüft: Server-Protokolle der letzten 24 Stunden (keine Fehler außer den eigenen Start-Prüfungen), Regeln/KI/Prüfung,

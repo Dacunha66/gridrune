@@ -123,7 +123,7 @@ export function DraftPractice({ reducedMotion, rune, onExit }: {
   };
   if (stage.k === 'deck') {
     // No run: the duel is played with the 20-card draft deck (5 on the hand, the rest drawn).
-    return <DraftDeckBuilder pool={pool} deadline={null} title="Draft-Übung" onBack={onExit} onDone={(deck) => setStage({ k: 'duel', picks: handPicks(deck) })} />;
+    return <DraftDeckBuilder pool={pool} deadline={null} title="Draft · Übung" onBack={onExit} onDone={(deck) => setStage({ k: 'duel', picks: handPicks(deck) })} />;
   }
   if (stage.k === 'duel') return <PracticeDuel seed={seed} pool={pool} picks={stage.picks} rune={rune} reducedMotion={reducedMotion} onEnd={(outcome, score) => setStage({ k: 'done', outcome, score })} onQuit={onExit} />;
   const title = stage.outcome === 'win' ? 'Sieg!' : stage.outcome === 'draw' ? 'Unentschieden' : 'Niederlage';
@@ -133,7 +133,7 @@ export function DraftPractice({ reducedMotion, rune, onExit }: {
       <div className="scroll result-body">
         <ResultIcon outcome={stage.outcome} />
         <h1>{title}</h1>
-        <p className="muted">Draft-Übung gegen die KI</p>
+        <p className="muted">Draft · Übung gegen die KI</p>
         <p className="result-score"><span className="blue">{stage.score.player}</span> : <span className="red">{stage.score.cpu}</span></p>
         <p className="muted small">Übung – keine Belohnung. Online gegen echte Spieler gibt es <Coin /> für einen Sieg.</p>
       </div>
@@ -154,7 +154,7 @@ function PracticeDuel({ seed, pool, picks, rune, reducedMotion, onEnd, onQuit }:
     // The computer builds its deck from the same pool (the strongest cards).
     const cpuHand = toHand(completeDraftDeck(pool));
     return {
-      cpuHand, first: null, rocks: [roundRock(seed, 0, arena.cells)], arena, label: 'Draft-Übung', tossRng: createRng(),
+      cpuHand, first: null, rocks: [roundRock(seed, 0, arena.cells)], arena, label: 'Draft · Übung', tossRng: createRng(),
       finishLabel: 'Ergebnis', ai: { level: 'medium' }, runes: { player: rune, cpu: null },
     };
   });
