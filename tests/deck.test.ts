@@ -154,6 +154,25 @@ describe('Balance mit Deck-Regel (v1.40)', () => {
     expect(leagueCpuHand('s1').every((c) => getCard(c.cardId).rarity === 'common')).toBe(true);
   });
 
+  it('Rangliste (v1.41): Spiegel-Deck – gleiche Seltenheiten wie das Liga-Deck, andere Karten, fest aus dem Seed', async () => {
+    const { leagueCpuHand } = await import('../src/game/verify');
+    const { getCard } = await import('../src/game/cards');
+    const byRarity = (list: string[]) => list.map((id) => getCard(id).rarity).sort().join(',');
+    const pick = (r: string, n: number) => CARDS.filter((c) => c.rarity === r).slice(0, n).map((c) => c.id);
+    const decks = [[...STARTER_DECK], [...pick('common', 6), ...pick('uncommon', 6), ...pick('rare', 4), ...pick('epic', 2), ...pick('legendary', 1), ...pick('mythic', 1)]];
+    // Duplicates (2 copies allowed) get two different mirror cards.
+    decks.push([...decks[1].slice(0, 18), decks[1][0], decks[1][6]]);
+    for (const deck of decks) {
+      const cpu = leagueCpuHand('s1', deck).map((c) => c.cardId);
+      expect(cpu).toHaveLength(deck.length);
+      expect(new Set(cpu).size).toBe(cpu.length);
+      expect(cpu.some((id) => deck.includes(id))).toBe(false);
+      expect(byRarity(cpu)).toBe(byRarity(deck));
+      expect(leagueCpuHand('s1', deck).map((c) => c.cardId)).toEqual(cpu);
+    }
+    expect(leagueCpuHand('s2', decks[1]).map((c) => c.cardId)).not.toEqual(leagueCpuHand('s1', decks[1]).map((c) => c.cardId));
+  });
+
   it('die schwere KI rechnet auch mit 5 Handkarten bis zum Schluss schnell (kein Hängen am Spielende)', () => {
     const rng = createRng(3);
     let s = createBattle(DECK, drawCpuHand(rng), 'player', [], undefined, {}, rng);

@@ -35,6 +35,14 @@
 - Bestehende Erfolge behalten ihre Kennung (bereits abgeholte bleiben abgeholt).
 - Automatisch: neue Zähler, Reihen aufsteigend, Titel-Länge, Runen-Zählung in der Duell-Statistik.
 
+## Rangliste schwerer: Spiegel-Deck + KI „Schwer“ (09.11.)
+
+- Der Computer spiegelt das Liga-Deck (gleiche Seltenheiten, andere Karten) und spielt auf „Schwer“; Spiel und Server
+  bauen das Deck gleich auf (siehe BALANCING.md v1.41).
+- Automatisch: tests/deck.test.ts (Spiegel-Deck: Seltenheiten, keine gemeinsamen Karten, Doppelte, fest aus dem Seed),
+  tests/verify.test.ts (ganzes Match mit KI „Schwer“ wird vom Server-Code bestätigt).
+- Nicht auf einem echten Gerät getestet.
+
 ## Balance nach der Deck-Regel (08.11.)
 
 - Simulation alt/neu (siehe BALANCING.md v1.40). Computer-Deck in Einfachem Spiel (Normal, Schwer) und Rangliste: nur

@@ -4,7 +4,7 @@
 // then pays the reward. The same functions run in the game (to play) and on the server (to check).
 import { ARENAS, Arena, pickArena } from './arenas';
 import { AiLevel, AiOptions, CPU_DECK_SHARE, chooseCpuMove, chooseCpuRune, cpuDeckShare, drawCpuHand } from './ai';
-import { DECK_SIZE } from './cards';
+import { CARDS, DECK_SIZE } from './cards';
 import { BattleState, HAND_SIZE, HandCard, Outcome, Side, coinToss, cpuChoosesFirst, createBattle, isGameOver, outcome, score, toHand } from './battle';
 import { CLASSIC_ARENA } from './arenas';
 import { Mission, Opponent, findArena, missionPool } from './campaign';
@@ -198,8 +198,32 @@ export interface LeagueLog {
   rounds: DuelLog[];
 }
 
-/** The computer's deck (the same in every round of the match). */
-export const leagueCpuHand = (seed: string): HandCard[] => drawCpuHand(deriveRng(seed, 'cpu-hand'), DECK_SIZE, CPU_DECK_SHARE);
+/** Strength of the league computer: "Schwer" (BALANCING.md, v1.41). */
+export const LEAGUE_AI: AiOptions = { level: 'hard' };
+
+/**
+ * The computer's deck (the same in every round of the match), a mirror of the player's league deck: for every card
+ * the player brings, the computer gets a different card of the same rarity (no card of the player's deck, no card
+ * twice). Older calls without a deck keep the commons-only deck.
+ */
+export function leagueCpuHand(seed: string, playerDeck?: readonly string[]): HandCard[] {
+  const rng = deriveRng(seed, 'cpu-hand');
+  if (!playerDeck || !playerDeck.length) return drawCpuHand(rng, DECK_SIZE, CPU_DECK_SHARE);
+  const used = new Set(playerDeck);
+  const out: string[] = [];
+  for (const id of playerDeck) {
+    const rarity = CARDS.find((c) => c.id === id)?.rarity;
+    let pool = CARDS.filter((c) => c.rarity === rarity && !used.has(c.id));
+    // Not enough other cards of that rarity: any unused card, then (tiny catalogs) any card not yet in the CPU deck.
+    if (!pool.length) pool = CARDS.filter((c) => !used.has(c.id));
+    if (!pool.length) pool = CARDS.filter((c) => !out.includes(c.id));
+    if (!pool.length) break;
+    const card = pool[Math.floor(rng() * pool.length)];
+    used.add(card.id);
+    out.push(card.id);
+  }
+  return toHand(out);
+}
 
 /** The computer's basic rune for a match (only when runes are in play for the player). */
 export function leagueCpuRune(seed: string, runesOn: boolean): string | null {
@@ -225,7 +249,7 @@ export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readon
   if (!log || !Array.isArray(log.rounds)) return { ok: false, error: 'Match fehlt' };
   const picks = handPicks(ticket.deck);
   const hand: HandCard[] = picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
-  const cpuHand = leagueCpuHand(ticket.seed);
+  const cpuHand = leagueCpuHand(ticket.seed, ticket.deck);
   let match = emptyMatch();
   const rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[] = [];
   const duels: PlayedDuel[] = [];
@@ -245,7 +269,7 @@ export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readon
     } catch {
       return { ok: false, error: 'Duell konnte nicht aufgebaut werden' };
     }
-    const duel = replayDuel(start, duelLog, { toss: r.toss, ai: r.ai }, undefined, step.first);
+    const duel = replayDuel(start, duelLog, { toss: r.toss, ai: r.ai }, LEAGUE_AI, step.first);
     if (!duel.ok) return { ok: false, error: `Runde ${step.round}: ${duel.error}` };
     const res = outcome(duel.end);
     const winner: Side | 'draw' = res === 'win' ? 'player' : res === 'loss' ? 'cpu' : 'draw';

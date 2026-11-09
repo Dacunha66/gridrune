@@ -155,3 +155,17 @@ Glutwiesen (30 → 50 %), Alte Ruinen (4 → 16 %), Schmiede am Berg (17 → 26 
 
 **KI „Schwer“:** Mit 5 Handkarten bis zum Ende dauerte die Endspiel-Suche bis zu 11 s pro Zug (Server-CPU). Neu: die
 Suche läuft nur, wenn sie höchstens 20 000 Stellungen braucht (meist ab 4 statt 5 restlichen Zügen) → längster Zug 33 ms.
+
+## Rangliste: Spiegel-Deck + KI „Schwer“ (v1.41, Simulation)
+
+Rückmeldung: In der Rangliste gewinnt man fast immer. Gemessen pro Duell (mittlere KI spielt den Spieler):
+
+| Spieler-Deck | bisher (nur gewöhnlich, Normal) | Spiegel-Deck, Normal | Spiegel-Deck, Schwer |
+|---|---|---|---|
+| starkes Liga-Deck | 97 % Siege | 45 % | 34 % |
+| Startdeck | 74 % Siege | 55 % | 53 % |
+
+**Neu:** Der Computer bekommt für jede Karte im Liga-Deck des Spielers eine andere Karte derselben Seltenheit
+(keine Karte des Spielers, keine doppelt, fest aus dem Match-Seed) und spielt auf „Schwer“. Damit hängt die Stärke des
+Gegners am eigenen Deck: Seltene Karten helfen nicht mehr automatisch, es zählt, wie gut man spielt. Ein echter Mensch
+spielt besser als die mittlere KI im Test – die echten Siegquoten liegen also höher als in der Tabelle.

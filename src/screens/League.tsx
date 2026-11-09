@@ -15,7 +15,7 @@ import { Header } from './Header';
 import { Battle } from './Battle';
 import { RuneMatchup } from '../components/RuneBadge';
 import { findRune } from '../game/runes';
-import { DuelLog, LeagueTicket, handPicks, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
+import { DuelLog, LEAGUE_AI, LeagueTicket, handPicks, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
 import { Reward } from '../game/rewards';
 import { CloudSave } from '../game/cloudSave';
 import { finishLeagueRemote, readPending, startLeague, writePending } from '../game/adventureApi';
@@ -60,7 +60,9 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
   const [payout, setPayout] = useState<Payout | null>(null);
   const [revealOpen, setRevealOpen] = useState(false);
 
-  const cpuHand = useMemo(() => (seed ? leagueCpuHand(seed) : []), [seed]);
+  // The computer mirrors the league deck the match was started with (same rarities, other cards); signed in: the ticket's deck.
+  const matchDeck = ticket?.deck ?? deck;
+  const cpuHand = useMemo(() => (seed ? leagueCpuHand(seed, matchDeck) : []), [seed, matchDeck]);
   // The computer's rune: one basic rune per match, fixed by the match seed (same in every round); signed in: from the server.
   const cpuRune = ticket ? ticket.cpuRune : seed ? leagueCpuRune(seed, !!runes) : null;
   const playerRune = ticket ? ticket.playerRune : runes?.player ?? null;
@@ -162,6 +164,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
             <ul className="plain-list">
               <li><GameIcon name="cards" /> Du spielst mit deinem <b>Liga-Deck</b>: Es wird gemischt, <b>5 Karten</b> hast du auf der Hand, vor jedem Zug ziehst du nach.</li>
               <li><GameIcon name="swords" /> <b>2 Runden</b> mit demselben Deck (jede Runde neu gemischt), der Start wird getauscht. 2:0 gewinnt, bei 1:1 folgt ein <b>Entscheidungsduell</b>.</li>
+              <li><GameIcon name="swords" /> Der Computer spielt auf <b>Schwer</b> mit einem <b>Spiegel-Deck</b>: genauso viele Karten jeder Seltenheit wie dein Deck, aber andere Karten.</li>
               <li><GameIcon name="lock" /> In jedem Duell blockiert ein <b>Fels</b> ein Feld: 15 Felder, kein Unentschieden, kein Startvorteil.</li>
             </ul>
             {runes && <RuneMatchup player={playerRune} cpu={cpuRune} note={runeNote} />}
@@ -205,6 +208,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
           deal: () => deriveRng(seed, `deal:${stepRound}`),
           finishLabel: 'Weiter',
           runes: { player: playerRune, cpu: cpuRune },
+          ai: LEAGUE_AI,
         }}
         onEnd={(result, sc, started, record) => onRoundEnd(started, result, sc, record ? { first: record.start.turn, moves: record.moves } : undefined)}
         onQuit={onExit}

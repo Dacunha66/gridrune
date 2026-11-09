@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, adventureDuel, adventureRngs, checkAdventure, handPicks, checkLeague, leagueCpuHand, leagueCpuRune, leagueRound,
+  AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, adventureDuel, adventureRngs, checkAdventure, handPicks, checkLeague, LEAGUE_AI, leagueCpuHand, leagueCpuRune, leagueRound,
 } from '../src/game/verify';
 import { emptyMatch, nextStep, recordRound } from '../src/game/match';
 import { createBattle } from '../src/game/battle';
@@ -56,7 +56,7 @@ function playLeague(t: LeagueTicket, choices: number): { log: LeagueLog; winner:
     const step = nextStep(match);
     if (step.kind === 'done') return { log: { rounds }, winner: step.winner };
     const r = leagueRound(t.seed, step.round);
-    let state = createBattle(hand, leagueCpuHand(t.seed), 'player', r.rocks, r.arena.cells, { player: t.playerRune, cpu: t.cpuRune }, r.deal);
+    let state = createBattle(hand, leagueCpuHand(t.seed, t.deck), 'player', r.rocks, r.arena.cells, { player: t.playerRune, cpu: t.cpuRune }, r.deal);
     let first = step.first;
     if (!first) {
       const w = coinToss(r.toss);
@@ -66,7 +66,7 @@ function playLeague(t: LeagueTicket, choices: number): { log: LeagueLog; winner:
     const moves: Action[] = [];
     while (!isGameOver(state)) {
       if (state.turn === 'cpu') {
-        const a: Action = chooseCpuRune(state, r.ai) ?? chooseCpuMove(state, r.ai);
+        const a: Action = chooseCpuRune(state, r.ai, LEAGUE_AI) ?? chooseCpuMove(state, r.ai, LEAGUE_AI);
         moves.push(a);
         state = applyAction(state, a);
       } else {
