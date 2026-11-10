@@ -229,7 +229,7 @@ export function prepareAdventure(saveRaw: unknown, campaignRaw: unknown, deck: u
   if (!validDeck(save, deck)) return { ok: false, error: 'deck' };
   if (!isAiLevel(level)) return { ok: false, error: 'level' };
   const playerRune = allowedRune(save, sanitizeProgress(campaignRaw), rune, 'adventure', isAdmin);
-  return { ok: true, ticket: { deck, owned: [...save.unlocked], playerRune, cpuRune: playerRune ? 'random' : null, level } };
+  return { ok: true, ticket: { deck, owned: [...save.unlocked], playerRune, cpuRune: playerRune ? 'random' : null, level, cpuDeck: 'mirror' } };
 }
 
 /** Replays the run and the duel; on success returns the reward and the new save. */

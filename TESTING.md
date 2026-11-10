@@ -666,3 +666,10 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 
 - Kristall-Feld (5 Reihen): Handkarten größer (iPhone 430 pt breit: 69 → 81 → jetzt 89 pt), das Feld dafür etwas kleiner (394 → 373 pt). Kleines iPhone (667 pt hoch): Hand 74 pt, Feld 230 pt. Im Browser in iPhone-Größe geprüft.
 - Startbildschirm-App am iPhone: Manche iOS-Versionen machen die Seite um die Statusleiste zu kurz → dunkler leerer Streifen unten. Die Seite wird jetzt dann auf volle Bildschirmhöhe gestreckt (nur in der App vom Home-Bildschirm, nur wenn genau die Statusleiste fehlt). Im Browser nicht nachstellbar; vom Spieler auf dem echten iPhone bestätigt: Streifen ist weg.
+
+## KI-Deck im Einfachen Spiel (v1.42)
+
+- Schwer: Gegner-Deck spiegelt die Seltenheiten des eigenen Decks; Normal: eine Seltenheit niedriger; Leicht unverändert.
+- Simulation siehe BALANCING.md (z. B. Deck des Admins auf Schwer: 98 % → 34 % Siege bei mittlerer KI als Spieler).
+- Automatische Tests: gleiche Seltenheiten, keine eigene/doppelte Karte, Normal schwächer als Schwer, alte Tickets unverändert.
+- Server-Funktion adventure auf neue Engine; Rangliste unverändert (eigene Regel bleibt).

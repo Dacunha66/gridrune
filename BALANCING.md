@@ -169,3 +169,23 @@ Rückmeldung: In der Rangliste gewinnt man fast immer. Gemessen pro Duell (mittl
 (keine Karte des Spielers, keine doppelt, fest aus dem Match-Seed) und spielt auf „Schwer“. Damit hängt die Stärke des
 Gegners am eigenen Deck: Seltene Karten helfen nicht mehr automatisch, es zählt, wie gut man spielt. Ein echter Mensch
 spielt besser als die mittlere KI im Test – die echten Siegquoten liegen also höher als in der Tabelle.
+
+## Einfaches Spiel: Gegner-Deck folgt dem eigenen Deck (v1.42, Simulation)
+
+Rückmeldung: Auf „Schwer“ denkt der Computer voraus, spielt aber nur gewöhnliche Karten – mit einem guten Deck gewinnt
+man fast immer. Neu (wie in der Rangliste): Der Computer bekommt für jede Karte im Deck des Spielers eine andere Karte –
+auf **Schwer** derselben Seltenheit, auf **Normal** eine Seltenheit niedriger (gewöhnlich bleibt gewöhnlich). Keine
+Karte des Spielers, keine doppelt, fest aus dem Seed (der Server prüft genauso). Gibt es zu wenige Karten einer
+Seltenheit, nimmt er die nächstniedrigere. **Leicht** bleibt unverändert. Alte, noch offene Spiele behalten das alte Deck.
+
+Mittlere KI spielt den Spieler, 300–400 Duelle je Zeile, Kartenstand live (250 Karten). Siege / Unentschieden / Niederlagen in %:
+
+| Spieler-Deck | Normal alt | Normal neu | Schwer alt | Schwer neu |
+|---|---|---|---|---|
+| Startdeck | 54 / 20 / 26 | 55 / 18 / 27 | 54 / 17 / 29 | 31 / 23 / 46 |
+| gemischt (4 gew., 5 ungew., 5 selten, 4 episch, 1 legendär, 1 mystisch) | 83 / 11 / 5 | 59 / 20 / 21 | 80 / 11 / 9 | 33 / 21 / 46 |
+| Deck des Admins (1 myst., 2 leg., 10 episch, 7 selten) | 99 / 2 / 0 | 70 / 19 / 11 | 98 / 2 / 0 | 34 / 28 / 39 |
+| 20 stärkste Karten | 99 / 1 / 0 | 73 / 17 / 10 | 100 / 0 / 0 | 65 / 20 / 15 |
+
+Ein Mensch spielt besser als die mittlere KI im Test – echte Siegquoten liegen höher. Mit den 20 stärksten Karten bleibt
+man auch auf Schwer vorn, weil der Computer keine Karte des Spielers bekommt und es nur wenige noch stärkere gibt.

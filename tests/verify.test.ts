@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import {
+import { simpleCpuDeck,
   AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, adventureDuel, adventureRngs, checkAdventure, handPicks, checkLeague, LEAGUE_AI, leagueCpuHand, leagueCpuRune, leagueRound,
 } from '../src/game/verify';
 import { emptyMatch, nextStep, recordRound } from '../src/game/match';
 import { createBattle } from '../src/game/battle';
-import { STARTER_DECK, STARTING_UNLOCKED } from '../src/game/cards';
+import { CARDS, RARITY_ORDER, STARTER_DECK, STARTING_UNLOCKED } from '../src/game/cards';
 import { applyMove, coinToss, cpuChoosesFirst, isGameOver, legalMoves, outcome } from '../src/game/battle';
 import { chooseCpuMove, chooseCpuRune } from '../src/game/ai';
 import { Action, applyAction } from '../src/game/runes';
@@ -179,5 +179,38 @@ describe('Rangliste vom Server geprüft', () => {
     expect(checkLeague(t, badMove).ok).toBe(false);
     const otherDeck = { ...t, deck: [...deck].reverse() };
     expect(checkLeague(otherDeck, log).ok).toBe(false);
+  });
+});
+
+describe('Einfaches Spiel: Gegner-Deck folgt dem eigenen Deck (v1.42)', () => {
+  const rarityOf = (id: string) => CARDS.find((c) => c.id === id)!.rarity;
+  // A few strong cards (the test catalog is small: the computer must still find cards of the same rarity).
+  const strong = [...CARDS].sort((a, b) => RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity]).slice(0, 6).map((c) => c.id);
+  const count = (ids: string[]) => ids.reduce((s, id) => s + RARITY_ORDER[rarityOf(id)], 0);
+
+  it('Schwer: gleiche Seltenheiten, keine eigene Karte, keine doppelt', () => {
+    const cpu = simpleCpuDeck(createRng(7), 'hard', STARTER_DECK).map((c) => c.cardId);
+    expect(cpu).toHaveLength(20);
+    expect(new Set(cpu).size).toBe(20);
+    expect(cpu.some((id) => STARTER_DECK.includes(id))).toBe(false);
+    expect(cpu.map(rarityOf).sort()).toEqual(STARTER_DECK.map(rarityOf).sort());
+  });
+
+  it('Normal: eine Seltenheit niedriger; Schwer mit starkem Deck ist stärker als Normal', () => {
+    const hard = simpleCpuDeck(createRng(3), 'hard', strong).map((c) => c.cardId);
+    const normal = simpleCpuDeck(createRng(3), 'medium', strong).map((c) => c.cardId);
+    expect(count(hard)).toBeGreaterThan(count(normal));
+    expect(count(normal)).toBeGreaterThan(count(simpleCpuDeck(createRng(3), 'hard', STARTER_DECK).map((c) => c.cardId)));
+  });
+
+  it('Leicht bleibt beim festen Mix; alte Tickets ohne Spiegel behalten das alte Deck', () => {
+    const easy = simpleCpuDeck(createRng(5), 'easy', strong).map((c) => c.cardId);
+    expect(easy.every((id) => ['common', 'uncommon', 'rare'].includes(rarityOf(id)))).toBe(true);
+    const deck20 = [...strong, ...STARTER_DECK.filter((id) => !strong.includes(id))].slice(0, 20);
+    const old = adventureDuel({ id: 't', seed: 'abc', deck: deck20, owned: [], playerRune: null, cpuRune: null, level: 'hard' }, handPicks(deck20)).start;
+    const cpuIds = [...old.hands.cpu, ...(old.piles?.cpu ?? [])].map((c) => c.cardId);
+    expect(cpuIds.every((id) => rarityOf(id) === 'common')).toBe(true);
+    const neu = adventureDuel({ id: 't', seed: 'abc', deck: deck20, owned: [], playerRune: null, cpuRune: null, level: 'hard', cpuDeck: 'mirror' }, handPicks(deck20)).start;
+    expect([...neu.hands.cpu, ...(neu.piles?.cpu ?? [])].some((c) => rarityOf(c.cardId) !== 'common')).toBe(true);
   });
 });

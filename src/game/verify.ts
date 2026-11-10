@@ -4,7 +4,7 @@
 // then pays the reward. The same functions run in the game (to play) and on the server (to check).
 import { ARENAS, Arena, pickArena } from './arenas';
 import { AiLevel, AiOptions, CPU_DECK_SHARE, chooseCpuMove, chooseCpuRune, cpuDeckShare, drawCpuHand } from './ai';
-import { CARDS, DECK_SIZE } from './cards';
+import { CARDS, DECK_SIZE, RARITY_ORDER, Rarity } from './cards';
 import { BattleState, HAND_SIZE, HandCard, Outcome, Side, coinToss, cpuChoosesFirst, createBattle, isGameOver, outcome, score, toHand } from './battle';
 import { CLASSIC_ARENA } from './arenas';
 import { Mission, Opponent, findArena, missionPool } from './campaign';
@@ -29,6 +29,8 @@ export interface AdventureTicket {
   cpuRune: 'random' | null;
   /** Difficulty chosen by the player (decides the computer's moves and the coins); older tickets: medium. */
   level?: AiLevel;
+  /** "mirror": the computer's deck follows the strength of the player's deck (Normal, Schwer); older tickets: commons. */
+  cpuDeck?: 'mirror';
 }
 
 /** What a runner track is built from (adventure and campaign runs). */
@@ -79,7 +81,10 @@ export function adventureDuel(ticket: AdventureTicket, picks: Pick[], rngs = adv
   const basic = basicRunes().map((r) => r.id);
   const cpuRune = ticket.cpuRune === 'random' && basic.length > 0 ? basic[Math.floor(rngs.cpuRune() * basic.length)] : null;
   const hand: HandCard[] = picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
-  const start = createBattle(hand, drawCpuHand(rngs.cpuHand, DECK_SIZE, cpuDeckShare(ticket.level ?? 'medium')), 'player', [], arena.cells, { player: ticket.playerRune, cpu: cpuRune }, rngs.deal);
+  const cpuHand = ticket.cpuDeck === 'mirror'
+    ? simpleCpuDeck(rngs.cpuHand, ticket.level ?? 'medium', hand.map((c) => c.cardId))
+    : drawCpuHand(rngs.cpuHand, DECK_SIZE, cpuDeckShare(ticket.level ?? 'medium'));
+  const start = createBattle(hand, cpuHand, 'player', [], arena.cells, { player: ticket.playerRune, cpu: cpuRune }, rngs.deal);
   return { arena, start };
 }
 
@@ -209,12 +214,30 @@ export const LEAGUE_AI: AiOptions = { level: 'hard' };
 export function leagueCpuHand(seed: string, playerDeck?: readonly string[]): HandCard[] {
   const rng = deriveRng(seed, 'cpu-hand');
   if (!playerDeck || !playerDeck.length) return drawCpuHand(rng, DECK_SIZE, CPU_DECK_SHARE);
+  return mirrorCpuDeck(rng, playerDeck, 0, false);
+}
+
+const RARITY_BY_ORDER = Object.fromEntries(Object.entries(RARITY_ORDER).map(([r, n]) => [n, r])) as Record<number, Rarity>;
+
+/**
+ * A deck that follows the player's deck: for every card the player brings, the computer gets a different card of the
+ * same rarity – or `down` rarities lower (never below common). No card of the player's deck, no card twice.
+ */
+export function mirrorCpuDeck(rng: Rng, playerDeck: readonly string[], down = 0, nearest = true): HandCard[] {
   const used = new Set(playerDeck);
   const out: string[] = [];
   for (const id of playerDeck) {
-    const rarity = CARDS.find((c) => c.id === id)?.rarity;
-    let pool = CARDS.filter((c) => c.rarity === rarity && !used.has(c.id));
-    // Not enough other cards of that rarity: any unused card, then (tiny catalogs) any card not yet in the CPU deck.
+    const own = CARDS.find((c) => c.id === id)?.rarity;
+    const target = own ? Math.max(0, RARITY_ORDER[own] - down) : 0;
+    // Not enough other cards of that rarity: the next lower rarity (then higher), then any unused card, then (tiny
+    // catalogs) any card not yet in the CPU deck.
+    // (The league keeps its first rule: same rarity only, else any unused card – its matches replay unchanged.)
+    const order = nearest ? [target, ...[1, 2, 3, 4, 5].flatMap((k) => [target - k, target + k])].filter((n) => n >= 0 && n <= 5) : [target];
+    let pool: typeof CARDS = [];
+    for (const n of order) {
+      pool = CARDS.filter((c) => c.rarity === RARITY_BY_ORDER[n] && !used.has(c.id));
+      if (pool.length) break;
+    }
     if (!pool.length) pool = CARDS.filter((c) => !used.has(c.id));
     if (!pool.length) pool = CARDS.filter((c) => !out.includes(c.id));
     if (!pool.length) break;
@@ -223,6 +246,15 @@ export function leagueCpuHand(seed: string, playerDeck?: readonly string[]): Han
     out.push(card.id);
   }
   return toHand(out);
+}
+
+/**
+ * The computer's deck in the simple game (BALANCING.md, v1.42): "Leicht" keeps its fixed mix; "Normal" mirrors the
+ * player's deck one rarity lower, "Schwer" mirrors it at the same rarity – a strong deck meets a strong opponent.
+ */
+export function simpleCpuDeck(rng: Rng, level: AiLevel, playerDeck: readonly string[]): HandCard[] {
+  if (level === 'easy' || !playerDeck.length) return drawCpuHand(rng, DECK_SIZE, cpuDeckShare(level));
+  return mirrorCpuDeck(rng, playerDeck, level === 'hard' ? 0 : 1);
 }
 
 /** The computer's basic rune for a match (only when runes are in play for the player). */
