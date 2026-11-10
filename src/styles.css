@@ -2395,3 +2395,6 @@ label.btn.disabled { opacity: .45; }
 .pill.phase-draft { border-color: var(--muted); color: var(--muted); }
 .admin-thumb .puzzle-board { --gap: 1px; padding: 1px; border-width: 0; }
 .admin-thumb .puzzle-lock { display: none; }
+/* Rays are centred with margins (a translate would be turned along with the spinning rays and drift off-centre). */
+.unlock-rays { transform: none; margin: -75% 0 0 -75%; }
+.slot-rays { transform: none; margin: -80% 0 0 -80%; }

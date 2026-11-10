@@ -1,7 +1,7 @@
 {
   "name": "GridRune",
   "short_name": "GridRune",
-  "description": "Renne. Sammle. Erobere das Raster. Ein Kartenspiel mit Runen, Kampagne, Online-Duellen und Weltboss-Raids.",
+  "description": "Sammle. Lege. Erobere das Raster. Ein Kartenspiel mit Runen, Kampagne, Duellen gegen Spieler und Raids.",
   "lang": "de",
   "id": "./",
   "start_url": "./",

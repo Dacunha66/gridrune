@@ -281,7 +281,7 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
             <div className="field-row">
               <label className="field grow"><span>Aufgabe</span>
                 <select className="admin-input" value={t.metric} onChange={(ev) => setTask(i, { metric: ev.target.value as PuzzleTask['metric'] })}>
-                  {PUZZLE_METRICS.map((m) => <option key={m} value={m}>{METRIC_TEXT[m](1).replace(/\b1\b/, 'X')}</option>)}
+                  {PUZZLE_METRICS.map((m) => <option key={m} value={m}>{METRIC_TEXT[m](2).replace(/\b2\b/, 'X')}</option>)}
                 </select>
               </label>
               <label className="field"><span>Ziel</span>

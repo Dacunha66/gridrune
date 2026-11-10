@@ -1,5 +1,26 @@
 # Testprotokoll
 
+## Puzzle-Events, Version 1 (10.11.)
+
+- Neu: Startseite → Event-Karte → Events (Aktuell/Archiv) → Puzzle-Detail (3×3, Aufgaben, Restzeit, Belohnung) →
+  Freischaltanimation („Karte freigeschaltet!“: Karte ansehen / Zur Sammlung / Zurück zum Event). Edition in der Sammlung
+  wählbar (Original/Edition), sichtbar auf eigenen Karten (Sammlung, Deck, eigene Duellkarten), nie auf Gegnerkarten.
+- Erstes Event „Mondfinsternis“ (pz01, Runde r1, 10.11.–24.11.): Edition ed01 „Runenwolf – Mondfinsternis“ (Bild vom
+  Admin, Rahmen Mondsilber), 9 Fragmente; Aufgaben: täglich 2 Siege (1), wöchentlich 10 Siege (2), einmalig Sieg mit
+  12+ Feldern (1).
+- Datenbank (Migration 020): puzzle_progress, puzzle_counters, puzzle_claims (Spieler lesen nur eigene Zeilen, schreiben
+  nur der Server); quest_add zählt zusätzlich für laufende Events; puzzle_claim vergibt in einem Schritt.
+- Live-Datenbanktest (Test-Event pz99, danach gelöscht, echter Spielstand nicht berührt): Zähler addieren, ungültige
+  Werte ignoriert; dieselbe Aufgabe zweimal → „already“; schon vorhandenes Teil → „conflict“ und nichts geändert;
+  Fertigstellung ohne Spielstand → abgelehnt; Spielstand mit falscher Version → „conflict“, alles zurückgerollt.
+- 8 neue automatische Tests (344 insgesamt); gebaute Server-Regeln direkt aufgerufen (Entwurf unsichtbar, Vergabe,
+  Edition im Spielstand); alle Server-Funktionen starten (events neu; save-sync, game, quests, adventure, raid neu).
+- Browser (Testseite mit Beispieldaten, nicht im Repo): Startseiten-Karte, Detail, Archiv-Liste, Animation,
+  Edition wählen, Admin (Liste, Editor, Vorschau 0/teilweise/voll, Testmodus mit Fragmenten/Animation, Speichern).
+  Normales Duell als Gast weiter ohne Fehler.
+- Nicht getestet: echter Fragment-Erhalt mit Konto im Browser, echtes Gerät. Bild-Upload im Event-Editor nur im echten
+  Admin (in der Testseite nicht verfügbar).
+
 ## Runensteine (10.11.)
 
 - Neue Währung „Runensteine“ (nur mit Konto, Anzeige oben neben den Münzen). Verdienen: Belohnungsart „Runensteine“
