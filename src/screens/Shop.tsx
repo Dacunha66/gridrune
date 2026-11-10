@@ -335,9 +335,9 @@ export function Shop({ save, onChange, onBack, server = null, top, player = null
 
         {tab === 'skins' && (
           <div className="shop-list">
-            {(['card', 'runner'] as const).map((kind) => (
+            {(['card'] as const).map((kind) => (
               <section key={kind}>
-                <h2 className="section-title">{kind === 'card' ? 'Kartenfarbe im Duell' : 'Figur im Lauf'}</h2>
+                <h2 className="section-title">Kartenfarbe im Duell</h2>
                 <div className="skin-grid">
                   {SKINS.filter((s) => s.kind === kind && (!s.rewardOnly || save.skins.owned.includes(s.id))).map((skin) => {
                     const owned = save.skins.owned.includes(skin.id);

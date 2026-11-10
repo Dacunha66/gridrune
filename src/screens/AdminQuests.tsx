@@ -28,7 +28,7 @@ function RewardEditor({ value, onChange }: { value: QuestReward; onChange: (r: Q
     else if (type === 'stones') onChange({ type, amount: 10 });
     else if (type === 'pack') onChange({ type, packId: PACKS[0].id, amount: 1 });
     else if (type === 'card') onChange({ type, cardId: cards[0]?.id });
-    else if (type === 'skin') onChange({ type, skinId: SKINS.find((s) => s.price > 0 || s.rewardOnly)?.id });
+    else if (type === 'skin') onChange({ type, skinId: SKINS.find((s) => s.kind === 'card' && (s.price > 0 || s.rewardOnly))?.id });
     else if (type === 'rune') onChange({ type, runeId: RUNES[0]?.id });
     else onChange({ type, title: 'Neuer Titel' });
   };
@@ -57,7 +57,7 @@ function RewardEditor({ value, onChange }: { value: QuestReward; onChange: (r: Q
       )}
       {value.type === 'skin' && (
         <select className="admin-input" value={value.skinId} onChange={(e) => onChange({ ...value, skinId: e.target.value })} aria-label="Skin">
-          {SKINS.filter((s) => s.price > 0 || s.rewardOnly).map((s) => <option key={s.id} value={s.id}>{s.kind === 'card' ? 'Karten' : 'Läufer'}: {s.name}{s.rewardOnly ? ' (nur Belohnung)' : ''}</option>)}
+          {SKINS.filter((s) => s.kind === 'card' && (s.price > 0 || s.rewardOnly)).map((s) => <option key={s.id} value={s.id}>{s.name}{s.rewardOnly ? ' (nur Belohnung)' : ''}</option>)}
         </select>
       )}
       {value.type === 'rune' && (

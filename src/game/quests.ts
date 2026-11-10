@@ -153,7 +153,7 @@ export function eventDelta(e: QuestEvent): Counters {
 export type QuestRewardType = 'coins' | 'stones' | 'card' | 'pack' | 'skin' | 'rune' | 'title';
 export const QUEST_REWARD_TYPES: QuestRewardType[] = ['coins', 'stones', 'card', 'pack', 'skin', 'rune', 'title'];
 export const QUEST_REWARD_LABEL: Record<QuestRewardType, string> = {
-  coins: 'Münzen', stones: 'Runensteine', card: 'Karte', pack: 'Booster', skin: 'Kartenrücken / Läufer', rune: 'Rune', title: 'Titel',
+  coins: 'Münzen', stones: 'Runensteine', card: 'Karte', pack: 'Booster', skin: 'Kartenrücken', rune: 'Rune', title: 'Titel',
 };
 
 export interface QuestReward {
