@@ -5,7 +5,7 @@
 // "admin-stats": numbers of one event for the admin.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { loadContent, puzzleClaimServer, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@COMMIT/public/server/engine-HASH.js';
+import { loadContent, puzzleClaimServer, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@66e3f4c46590a05b1a7a768a1c6bece368faede6/public/server/engine-391f86193bb7.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
