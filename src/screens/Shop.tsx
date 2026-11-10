@@ -40,11 +40,10 @@ const TAB_HINT: Record<ShopTab, string> = {
   skins: 'Skins ändern nur das Aussehen, nie die Kartenwerte.',
 };
 
-/** "in 5 Std. 12 Min." until the given time. */
-function untilText(at: Date, now: number): string {
-  const min = Math.max(1, Math.ceil((at.getTime() - now) / 60000));
-  const h = Math.floor(min / 60);
-  return h > 0 ? `in ${h} Std. ${min % 60} Min.` : `in ${min} Min.`;
+/** Time left until `at`, counting down like a clock: "11:59" (hours:minutes, rounded down). */
+export function untilText(at: Date, now: number): string {
+  const min = Math.max(0, Math.floor((at.getTime() - now) / 60000));
+  return `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
 }
 
 export function skinStyle(colors: [string, string, string]): CSSProperties {
@@ -88,10 +87,11 @@ function odds(pack: PackDef): { rarity: Rarity; text: string }[] {
 export function Shop({ save, onChange, onBack, server = null, top, player = null, admin = false, onAccount }: Props) {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<ShopTab>('offers');
-  // A clock for the free-coins countdown and the day of the card offers.
-  const [now, setNow] = useState(() => Date.now());
+  // Redraws the countdown every few seconds; the time itself is read fresh on every drawing (never an old value).
+  const [, setTick] = useState(0);
+  const now = Date.now();
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 20000);
+    const t = setInterval(() => setTick((k) => k + 1), 5000);
     return () => clearInterval(t);
   }, []);
   /** flipped = which cards are already turned over (they come out of the pack face down). */
@@ -231,7 +231,7 @@ export function Shop({ save, onChange, onBack, server = null, top, player = null
                 <small>{cfg.freeCoins} Münzen alle {cfg.freeHours} Stunden</small>
               </span>
               <button type="button" className="btn btn-primary" disabled={!!freeAt || busy} onClick={takeFree}>
-                {freeAt ? untilText(freeAt, now) : <>Abholen <Coin /> {cfg.freeCoins}</>}
+                {freeAt ? <>Wieder in {untilText(new Date(Math.min(freeAt.getTime(), now + cfg.freeHours * 3600_000 - 1)), now)}</> : <>Abholen <Coin /> {cfg.freeCoins}</>}
               </button>
             </section>
             <h2 className="section-title">Karten des Tages <small className="muted">neu um Mitternacht</small></h2>
