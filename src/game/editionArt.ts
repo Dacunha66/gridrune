@@ -8,11 +8,14 @@ import ed02 from '../assets/editions/ed02-vampirgraf-blutmond.webp';
 import ed02Thumb from '../assets/editions/ed02-vampirgraf-blutmond-thumb.webp';
 import ed03 from '../assets/editions/ed03-nachtwolf-schattenmond.webp';
 import ed03Thumb from '../assets/editions/ed03-nachtwolf-schattenmond-thumb.webp';
+import ed04 from '../assets/editions/ed04-mondweberin-totale-finsternis.webp';
+import ed04Thumb from '../assets/editions/ed04-mondweberin-totale-finsternis-thumb.webp';
 
 const BUILTIN_ART: Record<string, { image: string; thumb: string }> = {
   ed01: { image: ed01, thumb: ed01Thumb },
   ed02: { image: ed02, thumb: ed02Thumb },
   ed03: { image: ed03, thumb: ed03Thumb },
+  ed04: { image: ed04, thumb: ed04Thumb },
 };
 
 export function editionImage(e: EditionDef): string | undefined {
