@@ -33,7 +33,7 @@ import {
 import { EffectId } from '../game/effects';
 import {
   EDITIONS_COLLECTION, EditionDef, PUZZLES_COLLECTION, PuzzleCounters, PuzzleDef, allPuzzles, earnedClaim, findEdition, grantPuzzleReward, parseEdition,
-  parsePuzzle, puzzlePhase, setEditions, setPuzzles, taskViews,
+  parsePuzzle, puzzlePhase, setEditions, setPuzzles, taskViews, puzzleStages, totalPieces, newlyDone, stageDone,
 } from '../game/puzzles';
 
 export interface ContentRow {
@@ -91,12 +91,14 @@ export function visiblePuzzles(now: Date = new Date()): PuzzleDef[] {
  * puzzle. null = nothing to give.
  */
 export function puzzleClaimServer(saveRaw: unknown, puzzleId: string, have: number[], counters: PuzzleCounters | null, claimed: string[], seed: string, now: Date = new Date()):
-  { keys: string[]; pieces: number[]; complete: boolean; save: SaveData | null } | null {
+  { keys: string[]; pieces: number[]; complete: boolean; total: number; save: SaveData | null } | null {
   const p = allPuzzles().find((x) => x.id === puzzleId);
   if (!p) return null;
   const c = earnedClaim(p, have, counters, claimed, seed, now);
   if (!c) return null;
-  return { ...c, save: c.complete ? grantPuzzleReward(sanitize(saveRaw), p) : null };
+  // A stage completed with this claim: its edition goes into the save in the same step.
+  const done = newlyDone(p, have, c.pieces);
+  return { ...c, total: totalPieces(p), save: done.length || c.complete ? grantPuzzleReward(sanitize(saveRaw), p, [...have, ...c.pieces]) : null };
 }
 
 /** What the player sees of an event (public parts of the definition, own pieces and task progress). */
@@ -106,6 +108,15 @@ export function puzzleView(p: PuzzleDef, have: number[], completedAt: string | n
     id: p.id, name: p.name, description: p.description, image: p.image, pieces: p.pieces, cols: p.cols, rows: p.rows,
     phase: puzzlePhase(p, now), run: p.run,
     reward: e ? { type: 'edition', editionId: e.id, cardId: e.cardId, name: e.name, image: e.image, frame: e.frame } : null,
+    // Every stage (first = the reward above): its card edition, pieces and grid, and whether it is complete.
+    stages: puzzleStages(p).map((st) => {
+      const se = findEdition(st.editionId);
+      return {
+        index: st.index, offset: st.offset, pieces: st.pieces, cols: st.cols, rows: st.rows, done: stageDone(st, have),
+        reward: se ? { type: 'edition', editionId: se.id, cardId: se.cardId, name: se.name, image: se.image, frame: se.frame } : null,
+      };
+    }),
+    total: totalPieces(p),
     have, completedAt,
     tasks: taskViews(p, counters, claimed, now).map((v) => ({
       id: v.task.id, title: v.title, description: v.task.description, period: v.task.period, fragments: v.task.fragments,

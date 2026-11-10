@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BUILTIN_EDITIONS, PuzzleCounters, earnedClaim, equipEdition, grantPuzzleReward, missingPieces, parseEdition, parsePuzzle, puzzlePhase,
+  BUILTIN_EDITIONS, PuzzleCounters, currentStage, earnedClaim, newlyDone, puzzleStages, stageDone, totalPieces, equipEdition, grantPuzzleReward, missingPieces, parseEdition, parsePuzzle, puzzlePhase,
   puzzleProblems, setEditions, taskKey, taskViews,
 } from '../src/game/puzzles';
 import { defaultSave, sanitize } from '../src/game/storage';
@@ -87,5 +87,38 @@ describe('Puzzle-Events: Editionen', () => {
     expect(m.editions.equipped).toEqual({ r02: 'ed01' });
     const fresh = mergeChoices(cleanSave(defaultSave()), incoming) as typeof m;
     expect(fresh.editions).toEqual({ owned: [], equipped: {} });
+  });
+});
+
+describe('Puzzle-Events: Stufen (Selten → Episch → Legendär → Mystisch)', () => {
+  const staged = parsePuzzle('pz01', {
+    ...raw,
+    tasks: [{ id: 'tbig', metric: 'wins', target: 1, fragments: 5, period: 'once' }, { id: 'tday', metric: 'wins', target: 2, fragments: 1, period: 'daily' }],
+    stages: [{ editionId: 'ed02', pieces: 9 }, { editionId: 'ed03', pieces: 12 }, { editionId: 'ed04', pieces: 16, cols: 4, rows: 4 }, { editionId: 'bad' }],
+  })!;
+  it('liest Stufen; Teile werden über alle Stufen gezählt', () => {
+    expect(staged.stages.map((s) => [s.editionId, s.pieces, s.cols, s.rows])).toEqual([['ed02', 9, 3, 3], ['ed03', 12, 3, 4], ['ed04', 16, 4, 4]]);
+    expect(totalPieces(staged)).toBe(46);
+    expect(puzzleStages(staged).map((s) => s.offset)).toEqual([0, 9, 18, 30]);
+  });
+  it('erst die aktuelle Stufe, Überzähliges in die nächste; dort wird die Edition fällig', () => {
+    const have = [0, 1, 2, 3, 4, 5, 6];
+    const c = earnedClaim(staged, have, counters(2), [], 's', now)!;
+    expect(c.pieces.length).toBe(6);
+    expect(c.pieces.filter((i) => i < 9).sort()).toEqual([7, 8]);
+    expect(c.pieces.every((i) => i < 18)).toBe(true);
+    const done = newlyDone(staged, have, c.pieces);
+    expect(done.map((s) => s.editionId)).toEqual(['ed01']);
+    const save = grantPuzzleReward(defaultSave(), staged, [...have, ...c.pieces]);
+    expect(save.editions.owned).toEqual(['ed01']);
+    expect(currentStage(staged, [...have, ...c.pieces])!.index).toBe(1);
+    expect(c.complete).toBe(false);
+  });
+  it('alles geschafft: alle Editionen, Puzzle vollständig', () => {
+    const all = Array.from({ length: 46 }, (_, i) => i);
+    expect(stageDone(puzzleStages(staged)[3], all)).toBe(true);
+    expect(grantPuzzleReward(defaultSave(), staged, all).editions.owned).toEqual(['ed01', 'ed02', 'ed03', 'ed04']);
+    expect(earnedClaim(staged, all, counters(5), [], 's', now)).toBeNull();
+    expect(currentStage(staged, all)).toBeNull();
   });
 });

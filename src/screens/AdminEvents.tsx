@@ -6,6 +6,7 @@ import { Assets, Db, describeError } from '../game/cardStore';
 import { CARDS, RARITY_LABEL, getCard, isCardId } from '../game/cards';
 import { METRIC_TEXT } from '../game/quests';
 import {
+  PuzzleStage, puzzleStages, stageDone, totalPieces,
   EDITION_FRAMES, EditionDef, FRAME_LABEL, PERIOD_LABEL, PHASE_LABEL, PIECES_BY_RARITY, PUZZLE_METRICS, PuzzleDef, PuzzlePeriod, PuzzleTask, allEditions,
   findEdition, gridFor, nextEditionId, nextPuzzleId, puzzlePhase, puzzleProblems, setEditions, setPuzzles, taskTitle,
 } from '../game/puzzles';
@@ -33,15 +34,24 @@ function newPuzzle(id: string, editionId: string): PuzzleDef {
       { id: 'tweek', title: '', description: '', metric: 'wins', target: 10, fragments: 2, period: 'weekly' },
       { id: 'tonce', title: '', description: '', metric: 'big_wins', target: 1, fragments: 1, period: 'once' },
     ],
+    stages: [],
   };
 }
 
+type Edit = { p: PuzzleDef; e: EditionDef; se: EditionDef[] };
+const editionOf = (r: EditionDef | null | undefined) =>
+  r ? { type: 'edition' as const, editionId: r.id, cardId: r.cardId, name: r.name, image: r.image, frame: r.frame } : null;
+
 /** The event as a player would see it, with simulated pieces and task progress (test mode and preview). */
-function simulated(p: PuzzleDef, e: EditionDef | null, have: number[], done: string[], gained: number[] = []): EventView {
+function simulated(p: PuzzleDef, e: EditionDef | null, have: number[], done: string[], gained: number[] = [], se: EditionDef[] = []): EventView {
+  const stages = puzzleStages(p).map((st) => ({
+    index: st.index, offset: st.offset, pieces: st.pieces, cols: st.cols, rows: st.rows, done: stageDone(st, have),
+    reward: editionOf(st.index === 0 ? e : se[st.index - 1]),
+  }));
   return {
     id: p.id, name: p.name, description: p.description, image: p.image, pieces: p.pieces, cols: p.cols, rows: p.rows, phase: 'active', run: p.run,
-    reward: e ? { type: 'edition', editionId: e.id, cardId: e.cardId, name: e.name, image: e.image, frame: e.frame } : null,
-    have, completedAt: have.length >= p.pieces ? new Date().toISOString() : null, gained,
+    reward: editionOf(e), stages, total: totalPieces(p),
+    have, completedAt: have.length >= totalPieces(p) ? new Date().toISOString() : null, gained,
     tasks: p.tasks.map((t) => ({ id: t.id, title: taskTitle(t), description: t.description, period: t.period, fragments: t.fragments,
       value: done.includes(t.id) ? t.target : 0, target: t.target, done: done.includes(t.id), claimed: done.includes(t.id) })),
   };
@@ -50,7 +60,7 @@ function simulated(p: PuzzleDef, e: EditionDef | null, have: number[], done: str
 export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Assets | null; onToast: (m: string) => void }) {
   const [puzzles, setList] = useState<PuzzleDef[] | null>(null);
   const [editions, setEds] = useState<EditionDef[]>(allEditions());
-  const [edit, setEdit] = useState<{ p: PuzzleDef; e: EditionDef } | null>(null);
+  const [edit, setEdit] = useState<Edit | null>(null);
   const [saved, setSaved] = useState('');
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<'none' | 'some' | 'all'>('some');
@@ -74,7 +84,8 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
   const dirty = edit ? JSON.stringify(edit) !== saved : false;
   const open = (p: PuzzleDef) => {
     const e = findEdition(p.reward.editionId) ?? { id: p.reward.editionId, cardId: CARDS[0].id, name: 'Edition', image: null, frame: 'none' as const };
-    const x = { p, e };
+    const se = p.stages.map((st) => findEdition(st.editionId) ?? { id: st.editionId, cardId: CARDS[0].id, name: 'Edition', image: null, frame: 'none' as const });
+    const x = { p, e, se };
     setEdit(x);
     setSaved(JSON.stringify(x));
     setTest(null);
@@ -84,7 +95,7 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
     const eid = nextEditionId(editions.map((e) => e.id));
     const p = newPuzzle(nextPuzzleId((puzzles ?? []).map((x) => x.id)), eid);
     const e: EditionDef = { id: eid, cardId: CARDS.find((c) => c.rarity === 'epic')?.id ?? CARDS[0].id, name: 'Neue Edition', image: null, frame: 'moon' };
-    setEdit({ p, e });
+    setEdit({ p, e, se: [] });
     setSaved('');
     setTest(null);
   };
@@ -93,9 +104,10 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
     if (!next) return false;
     setBusy(true);
     try {
-      await saveEdition(db, next.e);
+      for (const x of [next.e, ...next.se]) await saveEdition(db, x);
       await savePuzzle(db, next.p);
-      const eds = [...editions.filter((x) => x.id !== next.e.id), next.e];
+      const mine = new Set([next.e.id, ...next.se.map((x) => x.id)]);
+      const eds = [...editions.filter((x) => !mine.has(x.id)), next.e, ...next.se];
       setEditions(eds);
       setEds(allEditions());
       const list = [...(puzzles ?? []).filter((x) => x.id !== next.p.id), next.p];
@@ -146,14 +158,28 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
     );
   }
 
-  const { p, e } = edit;
+  const { p, e, se } = edit;
   const setP = (patch: Partial<PuzzleDef>) => setEdit({ ...edit, p: { ...p, ...patch } });
   const setE = (patch: Partial<EditionDef>) => setEdit({ ...edit, e: { ...e, ...patch } });
   const setTask = (i: number, patch: Partial<PuzzleTask>) => setP({ tasks: p.tasks.map((t, k) => (k === i ? { ...t, ...patch } : t)) });
   const phase = puzzlePhase(p);
   // Problems are checked against the edition being edited.
-  const problems = puzzleProblems(p).filter((x) => !x.startsWith('Die Belohnungs-Edition') && !x.startsWith('Die Karte der Edition'));
+  const problems = puzzleProblems(p).filter((x) => !x.startsWith('Die Belohnungs-Edition') && !x.startsWith('Die Karte der Edition') && !x.includes('Die Edition oder ihre Karte'));
   if (!isCardId(e.cardId)) problems.push('Die Karte der Edition gibt es nicht.');
+  se.forEach((x, i) => { if (!isCardId(x.cardId)) problems.push(`Stufe ${i + 2}: Die Karte gibt es nicht.`); });
+  const setStage = (i: number, patch: Partial<PuzzleStage>, ed?: Partial<EditionDef>) => setEdit({
+    ...edit, p: { ...p, stages: p.stages.map((x, k) => (k === i ? { ...x, ...patch } : x)) }, se: se.map((x, k) => (k === i && ed ? { ...x, ...ed } : x)),
+  });
+  const addStage = () => {
+    const used = [e.cardId, ...se.map((x) => x.cardId)];
+    const lastRarity = getCard(se.length ? se[se.length - 1].cardId : e.cardId).rarity;
+    const order = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as const;
+    const want = order[Math.min(order.length - 1, order.indexOf(lastRarity) + 1)];
+    const c = CARDS.find((x) => x.rarity === want && !used.includes(x.id)) ?? CARDS[0];
+    const id = nextEditionId([...editions.map((x) => x.id), e.id, ...se.map((x) => x.id)]);
+    const pieces = PIECES_BY_RARITY[c.rarity];
+    setEdit({ p: { ...p, stages: [...p.stages, { editionId: id, pieces, ...gridFor(pieces) }] }, e, se: [...se, { id, cardId: c.id, name: e.name, image: null, frame: e.frame }] });
+  };
   const picture = editionImage(e) ?? (isCardId(e.cardId) ? getCard(e.cardId).image : undefined);
   const previewHave = preview === 'none' ? [] : preview === 'all' ? Array.from({ length: p.pieces }, (_, i) => i) : Array.from({ length: Math.ceil(p.pieces / 2) }, (_, i) => i * 2 % p.pieces);
   const card = isCardId(e.cardId) ? getCard(e.cardId) : null;
@@ -164,13 +190,25 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
   }
 
   if (test) {
-    const view = simulated(p, e, test.have, test.done, test.gained);
-    const missing = Array.from({ length: p.pieces }, (_, i) => i).filter((i) => !test.have.includes(i));
+    const view = simulated(p, e, test.have, test.done, test.gained, se);
+    const missing = Array.from({ length: totalPieces(p) }, (_, i) => i).filter((i) => !test.have.includes(i));
+    // Like the server: pieces of the stage being collected first (random within it), the rest into the next stage.
+    const pickPieces = (n: number) => {
+      const own = new Set(test.have);
+      const out: number[] = [];
+      for (let k = 0; k < n; k++) {
+        const st = puzzleStages(p).find((x) => Array.from({ length: x.pieces }, (_, i) => x.offset + i).some((i) => !own.has(i)));
+        if (!st) break;
+        const free = Array.from({ length: st.pieces }, (_, i) => st.offset + i).filter((i) => !own.has(i));
+        const pick = free[Math.floor(Math.random() * free.length)];
+        own.add(pick);
+        out.push(pick);
+      }
+      return out;
+    };
     const give = (n: number) => {
-      const add = missing.slice().sort(() => Math.random() - 0.5).slice(0, n);
-      const have = [...test.have, ...add];
-      setTest({ ...test, have, gained: add });
-      if (have.length >= p.pieces && add.length) setAnim(true);
+      const add = pickPieces(n);
+      setTest({ ...test, have: [...test.have, ...add], gained: add });
     };
     return (
       <div className="events-admin-test">
@@ -178,7 +216,11 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
           <b>TESTMODUS</b> · nur auf diesem Gerät, nichts wird gespeichert
           <div className="row-buttons">
             <button type="button" className="btn btn-small" onClick={() => give(1)} disabled={!missing.length}>+1 Fragment</button>
-            <button type="button" className="btn btn-small" onClick={() => give(missing.length)} disabled={!missing.length}>Puzzle vollständig</button>
+            <button type="button" className="btn btn-small" onClick={() => {
+              const st = puzzleStages(p).find((x) => !stageDone(x, test.have));
+              if (st) give(Array.from({ length: st.pieces }, (_, i) => st.offset + i).filter((i) => !test.have.includes(i)).length);
+            }} disabled={!missing.length}>Stufe vollständig</button>
+            <button type="button" className="btn btn-small" onClick={() => give(missing.length)} disabled={!missing.length}>Alles vollständig</button>
             <button type="button" className="btn btn-small" onClick={() => setAnim(true)}>Animation</button>
             <button type="button" className="btn btn-small" onClick={() => setTest({ have: [], done: [], gained: [] })}>Zurücksetzen</button>
             <button type="button" className="btn btn-small" onClick={() => setTest(null)}>Test beenden</button>
@@ -187,16 +229,14 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
             {p.tasks.map((t) => (
               <button key={t.id} type="button" className={`btn btn-small ${test.done.includes(t.id) ? 'active' : ''}`} onClick={() => {
                 if (test.done.includes(t.id)) return setTest({ ...test, done: test.done.filter((x) => x !== t.id) });
-                const add = missing.slice(0, t.fragments);
-                const have = [...test.have, ...add];
-                setTest({ have, done: [...test.done, t.id], gained: add });
-                if (have.length >= p.pieces && add.length) setAnim(true);
+                const add = pickPieces(t.fragments);
+                setTest({ have: [...test.have, ...add], done: [...test.done, t.id], gained: add });
               }}>✓ {taskTitle(t)}</button>
             ))}
           </div>
         </div>
         {anim && <UnlockReveal ev={view} reducedMotion={false} onCard={() => setAnim(false)} onCollection={() => setAnim(false)} onClose={() => setAnim(false)} />}
-        <EventDetail key={test.have.join(',')} ev={{ ...view, gained: anim ? [] : view.gained, completedAt: anim ? null : view.completedAt }} reducedMotion={false} test
+        <EventDetail key={test.have.join(',')} ev={{ ...view, gained: anim ? [] : view.gained }} reducedMotion={false} test
           onBack={() => setTest(null)} onCard={() => undefined} onCollection={() => undefined} />
       </div>
     );
@@ -233,7 +273,7 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
           <select className="admin-input" value={e.cardId} onChange={(ev) => {
             const c = getCard(ev.target.value);
             const pieces = PIECES_BY_RARITY[c.rarity];
-            setEdit({ p: { ...p, pieces, ...gridFor(pieces) }, e: { ...e, cardId: c.id } });
+            setEdit({ ...edit, p: { ...p, pieces, ...gridFor(pieces) }, e: { ...e, cardId: c.id } });
           }}>
             {[...CARDS].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((c) => <option key={c.id} value={c.id}>{c.name} ({RARITY_LABEL[c.rarity]})</option>)}
           </select>
@@ -247,6 +287,48 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
         <ImageField kind="editionArt" value={e.image} onChange={(image) => setE({ image })} assets={assets} onToast={onToast} />
         {!e.image && editionImage(e) && <p className="muted small">Ohne Upload wird die eingebaute Illustration dieser Edition gezeigt.</p>}
         {card && <p className="muted small">{card.name}: ↑{card.top} →{card.right} ↓{card.bottom} ←{card.left} · {RARITY_LABEL[card.rarity]} – vorgeschlagen {PIECES_BY_RARITY[card.rarity]} Fragmente.</p>}
+      </section>
+
+      <section className="admin-card">
+        <h3>Weitere Stufen <small className="muted">nach der ersten Karte</small></h3>
+        <p className="muted small">Ist eine Stufe geschafft, beginnt die nächste Karte (z. B. Episch → Legendär → Mystisch). Spieler sehen die kommenden Karten als
+          Vorschau. Die Fragmente aller Stufen werden mit denselben Aufgaben gesammelt; überzählige gehen in die nächste Stufe. Höchstens 64 Fragmente insgesamt.</p>
+        {p.stages.map((st, i) => {
+          const x = se[i];
+          const c = isCardId(x.cardId) ? getCard(x.cardId) : null;
+          return (
+            <div key={st.editionId} className="event-task-edit">
+              <b>Stufe {i + 2}{c ? ` · ${RARITY_LABEL[c.rarity]}` : ''}</b>
+              <label className="field"><span>Karte</span>
+                <select className="admin-input" value={x.cardId} onChange={(ev) => {
+                  const cc = getCard(ev.target.value);
+                  const n = PIECES_BY_RARITY[cc.rarity];
+                  setStage(i, { pieces: n, ...gridFor(n) }, { cardId: cc.id });
+                }}>
+                  {[...CARDS].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((cc) => <option key={cc.id} value={cc.id}>{cc.name} ({RARITY_LABEL[cc.rarity]})</option>)}
+                </select>
+              </label>
+              <TextField label="Editionsname" value={x.name} max={40} onChange={(name) => setStage(i, {}, { name })} />
+              <div className="field-row">
+                <label className="field"><span>Rahmen</span>
+                  <select className="admin-input" value={x.frame} onChange={(ev) => setStage(i, {}, { frame: ev.target.value as EditionDef['frame'] })}>
+                    {EDITION_FRAMES.map((f) => <option key={f} value={f}>{FRAME_LABEL[f]}</option>)}
+                  </select>
+                </label>
+                <label className="field"><span>Fragmente</span>
+                  <select className="admin-input" value={st.pieces} onChange={(ev) => { const n = Number(ev.target.value); setStage(i, { pieces: n, ...gridFor(n) }); }}>
+                    {[4, 6, 9, 12, 16, 20].map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </label>
+                <button type="button" className="btn btn-small btn-danger" aria-label="Stufe entfernen" onClick={() => setEdit({ ...edit, p: { ...p, stages: p.stages.filter((_, k) => k !== i) }, se: se.filter((_, k) => k !== i) })}>✕</button>
+              </div>
+              <ImageField kind="editionArt" value={x.image} onChange={(image) => setStage(i, {}, { image })} assets={assets} onToast={onToast} />
+              {!x.image && <p className="muted small">Ohne Upload wird das normale Kartenbild gezeigt.</p>}
+            </div>
+          );
+        })}
+        <button type="button" className="btn btn-small" disabled={p.stages.length >= 5 || totalPieces(p) >= 64} onClick={addStage}>+ Stufe</button>
+        <p className="muted small">Fragmente insgesamt: <b>{totalPieces(p)}</b></p>
       </section>
 
       <section className="admin-card">

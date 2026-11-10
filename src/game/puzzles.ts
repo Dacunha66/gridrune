@@ -118,6 +118,14 @@ export interface PuzzleRun {
   endsAt: string;
 }
 
+/** A further stage of an event: after the previous card, the next (rarer) one – its pieces follow the earlier ones. */
+export interface PuzzleStage {
+  editionId: string;
+  pieces: number;
+  cols: number;
+  rows: number;
+}
+
 export interface PuzzleDef {
   id: string;
   name: string;
@@ -131,6 +139,42 @@ export interface PuzzleDef {
   status: PuzzleStatus;
   run: PuzzleRun;
   tasks: PuzzleTask[];
+  /** Further stages after the first card (reward/pieces/cols/rows above): e.g. epic, legendary, mythic. */
+  stages: PuzzleStage[];
+}
+
+/** Every stage with the position of its pieces (the first stage is the event's own reward). */
+export interface StageInfo extends PuzzleStage {
+  index: number;
+  /** First piece number of this stage (pieces are counted over all stages). */
+  offset: number;
+}
+
+export function puzzleStages(p: PuzzleDef): StageInfo[] {
+  const list: PuzzleStage[] = [{ editionId: p.reward.editionId, pieces: p.pieces, cols: p.cols, rows: p.rows }, ...p.stages];
+  let offset = 0;
+  return list.map((st, index) => {
+    const out = { ...st, index, offset };
+    offset += st.pieces;
+    return out;
+  });
+}
+
+/** Pieces of all stages together. */
+export function totalPieces(p: PuzzleDef): number {
+  return puzzleStages(p).reduce((n, st) => n + st.pieces, 0);
+}
+
+/** Is this stage complete with these pieces? */
+export function stageDone(st: StageInfo, have: readonly number[]): boolean {
+  const own = new Set(have);
+  for (let i = 0; i < st.pieces; i++) if (!own.has(st.offset + i)) return false;
+  return true;
+}
+
+/** The stage being collected now (the first one not complete); null = all stages complete. */
+export function currentStage(p: PuzzleDef, have: readonly number[]): StageInfo | null {
+  return puzzleStages(p).find((st) => !stageDone(st, have)) ?? null;
 }
 
 /** Suggested number of fragments per rarity of the card. */
@@ -176,6 +220,17 @@ export function parsePuzzle(id: string, raw: unknown): PuzzleDef | null {
     status: r.status === 'published' || r.status === 'archived' ? r.status : 'draft',
     run: { id: typeof run.id === 'string' && RUN_ID_RE.test(run.id) ? run.id : 'r1', startsAt: time(run.startsAt, now), endsAt: time(run.endsAt, now) },
     tasks: [...new Map(tasks.map((t) => [t.id, t])).values()],
+    stages: (Array.isArray(r.stages) ? r.stages : []).slice(0, 5).flatMap((x): PuzzleStage[] => {
+      if (!x || typeof x !== 'object') return [];
+      const st = x as Record<string, unknown>;
+      if (typeof st.editionId !== 'string' || !EDITION_ID_RE.test(st.editionId)) return [];
+      const n = int(st.pieces, 2, 30, 9);
+      const gg = gridFor(n);
+      let c = int(st.cols, 1, 6, gg.cols);
+      let rr = int(st.rows, 1, 6, gg.rows);
+      if (c * rr < n) ({ cols: c, rows: rr } = gg);
+      return [{ editionId: st.editionId, pieces: n, cols: c, rows: rr }];
+    }),
   };
 }
 
@@ -214,6 +269,12 @@ export function puzzleProblems(p: PuzzleDef): string[] {
   else if (!isCardId(e.cardId)) out.push('Die Karte der Edition gibt es nicht.');
   if (p.tasks.length === 0) out.push('Mindestens eine Aufgabe fehlt.');
   if (p.cols * p.rows < p.pieces) out.push('Das Raster hat zu wenige Felder für die Fragmente.');
+  p.stages.forEach((st, i) => {
+    const se = findEdition(st.editionId);
+    if (!se || !isCardId(se.cardId)) out.push(`Stufe ${i + 2}: Die Edition oder ihre Karte gibt es nicht.`);
+    if (st.cols * st.rows < st.pieces) out.push(`Stufe ${i + 2}: Das Raster hat zu wenige Felder.`);
+  });
+  if (totalPieces(p) > 64) out.push('Zusammen höchstens 64 Fragmente.');
   if (Date.parse(p.run.endsAt) <= Date.parse(p.run.startsAt)) out.push('Das Ende liegt vor dem Start.');
   return out;
 }
@@ -264,7 +325,7 @@ export function taskViews(p: PuzzleDef, counters: PuzzleCounters | null, claimed
 /** Missing pieces (0-based) of a puzzle, in order. */
 export function missingPieces(p: PuzzleDef, have: readonly number[]): number[] {
   const own = new Set(have);
-  return Array.from({ length: p.pieces }, (_, i) => i).filter((i) => !own.has(i));
+  return Array.from({ length: totalPieces(p) }, (_, i) => i).filter((i) => !own.has(i));
 }
 
 export interface PuzzleClaim {
@@ -282,28 +343,49 @@ export interface PuzzleClaim {
  */
 export function earnedClaim(p: PuzzleDef, have: readonly number[], counters: PuzzleCounters | null, claimed: readonly string[], seed: string, now: Date = new Date()): PuzzleClaim | null {
   if (puzzlePhase(p, now) !== 'active') return null;
-  let missing = missingPieces(p, have);
-  if (missing.length === 0) return null;
+  const stages = puzzleStages(p);
+  const own = new Set(have);
+  if (missingPieces(p, have).length === 0) return null;
   const rng = deriveRng(seed, `puzzle:${p.id}`);
   const keys: string[] = [];
   const pieces: number[] = [];
-  for (const v of taskViews(p, counters, claimed, now)) {
-    if (!v.done || v.claimed || missing.length === 0) continue;
-    keys.push(v.key);
-    for (let i = 0; i < v.task.fragments && missing.length > 0; i++) {
-      const k = Math.floor(rng() * missing.length);
-      pieces.push(missing[k]);
-      missing = missing.filter((_, j) => j !== k);
+  // Always a missing piece of the stage being collected (random within it); the rest goes on to the next stage.
+  const nextPiece = (): number | null => {
+    for (const st of stages) {
+      const free = Array.from({ length: st.pieces }, (_, i) => st.offset + i).filter((i) => !own.has(i));
+      if (free.length) return free[Math.floor(rng() * free.length)];
     }
+    return null;
+  };
+  for (const v of taskViews(p, counters, claimed, now)) {
+    if (!v.done || v.claimed) continue;
+    let given = 0;
+    for (let i = 0; i < v.task.fragments; i++) {
+      const k = nextPiece();
+      if (k === null) break;
+      own.add(k);
+      pieces.push(k);
+      given++;
+    }
+    if (given) keys.push(v.key);
   }
-  return keys.length ? { keys, pieces, complete: missing.length === 0 } : null;
+  return keys.length ? { keys, pieces, complete: missingPieces(p, [...own]).length === 0 } : null;
 }
 
-/** Adds the reward of a complete puzzle to the save (once – an edition already owned stays as it is). */
-export function grantPuzzleReward(save: SaveData, p: PuzzleDef): SaveData {
-  const id = p.reward.editionId;
-  if (save.editions.owned.includes(id)) return save;
-  return { ...save, editions: { ...save.editions, owned: [...save.editions.owned, id] } };
+/**
+ * Adds the reward of every complete stage to the save (once – editions already owned stay as they are).
+ * Without `have` the whole puzzle counts as complete.
+ */
+export function grantPuzzleReward(save: SaveData, p: PuzzleDef, have?: readonly number[]): SaveData {
+  const ids = puzzleStages(p).filter((st) => !have || stageDone(st, have)).map((st) => st.editionId).filter((id) => !save.editions.owned.includes(id));
+  if (!ids.length) return save;
+  return { ...save, editions: { ...save.editions, owned: [...save.editions.owned, ...ids] } };
+}
+
+/** Stages completed by adding `gained` to `before` (for the save and the unlock animation). */
+export function newlyDone(p: PuzzleDef, before: readonly number[], gained: readonly number[]): StageInfo[] {
+  const after = [...before, ...gained];
+  return puzzleStages(p).filter((st) => stageDone(st, after) && !stageDone(st, before));
 }
 
 /** The card of a puzzle's reward. */

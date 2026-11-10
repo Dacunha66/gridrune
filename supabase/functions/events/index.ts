@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
         const c = puzzleClaimServer(saveRow.save, p.id, st.have, st.counters as never, st.claimed, seed(), now);
         if (!c) break;
         const { data: res, error } = await db.rpc('puzzle_claim', {
-          p_player: uid, p_puzzle: p.id, p_keys: c.keys, p_pieces: c.pieces, p_total: p.pieces, p_save: c.save, p_version: saveRow.version,
+          p_player: uid, p_puzzle: p.id, p_keys: c.keys, p_pieces: c.pieces, p_total: c.total, p_save: c.save, p_version: saveRow.version,
         });
         if (error) return json({ error: 'database' }, 500);
         if (res === 'paid') {

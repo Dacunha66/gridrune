@@ -10,6 +10,16 @@ import {
   puzzleToDoc,
 } from './puzzles';
 
+export interface StageView {
+  index: number;
+  offset: number;
+  pieces: number;
+  cols: number;
+  rows: number;
+  done: boolean;
+  reward: EventView['reward'];
+}
+
 /** One event as the server shows it to this player. */
 export interface EventView {
   id: string;
@@ -22,6 +32,10 @@ export interface EventView {
   phase: PuzzlePhase;
   run: PuzzleRun;
   reward: { type: 'edition'; editionId: string; cardId: string; name: string; image: ImageRef | null; frame: EditionFrame } | null;
+  /** All stages (first = `reward`); absent from older answers = one stage. */
+  stages?: StageView[];
+  /** Pieces of all stages together. */
+  total?: number;
   have: number[];
   completedAt: string | null;
   tasks: { id: string; title: string; description: string; period: PuzzlePeriod; fragments: number; value: number; target: number; done: boolean; claimed: boolean }[];

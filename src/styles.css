@@ -2398,3 +2398,17 @@ label.btn.disabled { opacity: .45; }
 /* Rays are centred with margins (a translate would be turned along with the spinning rays and drift off-centre). */
 .unlock-rays { transform: none; margin: -75% 0 0 -75%; }
 .slot-rays { transform: none; margin: -80% 0 0 -80%; }
+/* Puzzle-Events: stages (rare → epic → legendary → mythic) */
+.stage-track { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; }
+.stage-chip { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 4px; border-radius: var(--radius); cursor: pointer; color: var(--text);
+  background: rgba(16, 24, 44, 0.9); border: 1px solid var(--gold-faint); min-width: 0; }
+.stage-chip.active { border-color: var(--glow); box-shadow: 0 0 12px var(--glow-soft); }
+.stage-chip.rarity-edge-epic { --edge: rgba(192, 132, 252, 0.7); }
+.stage-chip.rarity-edge-legendary { --edge: rgba(251, 191, 36, 0.75); }
+.stage-chip.rarity-edge-mythic { --edge: rgba(255, 122, 217, 0.75); }
+.stage-chip:not(.active) { border-color: var(--edge, var(--gold-faint)); }
+.stage-card { width: min(100%, 64px); display: block; }
+.stage-chip.future .stage-card, .stage-preview { filter: blur(3px) brightness(0.45) saturate(0.6); }
+.stage-preview { display: inline-block; }
+.stage-chip.done .stage-card { filter: drop-shadow(0 0 6px var(--edge, var(--glow-soft))); }
+.stage-label { font-size: 11px; font-weight: 800; white-space: nowrap; }

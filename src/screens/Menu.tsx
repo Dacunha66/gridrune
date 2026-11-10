@@ -11,7 +11,7 @@ import type { AiLevel } from '../game/ai';
 import { AI_COINS } from '../game/rewards';
 import type { EventView } from '../game/puzzleApi';
 import { timeLeftText } from '../game/puzzles';
-import { PuzzleBoard, rewardPicture } from './Events';
+import { PuzzleBoard, activeStage, rewardPicture, stageEvent, stagesOf } from './Events';
 
 const LEVELS: { level: AiLevel; label: string; icon: GameIconName; text: string }[] = [
   { level: 'easy', label: 'Leicht', icon: 'leaf', text: 'spielt oft zufällig' },
@@ -193,17 +193,23 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
             </section>
             {onEvents && (
               <button type="button" className="menu-event" onClick={onEvents}>
-                {eventCard ? (
-                  <>
-                    <span className="menu-event-art"><PuzzleBoard picture={rewardPicture(eventCard)} cols={eventCard.cols} rows={eventCard.rows} pieces={eventCard.pieces} have={eventCard.have} /></span>
-                    <span className="menu-event-text">
-                      <small>Event · noch {timeLeftText(eventCard.run.endsAt)}</small>
-                      <b>{eventCard.name}</b>
-                      <span className="event-bar"><i style={{ width: `${Math.round((eventCard.have.length / eventCard.pieces) * 100)}%` }} /></span>
-                      <small>{eventCard.completedAt ? '✓ Karte freigeschaltet' : `${eventCard.have.length} / ${eventCard.pieces} Fragmente`}</small>
-                    </span>
-                  </>
-                ) : (
+                {eventCard ? (() => {
+                  const stages = stagesOf(eventCard);
+                  const st = activeStage(eventCard);
+                  const ev = stageEvent(eventCard, st);
+                  const allDone = stages.every((x) => x.done);
+                  return (
+                    <>
+                      <span className="menu-event-art"><PuzzleBoard picture={rewardPicture(ev)} cols={ev.cols} rows={ev.rows} pieces={ev.pieces} have={ev.have} /></span>
+                      <span className="menu-event-text">
+                        <small>Event · noch {timeLeftText(eventCard.run.endsAt)}</small>
+                        <b>{eventCard.name}</b>
+                        <span className="event-bar"><i style={{ width: `${Math.round((ev.have.length / ev.pieces) * 100)}%` }} /></span>
+                        <small>{allDone ? '✓ Alle Karten freigeschaltet' : `${stages.length > 1 ? `Stufe ${st.index + 1}/${stages.length} · ` : ''}${ev.have.length} / ${ev.pieces} Fragmente`}</small>
+                      </span>
+                    </>
+                  );
+                })() : (
                   <span className="menu-event-text"><small>Events</small><b>Puzzle-Events</b><small>Archiv und kommende Events</small></span>
                 )}
                 <GameIcon name="next" className="menu-step-go" />
