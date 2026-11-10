@@ -652,3 +652,12 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 - Kein Ton, keine Musik.
 - Balance (Kartenwerte, Stärke des Computers) ist ein erster Entwurf.
 - Kein Konto und keine geräteübergreifende Sicherung (bewusst nicht im MVP).
+
+## Leuchten für legendäre und mystische Karten (nur Optik)
+
+- Legendär: goldener, langsam atmender Rand und ab und zu ein Lichtschimmer über das Bild.
+- Mystisch: Regenbogenring wandert um den Rand, kräftigerer Glanz.
+- Spielfeld/Hand im Duell: nur ein ruhiges, schwächeres Leuchten ohne Bewegung.
+- „Animationen reduzieren" (oder System-Einstellung): festes Leuchten, keine Bewegung.
+- Karten mit Editionsrahmen: nur der Editions-Glanz, kein zusätzliches Leuchten.
+- Geprüft im Browser in iPhone-Größe (Sammlung, Duell, reduzierte Animation, Editionen); auf einem echten Gerät noch nicht geprüft.

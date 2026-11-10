@@ -2412,3 +2412,64 @@ label.btn.disabled { opacity: .45; }
 .stage-preview { display: inline-block; }
 .stage-chip.done .stage-card { filter: drop-shadow(0 0 6px var(--edge, var(--glow-soft))); }
 .stage-label { font-size: 11px; font-weight: 800; white-space: nowrap; }
+
+/* ---------- Legendary and mythic cards glow (look only – values and rules stay the same) ----------
+   Not on locked cards, and not on cards with an edition frame (the edition brings its own glow – one effect only). */
+@property --myth-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.card.rarity-legendary:not(.locked):not(.edition-moon):not(.edition-gold):not(.edition-ember):not(.edition-frost) {
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.55), 0 0 0 1.5px rgba(251, 191, 36, 0.8), 0 0 10px 1px rgba(251, 191, 36, 0.4);
+  animation: legend-breathe 3.4s ease-in-out infinite;
+}
+@keyframes legend-breathe {
+  50% { box-shadow: 0 3px 9px rgba(0, 0, 0, 0.55), 0 0 0 1.5px rgba(255, 224, 138, 1), 0 0 18px 4px rgba(251, 191, 36, 0.7); }
+}
+/* Now and then a soft light runs over the picture. */
+.card.rarity-legendary:not(.locked):not(.edition-moon):not(.edition-gold):not(.edition-ember):not(.edition-frost)::after {
+  content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(112deg, transparent 38%, rgba(255, 236, 190, 0.38) 49%, rgba(255, 255, 255, 0.5) 50%, transparent 62%);
+  background-size: 320% 100%; background-repeat: no-repeat; animation: legend-sweep 7.5s ease-in-out infinite;
+}
+@keyframes legend-sweep { 0%, 76% { background-position: 140% 0; } 100% { background-position: -40% 0; } }
+
+.card.rarity-mythic:not(.locked):not(.edition-moon):not(.edition-gold):not(.edition-ember):not(.edition-frost) {
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.55), 0 0 12px 2px rgba(240, 171, 252, 0.55), 0 0 22px 5px rgba(96, 165, 250, 0.28);
+  animation: myth-breathe 2.8s ease-in-out infinite;
+}
+@keyframes myth-breathe {
+  50% { box-shadow: 0 3px 9px rgba(0, 0, 0, 0.55), 0 0 18px 4px rgba(255, 122, 217, 0.75), 0 0 30px 8px rgba(96, 165, 250, 0.4); }
+}
+/* A rainbow that wanders around the edge – like the rainbow gem. */
+.card.rarity-mythic:not(.locked):not(.edition-moon):not(.edition-gold):not(.edition-ember):not(.edition-frost)::before {
+  content: ''; position: absolute; inset: 0; z-index: 6; border-radius: inherit; pointer-events: none; padding: max(2px, 2.8%);
+  background: conic-gradient(from var(--myth-a), #ff5f6d, #ffc371, #f9f871, #4ade80, #60a5fa, #c084fc, #ff5f6d);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: myth-spin 4s linear infinite;
+}
+@keyframes myth-spin { to { --myth-a: 360deg; } }
+/* A stronger shine with a rainbow tint, more often than on legendary cards. */
+.card.rarity-mythic:not(.locked):not(.edition-moon):not(.edition-gold):not(.edition-ember):not(.edition-frost)::after {
+  content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(112deg, transparent 34%, rgba(255, 122, 217, 0.35) 44%, rgba(255, 255, 255, 0.6) 50%, rgba(96, 165, 250, 0.35) 56%, transparent 66%);
+  background-size: 320% 100%; background-repeat: no-repeat; animation: legend-sweep 5s ease-in-out infinite;
+}
+
+/* In the duel (board and hand): quieter and still – smooth duels, readable values; the owner ring stays on top. */
+.play-area .card.rarity-legendary, .play-area .card.rarity-mythic { animation: none !important; }
+.play-area .card.rarity-legendary:not(.locked):not(.edition-moon):not(.edition-gold):not(.edition-ember):not(.edition-frost) {
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(251, 191, 36, 0.75), 0 0 7px rgba(251, 191, 36, 0.4);
+}
+.play-area .card.rarity-mythic:not(.locked):not(.edition-moon):not(.edition-gold):not(.edition-ember):not(.edition-frost) {
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.55), 0 0 8px 1px rgba(240, 171, 252, 0.5);
+}
+.play-area .card.rarity-legendary::after, .play-area .card.rarity-mythic::after { content: none !important; }
+.play-area .card.rarity-mythic::before { animation: none !important; z-index: 4 !important; padding: max(1.5px, 2%) !important; }
+
+/* "Animationen reduzieren": a calm, steady glow without any movement. */
+.reduced-motion .card.rarity-legendary, .reduced-motion .card.rarity-mythic { animation: none !important; }
+.reduced-motion .card.rarity-legendary::after, .reduced-motion .card.rarity-mythic::after { content: none !important; }
+.reduced-motion .card.rarity-mythic::before { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .card.rarity-legendary, .card.rarity-mythic, .card.rarity-mythic::before { animation: none !important; }
+  .card.rarity-legendary::after, .card.rarity-mythic::after { content: none !important; }
+}
