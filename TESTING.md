@@ -673,3 +673,4 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 - Simulation siehe BALANCING.md (z. B. Deck des Admins auf Schwer: 98 % → 34 % Siege bei mittlerer KI als Spieler).
 - Automatische Tests: gleiche Seltenheiten, keine eigene/doppelte Karte, Normal schwächer als Schwer, alte Tickets unverändert.
 - Server-Funktion adventure auf neue Engine; Rangliste unverändert (eigene Regel bleibt).
+- Münzen: Normal 65/25/12, Schwer 150/60/25 (Sieg/Unentschieden/Niederlage); Anzeige im Menü, Ergebnis und Regeln liest dieselbe Tabelle.

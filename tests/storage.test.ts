@@ -58,13 +58,13 @@ describe('Belohnungen', () => {
 
   it('Einfaches Spiel: nur Münzen nach Schwierigkeit, nie eine Karte', () => {
     expect(computeReward('win', 'easy')).toEqual({ coins: 30, newCard: null, duplicateCard: null });
-    expect(computeReward('win', 'medium').coins).toBe(50);
-    expect(computeReward('win', 'hard').coins).toBe(100);
-    expect([computeReward('draw', 'easy').coins, computeReward('draw', 'medium').coins, computeReward('draw', 'hard').coins]).toEqual([10, 20, 40]);
-    expect([computeReward('loss', 'easy').coins, computeReward('loss', 'medium').coins, computeReward('loss', 'hard').coins]).toEqual([5, 10, 15]);
+    expect(computeReward('win', 'medium').coins).toBe(65);
+    expect(computeReward('win', 'hard').coins).toBe(150);
+    expect([computeReward('draw', 'easy').coins, computeReward('draw', 'medium').coins, computeReward('draw', 'hard').coins]).toEqual([10, 25, 60]);
+    expect([computeReward('loss', 'easy').coins, computeReward('loss', 'medium').coins, computeReward('loss', 'hard').coins]).toEqual([5, 12, 25]);
     const after = applyReward(defaultSave(), 'win', computeReward('win', 'hard'));
     expect(after.unlocked).toEqual(defaultSave().unlocked);
-    expect(after.coins).toBe(defaultSave().coins + 100);
+    expect(after.coins).toBe(defaultSave().coins + 150);
     expect(after.stats.wins).toBe(1);
   });
 

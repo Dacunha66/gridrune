@@ -189,3 +189,8 @@ Mittlere KI spielt den Spieler, 300–400 Duelle je Zeile, Kartenstand live (250
 
 Ein Mensch spielt besser als die mittlere KI im Test – echte Siegquoten liegen höher. Mit den 20 stärksten Karten bleibt
 man auch auf Schwer vorn, weil der Computer keine Karte des Spielers bekommt und es nur wenige noch stärkere gibt.
+
+**Belohnung angepasst (v1.42):** Weil Siege auf Normal und Schwer jetzt seltener sind, gibt es mehr Münzen –
+Normal Sieg/Unentschieden/Niederlage 50/20/10 → 65/25/12, Schwer 100/40/15 → 150/60/25, Leicht unverändert 30/10/5.
+Erwartete Münzen pro Duell (Simulation oben): Startdeck Schwer ≈ 65 vorher → ≈ 72 jetzt; Deck des Admins Schwer
+≈ 99 → ≈ 77; Startdeck Normal ≈ 34 → ≈ 46.

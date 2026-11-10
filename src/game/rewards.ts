@@ -9,11 +9,11 @@ import { deriveRng } from './league';
 import { SETTINGS } from './settings';
 import { SaveData } from './storage';
 
-/** Coins in the simple game per difficulty. */
+/** Coins in the simple game per difficulty (v1.42: Normal and Schwer raised – the computer's deck now follows the player's). */
 export const AI_COINS: Record<AiLevel, Record<Outcome, number>> = {
   easy: { win: 30, draw: 10, loss: 5 },
-  medium: { win: 50, draw: 20, loss: 10 },
-  hard: { win: 100, draw: 40, loss: 15 },
+  medium: { win: 65, draw: 25, loss: 12 },
+  hard: { win: 150, draw: 60, loss: 25 },
 };
 /** Collection League: coins for a won match when every card is owned already. */
 export const LEAGUE_NO_CARD_COINS = 50;
