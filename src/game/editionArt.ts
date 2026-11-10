@@ -4,8 +4,13 @@ import { imageUrl } from './catalog';
 import { EditionDef, findEdition } from './puzzles';
 import ed01 from '../assets/editions/ed01-runenwolf-mondfinsternis.webp';
 import ed01Thumb from '../assets/editions/ed01-runenwolf-mondfinsternis-thumb.webp';
+import ed02 from '../assets/editions/ed02-vampirgraf-blutmond.webp';
+import ed02Thumb from '../assets/editions/ed02-vampirgraf-blutmond-thumb.webp';
 
-const BUILTIN_ART: Record<string, { image: string; thumb: string }> = { ed01: { image: ed01, thumb: ed01Thumb } };
+const BUILTIN_ART: Record<string, { image: string; thumb: string }> = {
+  ed01: { image: ed01, thumb: ed01Thumb },
+  ed02: { image: ed02, thumb: ed02Thumb },
+};
 
 export function editionImage(e: EditionDef): string | undefined {
   return (e.image && imageUrl(e.image.id)) || BUILTIN_ART[e.id]?.image;
