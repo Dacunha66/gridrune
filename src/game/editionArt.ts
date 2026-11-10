@@ -6,10 +6,13 @@ import ed01 from '../assets/editions/ed01-runenwolf-mondfinsternis.webp';
 import ed01Thumb from '../assets/editions/ed01-runenwolf-mondfinsternis-thumb.webp';
 import ed02 from '../assets/editions/ed02-vampirgraf-blutmond.webp';
 import ed02Thumb from '../assets/editions/ed02-vampirgraf-blutmond-thumb.webp';
+import ed03 from '../assets/editions/ed03-nachtwolf-schattenmond.webp';
+import ed03Thumb from '../assets/editions/ed03-nachtwolf-schattenmond-thumb.webp';
 
 const BUILTIN_ART: Record<string, { image: string; thumb: string }> = {
   ed01: { image: ed01, thumb: ed01Thumb },
   ed02: { image: ed02, thumb: ed02Thumb },
+  ed03: { image: ed03, thumb: ed03Thumb },
 };
 
 export function editionImage(e: EditionDef): string | undefined {
