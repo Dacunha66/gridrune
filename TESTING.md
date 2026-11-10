@@ -1,5 +1,21 @@
 # Testprotokoll
 
+## Runensteine (10.11.)
+
+- Neue Währung „Runensteine“ (nur mit Konto, Anzeige oben neben den Münzen). Verdienen: Belohnungsart „Runensteine“
+  bei Erfolgen, Kampagne und Raid (Admin wählbar). Standard: Wochenquests „3 Online-Siege“ 30 und „Ranglisten-Sieg“ 20,
+  Erfolge Sieger 50, Sammler 100 Karten 50, Eroberer 1000 50, Effektfeuerwerk 300 40, Stammgast 100 50 (statt Münzen).
+- Shop: Bereich „Angebote“ (Gratis-Münzen 100 alle 12 Std., auch für Gäste; Karten des Tages: 4 persönliche Karten,
+  die man noch nicht hat, Preis nach Seltenheit 10/20/40/100/250/600) und „Münzen“ (50 → 800, 120 → 2.000, 300 → 5.500).
+  Alles im Admin unter Shop → Runensteine änderbar.
+- Euro-Pakete vorbereitet, aber ausgeschaltet (kein Zahlungsanbieter verbunden; nur Admins sehen eine Vorschau).
+- Sicherheit: Runensteine und Shop-Zeiten ändert nur der Server (save-sync übernimmt sie nie vom Gerät; beim ersten
+  Speichern eines Kontos immer 0).
+- Getestet: 8 neue automatische Tests (336 insgesamt); gebaute Server-Regeln direkt aufgerufen (Gratis-Münzen, Sperre
+  12 Std., Münzen tauschen, Karte kaufen, Steine bleiben erhalten); alle Server-Funktionen starten. Browser als Gast:
+  Shop-Bereiche, Gratis-Münzen abholen. Nicht getestet: Kauf mit echtem Konto im Browser, echtes Gerät.
+- Duelle gegen Spieler (pvp) laufen weiter mit der vorigen Engine (schreiben den Spielstand nicht über die Engine).
+
 ## Booster verdeckt aufdecken (09.11.)
 
 - Nach dem Öffnen liegen die 3 Karten verdeckt (Rückseite in den Farben des ausgerüsteten Kartenrückens); seltene,

@@ -80,6 +80,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
         <p><b>Einfaches Spiel gegen Spieler</b> (mit Konto) – per Einladungscode gegen Freunde oder gegen einen zufälligen Gegner. Ein Sieg bringt <Coin /> {PVP_WIN_COINS}.</p>
         <p><b>Rangliste</b> (mit Konto) – gewinnst du das Match, bekommst du eine <b>zufällige Karte, die du noch nicht hast</b>. Hast du schon alle, gibt es <Coin /> {LEAGUE_NO_CARD_COINS}. Der Server prüft die Duelle vorher.</p>
         <p>Neue Karten gibt es außerdem im <b>Shop</b> und als Belohnung in der <b>Kampagne</b>.</p>
+        <p><b>Runensteine</b> (mit Konto) – die zweite Währung. Du verdienst sie mit Wochenquests und dauerhaften Erfolgen, in der Kampagne und im Raid. Im Shop tauschst du sie gegen Münzen oder kaufst die <b>Karten des Tages</b>. Außerdem gibt es im Shop alle 12 Stunden <b>Gratis-Münzen</b>.</p>
 
         <h2>Shop</h2>
         <p>Im Shop kaufst du mit Münzen <b>Booster-Packs</b> (3 Karten, neue Karten werden sofort freigeschaltet, doppelte in Münzen umgetauscht) und <b>Skins</b>, die nur das Aussehen ändern.</p>
