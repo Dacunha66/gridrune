@@ -21,6 +21,10 @@ import { CARDS, getCard, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
 import { getDb, isAdmin, loadArenas, loadAvatars, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks, loadStoneConfig } from './game/cardStore';
 import { setStoneConfig } from './game/stones';
+import { equipEdition, setEditions } from './game/puzzles';
+import { EventView, fetchEvents, loadEditions } from './game/puzzleApi';
+import { setEquippedEditions } from './game/editionArt';
+import { Events } from './screens/Events';
 import { setPackLooks } from './game/shop';
 import { ACTIVE, Design, DesignState, setActiveDesigns } from './game/designs';
 import { PageArt } from './components/DesignArt';
@@ -53,7 +57,9 @@ import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' }
+  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' }
+  /** focus = open this card's details right away. */
+  | { name: 'collection'; focus?: string }
   /** Einfaches Spiel gegen Spieler: random = look for a random opponent right away. */
   | { name: 'online'; random?: boolean }
   /** tab = open on this tab (the account page opens the avatars under "Erfolge"). */
@@ -79,6 +85,8 @@ export function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'menu' });
   const [saveOk, setSaveOk] = useState(true);
   const reducedMotion = save.settings.reducedMotion || prefersReducedMotion();
+  // The card editions the player uses are shown on every own card (collection, deck, own duel cards).
+  setEquippedEditions(save.editions.equipped);
 
   // Guests save in the browser; a signed-in player's save goes to the account (see useCloudSync below).
   const accountModeRef = useRef(false);
@@ -151,6 +159,22 @@ export function App() {
   /** Open tab of the main menu (kept while Shop or Erfolge is open). */
   const [menuTab, setMenuTab] = useState<MenuTab>('start');
   const [questDaily, setQuestDaily] = useState<QuestItem | null>(null);
+  /** Puzzle-Events for the start screen (the running one with the most to do), looked up when the menu opens. */
+  const [eventCard, setEventCard] = useState<EventView | null>(null);
+  useEffect(() => {
+    if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
+    let alive = true;
+    fetchEvents().then((r) => {
+      if (!alive || r === 'offline') return;
+      if (r.cloud) cloud.adoptServer(r.cloud);
+      const active = r.events.filter((e) => e.phase === 'active');
+      setEventCard(active.find((e) => !e.completedAt) ?? active[0] ?? null);
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen.name, cloud.uid, cloud.phase]);
   useEffect(() => {
     if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
     let alive = true;
@@ -180,12 +204,13 @@ export function App() {
     let alive = true;
     (async () => {
       const db = await getDb();
-      const [records, settings, arenas, designs, designState, savedCampaign, savedRunes, shopLooks, savedAvatars, stoneCfg] = await Promise.all([
+      const [records, settings, arenas, designs, designState, savedCampaign, savedRunes, shopLooks, savedAvatars, stoneCfg, savedEditions] = await Promise.all([
         loadCardRecords(db), loadGameSettings(db), loadArenas(db), loadDesigns(db), loadDesignState(db), loadCampaign(db), loadRunes(db),
-        loadShopLooks(db), loadAvatars(db), loadStoneConfig(db),
+        loadShopLooks(db), loadAvatars(db), loadStoneConfig(db), loadEditions(db),
       ]);
       if (alive && stoneCfg) setStoneConfig(stoneCfg);
       if (alive && savedAvatars) setAvatars(savedAvatars);
+      if (alive && savedEditions) setEditions(savedEditions);
       if (alive && shopLooks) setPackLooks(shopLooks);
       if (alive && savedCampaign) applyCampaign(mergeContent(savedCampaign));
       if (alive && savedRunes) setRunes(savedRunes);
@@ -407,7 +432,9 @@ export function App() {
           onTab={setMenuTab}
           onAvatars={account?.kind === 'signedIn' && cloud.uid ? () => setScreen({ name: 'avatars' }) : undefined}
           nextSteps={nextSteps}
-          onNavigate={(name) => setScreen(name === 'campaign' ? { name } : { name })}
+          eventCard={eventCard}
+          onEvents={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'events' }) : undefined}
+          onNavigate={(name) => setScreen(name === 'campaign' ? { name } : name === 'collection' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}
           onToggleReducedMotion={() =>
@@ -415,7 +442,14 @@ export function App() {
           }
         />
       )}
-      {screen.name === 'collection' && <Collection save={save} onBack={toMenu} />}
+      {screen.name === 'collection' && (
+        <Collection save={save} onBack={toMenu} focus={screen.focus ?? null}
+          onEdition={(cardId, editionId) => setSave((s) => equipEdition(s, cardId, editionId))} />
+      )}
+      {screen.name === 'events' && cloud.uid && (
+        <Events reducedMotion={reducedMotion} onAdopt={cloud.adoptServer} onBack={toMenu}
+          onCard={(cardId) => setScreen({ name: 'collection', focus: cardId })} onCollection={() => setScreen({ name: 'collection' })} />
+      )}
       {screen.name === 'deck' && (
         <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={toMenu}
           runes={runesOn ? {

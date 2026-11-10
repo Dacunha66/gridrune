@@ -4,6 +4,8 @@ import type { Side } from '../game/battle';
 import { CLASS_INFO, CardClass, EFFECTS } from '../game/effects';
 import { AbilityMedallion, CLASS_ICON, ClassShield, EFFECT_ICON, Icon, SHIELD_PATH } from './cardIcons';
 import { CardStyle, useCardStyle } from '../game/cardStyle';
+import { findEdition } from '../game/puzzles';
+import { editionImage, editionThumb, equippedEdition } from '../game/editionArt';
 
 export type CardBadge = 'deck' | 'discovery' | null;
 
@@ -39,6 +41,8 @@ interface Props {
   base?: readonly number[];
   /** Orientation in quarter turns clockwise (shows a small ↻ marker). */
   rot?: number;
+  /** Card edition: an id shows that edition, null the original; absent = the edition the player uses (never on opponent cards). */
+  edition?: string | null;
 }
 
 const DIRS = ['top', 'right', 'bottom', 'left'] as const;
@@ -110,12 +114,15 @@ function plateStyle(plate: string): CSSProperties {
 
 export function Card({
   id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0, def, values, shield,
-  terrainGlow, detail, styleOverride, base, rot = 0,
+  terrainGlow, detail, styleOverride, base, rot = 0, edition,
 }: Props) {
   const deviceStyle = useCardStyle();
   const cardStyle = styleOverride ?? deviceStyle;
   const premium = cardStyle === 'premium';
-  const c = def ?? getCard(id);
+  const base0 = def ?? getCard(id);
+  // Edition: only another picture and frame – values, class and ability stay the card's.
+  const ed = def || locked || edition === null ? null : edition !== undefined ? findEdition(edition) : owner === 'cpu' ? null : equippedEdition(id);
+  const c = ed && ed.cardId === base0.id ? { ...base0, image: editionImage(ed) ?? base0.image, thumb: editionThumb(ed) ?? base0.thumb } : base0;
   const plate = c.plate ?? c.name;
   const effective = (i: number) => (values ? values[i] : Math.min(10, Math.max(1, c[DIRS[i]] + mod)));
   const cls = c.cls ? CLASS_ICON[c.cls] : null;
@@ -124,7 +131,7 @@ export function Card({
   const classes = [
     'card', `card-${size}`, `rarity-${c.rarity}`, `cs-${cardStyle}`, premium ? `cs-prem cls-${c.cls ?? 'none'}` : '', cardStyle === 'klar' ? `cs-klar kcls-${c.cls ?? 'none'}` : '',
     owner ? `owner-${owner}` : '', locked ? 'locked' : '', selected ? 'selected' : '',
-    badge === 'discovery' ? 'discovery' : '', detail ? 'card-detail' : '', terrainGlow ? 'terrain-glow' : '', className,
+    badge === 'discovery' ? 'discovery' : '', detail ? 'card-detail' : '', terrainGlow ? 'terrain-glow' : '', c !== base0 && ed ? `edition edition-${ed.frame}` : '', className,
   ].join(' ');
   const label = ariaLabel ?? (locked
     ? `Gesperrte Karte, ${RARITY_LABEL[c.rarity]}`

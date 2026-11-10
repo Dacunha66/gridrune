@@ -19,6 +19,8 @@ export interface SaveData {
   stones: number;
   /** Shop: last free coins (ISO time) and the card offers bought today (Berlin day). */
   shop: ShopState;
+  /** Card editions (Puzzle-Events): owned editions and the one used per card (cardId → editionId). */
+  editions: { owned: string[]; equipped: Record<string, string> };
 }
 
 export interface ShopState {
@@ -48,6 +50,7 @@ export function defaultSave(): SaveData {
     runes: { owned: [], equipped: null },
     stones: 0,
     shop: { freeAt: null, offerDay: '', offerBought: [] },
+    editions: { owned: [], equipped: {} },
   };
 }
 
@@ -93,7 +96,21 @@ export function sanitize(raw: unknown): SaveData {
     },
     stones: Math.min(num(r.stones), 10_000_000),
     shop: sanitizeShop(r.shop),
+    editions: sanitizeEditions(r.editions),
   };
+}
+
+const EDITION_RE = /^ed\d{2,4}$/;
+function sanitizeEditions(raw: unknown): SaveData['editions'] {
+  const r = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  const owned = Array.isArray(r.owned) ? [...new Set(r.owned.filter((x): x is string => typeof x === 'string' && EDITION_RE.test(x)))].slice(0, 500) : [];
+  const equipped: Record<string, string> = {};
+  if (r.equipped && typeof r.equipped === 'object') {
+    for (const [card, ed] of Object.entries(r.equipped as Record<string, unknown>).slice(0, 500)) {
+      if (isPlausibleCardId(card) && typeof ed === 'string' && owned.includes(ed)) equipped[card] = ed;
+    }
+  }
+  return { owned, equipped };
 }
 
 function sanitizeShop(raw: unknown): ShopState {

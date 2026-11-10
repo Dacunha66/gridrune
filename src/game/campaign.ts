@@ -35,7 +35,7 @@ export interface ImageRef {
   fit: ImageFit;
 }
 
-export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground' | 'runeArt' | 'runeIcon' | 'packArt' | 'raidBoss' | 'playerAvatar';
+export type ImageKind = 'worldTile' | 'worldMap' | 'missionIcon' | 'avatar' | 'bossPortrait' | 'bossBackground' | 'runeArt' | 'runeIcon' | 'packArt' | 'raidBoss' | 'playerAvatar' | 'editionArt' | 'eventArt';
 
 /**
  * Recommended sizes, derived from the layout: the world map and boss background fill a phone screen
@@ -58,6 +58,10 @@ export const IMAGE_SPECS: Record<ImageKind, { label: string; w: number; h: numbe
   packArt: { label: 'Booster-Bild', w: 768, h: 1024, ratio: '3:4 (Hochformat)', aspect: 3 / 4 },
   // Weltboss: square picture up to ~300 points wide on the raid page (1024 px is sharp at 3×).
   raidBoss: { label: 'Weltboss-Bild', w: 1024, h: 1024, ratio: '1:1 (quadratisch)', aspect: 1 },
+  // Card edition (Puzzle-Events): the card picture, 3:4 like every card illustration.
+  editionArt: { label: 'Editions-Illustration', w: 768, h: 1024, ratio: '3:4 (Hochformat, wie Kartenbilder)', aspect: 3 / 4 },
+  // Event tile picture (optional – without it the edition picture is used).
+  eventArt: { label: 'Event-Bild', w: 768, h: 1024, ratio: '3:4 (Hochformat)', aspect: 3 / 4 },
 };
 
 export type RewardType = 'coins' | 'stones' | 'card' | 'pack' | 'alt_art' | 'frame' | 'title' | 'achievement' | 'unlock';

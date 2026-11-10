@@ -5,6 +5,7 @@ const CARD_ID = /^[a-z][0-9]{2,4}$/;
 const RUNE_ID = /^rn[0-9]{2,4}$/;
 const SKIN_ID = /^[a-z0-9_-]{1,30}$/;
 const MISSION_ID = /^m[0-9]{3,5}$/;
+const EDITION_ID = /^ed[0-9]{2,4}$/;
 /** Coins one sync may add: the biggest single reward plus pack refunds, plus some time allowance (offline play). */
 export const COIN_STEP = 2500;
 export const COINS_PER_MINUTE = 300;
@@ -25,6 +26,12 @@ export function cleanSave(raw: unknown): Obj {
   const unlocked = ids(r.unlocked, CARD_ID, 2000);
   const deck = ids(r.deck, CARD_ID, 20).filter((id) => unlocked.includes(id));
   const skinsOwned = ids(sk.owned, SKIN_ID, 100);
+  const ed = isObj(r.editions) ? r.editions : {};
+  const edOwned = ids(ed.owned, EDITION_ID, 500);
+  const edEquipped: Record<string, string> = {};
+  if (isObj(ed.equipped)) {
+    for (const [card, e] of Object.entries(ed.equipped).slice(0, 500)) if (CARD_ID.test(card) && typeof e === 'string' && edOwned.includes(e)) edEquipped[card] = e;
+  }
   return {
     version: 1,
     unlocked,
@@ -45,6 +52,7 @@ export function cleanSave(raw: unknown): Obj {
       offerDay: typeof sh.offerDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(sh.offerDay) ? sh.offerDay : '',
       offerBought: ids(sh.offerBought, CARD_ID, 20),
     },
+    editions: { owned: edOwned, equipped: edEquipped },
   };
 }
 
@@ -84,7 +92,7 @@ export function implausible(oldS: Obj, newS: Obj, oldC: Obj, newC: Obj, minutes:
 }
 
 /**
- * Phase 4d: coins, Runensteine, shop timers, cards, skins owned, runes owned, statistics and the campaign only change through the checked
+ * Phase 4d: coins, Runensteine, shop timers, card editions owned, cards, skins owned, runes owned, statistics and the campaign only change through the checked
  * server functions (adventure, game). From the game's own save only harmless choices are taken over: deck,
  * league deck, settings, equipped skins and rune – and only with things the stored save owns.
  */
@@ -104,5 +112,11 @@ export function mergeChoices(stored: Obj, incoming: Obj): Obj {
     },
     // Campaign runes are unlocked by progress (checked by the game when used), so any known rune id may be equipped.
     runes: { owned: s.runes.owned, equipped: n.runes.equipped },
+    // Card editions: owned only through the server (Puzzle-Events); which one is used is the player's choice.
+    editions: {
+      owned: (s.editions as { owned: string[] }).owned,
+      equipped: Object.fromEntries(Object.entries((n.editions as { equipped: Record<string, string> }).equipped)
+        .filter(([, e]) => (s.editions as { owned: string[] }).owned.includes(e))),
+    },
   };
 }

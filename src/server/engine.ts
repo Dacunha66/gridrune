@@ -31,6 +31,10 @@ import {
   questContext, questDay, questWeek, DEFAULT_QUESTS, BIG_WIN_FIELDS,
 } from '../game/quests';
 import { EffectId } from '../game/effects';
+import {
+  EDITIONS_COLLECTION, EditionDef, PUZZLES_COLLECTION, PuzzleCounters, PuzzleDef, allPuzzles, earnedClaim, findEdition, grantPuzzleReward, parseEdition,
+  parsePuzzle, puzzlePhase, setEditions, setPuzzles, taskViews,
+} from '../game/puzzles';
 
 export interface ContentRow {
   collection: string;
@@ -65,11 +69,49 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
   const questsRow = rows.find((r) => r.collection === QUESTS_COLLECTION && r.id === QUESTS_DOC);
   QUEST_CONFIG = questsRow ? parseQuestConfig(questsRow.data) : structuredClone(DEFAULT_QUESTS);
   setArenas(of<Arena>('arenas', parseArena));
+  // Puzzle-Events: editions and events (drafts only for admins, like everything else).
+  setEditions(of<EditionDef>(EDITIONS_COLLECTION, parseEdition));
+  setPuzzles(of<PuzzleDef>(PUZZLES_COLLECTION, parsePuzzle));
   const records = of<CardRecord>('cards', parseCardRecord);
   if (records.length > 0) {
     const catalog = buildCatalog(records, released(SETTINGS.features.abilities, isAdmin));
     setCardCatalog(catalog.active, catalog.known);
   }
+}
+
+// ---------- Puzzle-Events ----------
+
+/** Events a player sees: running, ended and archived ones (never drafts or events before their start). */
+export function visiblePuzzles(now: Date = new Date()): PuzzleDef[] {
+  return allPuzzles().filter((p) => ['active', 'ended', 'archived'].includes(puzzlePhase(p, now)));
+}
+
+/**
+ * Fragments earned and not received yet for one puzzle; with the save holding the reward when the claim completes the
+ * puzzle. null = nothing to give.
+ */
+export function puzzleClaimServer(saveRaw: unknown, puzzleId: string, have: number[], counters: PuzzleCounters | null, claimed: string[], seed: string, now: Date = new Date()):
+  { keys: string[]; pieces: number[]; complete: boolean; save: SaveData | null } | null {
+  const p = allPuzzles().find((x) => x.id === puzzleId);
+  if (!p) return null;
+  const c = earnedClaim(p, have, counters, claimed, seed, now);
+  if (!c) return null;
+  return { ...c, save: c.complete ? grantPuzzleReward(sanitize(saveRaw), p) : null };
+}
+
+/** What the player sees of an event (public parts of the definition, own pieces and task progress). */
+export function puzzleView(p: PuzzleDef, have: number[], completedAt: string | null, counters: PuzzleCounters | null, claimed: string[], now: Date = new Date()) {
+  const e = findEdition(p.reward.editionId);
+  return {
+    id: p.id, name: p.name, description: p.description, image: p.image, pieces: p.pieces, cols: p.cols, rows: p.rows,
+    phase: puzzlePhase(p, now), run: p.run,
+    reward: e ? { type: 'edition', editionId: e.id, cardId: e.cardId, name: e.name, image: e.image, frame: e.frame } : null,
+    have, completedAt,
+    tasks: taskViews(p, counters, claimed, now).map((v) => ({
+      id: v.task.id, title: v.title, description: v.task.description, period: v.task.period, fragments: v.task.fragments,
+      value: v.value, target: v.target, done: v.done, claimed: v.claimed,
+    })),
+  };
 }
 
 // ---------- Erfolge (quests) ----------
