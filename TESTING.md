@@ -1,5 +1,22 @@
 # Testprotokoll
 
+## Puzzle-Events: Stufen (10.11.)
+
+- Ein Event kann mehrere Stufen haben; jede Stufe ist eine eigene Karte (Edition) mit eigenem Puzzle. Fragmente gehen
+  immer in die aktuelle Stufe, Überzählige direkt in die nächste. Jede geschaffte Stufe gibt ihre Edition sofort (Server,
+  ein Schritt mit dem Spielstand). Kommende Stufen sind als verschwommene Vorschau zu sehen.
+- „Mondfinsternis“ (pz01) jetzt: Runenwolf (selten, 9) → Vampirgraf „Blutmond“ (episch, 9) → Nachtwolf Vyrax
+  „Schattenmond“ (legendär, 12) → Mondweberin Lyra „Totale Finsternis“ (mystisch, 16) = 46 Fragmente. Bilder der neuen
+  Editionen vorerst das normale Kartenbild (eigene Illustration im Admin hochladbar). Bisheriger Fortschritt bleibt
+  (Teile 0–8 = Stufe 1).
+- Aufgaben jetzt 10 (3 täglich, 3 wöchentlich, 4 einmalig, davon 4 „Schwer“: 25 Siege/Woche, 5 Kantersiege,
+  3 Ranglisten-Matches, plus 10 Kampagnen-Missionen). Höchstens ca. 80 Fragmente in 14 Tagen möglich.
+- Admin: Abschnitt „Weitere Stufen“ (Karte, Editionsname, Rahmen, Fragmente, Bild), Testmodus „Stufe vollständig“ /
+  „Alles vollständig“.
+- Getestet: 3 neue automatische Tests (347); gebaute Server-Regeln mit dem echten Event-Dokument (46 Teile, Stufen
+  richtig); events-Funktion veröffentlicht und startet; Ansicht im Browser (Testseite: Stufenleiste, Vorschau,
+  Freischaltung Stufe 1, weiter mit Stufe 2). Nicht getestet: mit echtem Konto, echtes Gerät.
+
 ## Puzzle-Events, Version 1 (10.11.)
 
 - Neu: Startseite → Event-Karte → Events (Aktuell/Archiv) → Puzzle-Detail (3×3, Aufgaben, Restzeit, Belohnung) →
