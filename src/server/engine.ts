@@ -13,6 +13,7 @@ import { GrantedReward, grantRewards, isPayable, owedRewards, payRewards } from 
 import { RaidConfig, raidOwed } from '../game/raid';
 import { deriveRng } from '../game/league';
 import { PackCard, SHOP_DOC, buyPack, buySkin, parseShopDoc, setPackLooks } from '../game/shop';
+import { STONES_DOC, buyCoins, buyOffer, claimFreeCoins, parseStoneDoc, setStoneConfig } from '../game/stones';
 import { SaveData, sanitize } from '../game/storage';
 import { validPvpHand } from '../game/pvp';
 import {
@@ -58,6 +59,9 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
   // Booster prices set by the admin (settings/shop) – buying costs the same as the shop shows.
   const shopRow = rows.find((r) => r.collection === 'settings' && r.id === SHOP_DOC);
   setPackLooks(shopRow ? parseShopDoc(shopRow.data) : {});
+  // Runensteine: free coins, coin bundles and card prices set by the admin (settings/stones).
+  const stonesRow = rows.find((r) => r.collection === 'settings' && r.id === STONES_DOC);
+  setStoneConfig(parseStoneDoc(stonesRow?.data));
   const questsRow = rows.find((r) => r.collection === QUESTS_COLLECTION && r.id === QUESTS_DOC);
   QUEST_CONFIG = questsRow ? parseQuestConfig(questsRow.data) : structuredClone(DEFAULT_QUESTS);
   setArenas(of<Arena>('arenas', parseArena));
@@ -314,6 +318,24 @@ export function buyPackServer(saveRaw: unknown, packId: unknown, seed: string): 
 export function buySkinServer(saveRaw: unknown, skinId: unknown): { ok: true; save: SaveData } | { ok: false; error: string } {
   const r = buySkin(sanitize(saveRaw), String(skinId));
   return r.ok ? { ok: true, save: r.save } : { ok: false, error: r.reason };
+}
+
+// ---------- Runensteine (free coins, coins for Runensteine, daily card offers) ----------
+
+export function freeCoinsServer(saveRaw: unknown, now: Date = new Date()): { ok: true; save: SaveData; coins: number } | { ok: false; error: string } {
+  const r = claimFreeCoins(sanitize(saveRaw), now);
+  return r.ok ? { ok: true, save: r.save, coins: r.coins } : { ok: false, error: r.reason };
+}
+
+export function buyCoinsServer(saveRaw: unknown, bundleId: unknown): { ok: true; save: SaveData; coins: number } | { ok: false; error: string } {
+  const r = buyCoins(sanitize(saveRaw), bundleId);
+  return r.ok ? { ok: true, save: r.save, coins: r.coins } : { ok: false, error: r.reason };
+}
+
+/** `player` = the account id (the offers are personal and change every day). */
+export function buyOfferServer(saveRaw: unknown, player: string, cardId: unknown, now: Date = new Date()): { ok: true; save: SaveData; cardId: string } | { ok: false; error: string } {
+  const r = buyOffer(sanitize(saveRaw), player, cardId, now);
+  return r.ok ? { ok: true, save: r.save, cardId: r.cardId } : { ok: false, error: r.reason };
 }
 
 // ---------- Online duels (PvP) ----------

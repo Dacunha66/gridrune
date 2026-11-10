@@ -107,6 +107,29 @@ export async function buySkinRemote(skinId: string): Promise<ShopReply> {
   return { ok: false, reason: shopError(r?.data), cloud };
 }
 
+// ---------- Runensteine shop (server function "game") ----------
+
+export async function freeCoinsRemote(): Promise<ShopReply<{ coins: number }>> {
+  const r = await call({ action: 'free-coins' }, 'game');
+  const cloud = r?.data ? cloudOf(r.data) : null;
+  if (r?.data?.ok === true && cloud) return { ok: true, cloud, coins: Number(r.data.coins) || 0 };
+  return { ok: false, reason: shopError(r?.data), cloud };
+}
+
+export async function buyCoinsRemote(bundleId: string): Promise<ShopReply<{ coins: number }>> {
+  const r = await call({ action: 'buy-coins', bundleId }, 'game');
+  const cloud = r?.data ? cloudOf(r.data) : null;
+  if (r?.data?.ok === true && cloud) return { ok: true, cloud, coins: Number(r.data.coins) || 0 };
+  return { ok: false, reason: shopError(r?.data), cloud };
+}
+
+export async function buyOfferRemote(cardId: string): Promise<ShopReply<{ cardId: string }>> {
+  const r = await call({ action: 'buy-offer', cardId }, 'game');
+  const cloud = r?.data ? cloudOf(r.data) : null;
+  if (r?.data?.ok === true && cloud) return { ok: true, cloud, cardId: String(r.data.cardId) };
+  return { ok: false, reason: shopError(r?.data), cloud };
+}
+
 // ---------- Collection League against the computer (server function "game") ----------
 
 export type LeagueFinish =

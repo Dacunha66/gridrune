@@ -60,10 +60,10 @@ export const IMAGE_SPECS: Record<ImageKind, { label: string; w: number; h: numbe
   raidBoss: { label: 'Weltboss-Bild', w: 1024, h: 1024, ratio: '1:1 (quadratisch)', aspect: 1 },
 };
 
-export type RewardType = 'coins' | 'card' | 'pack' | 'alt_art' | 'frame' | 'title' | 'achievement' | 'unlock';
-export const REWARD_TYPES: RewardType[] = ['coins', 'card', 'pack', 'alt_art', 'frame', 'title', 'achievement', 'unlock'];
+export type RewardType = 'coins' | 'stones' | 'card' | 'pack' | 'alt_art' | 'frame' | 'title' | 'achievement' | 'unlock';
+export const REWARD_TYPES: RewardType[] = ['coins', 'stones', 'card', 'pack', 'alt_art', 'frame', 'title', 'achievement', 'unlock'];
 export const REWARD_LABEL: Record<RewardType, string> = {
-  coins: 'Münzen', card: 'Karte', pack: 'Kartenpack', alt_art: 'Alternative Illustration', frame: 'Rahmen', title: 'Titel', achievement: 'Erfolg', unlock: 'Freischaltung',
+  coins: 'Münzen', stones: 'Runensteine', card: 'Karte', pack: 'Kartenpack', alt_art: 'Alternative Illustration', frame: 'Rahmen', title: 'Titel', achievement: 'Erfolg', unlock: 'Freischaltung',
 };
 
 /**
@@ -188,6 +188,7 @@ export function parseReward(raw: unknown): Reward | null {
   if (!REWARD_TYPES.includes(r.type as RewardType)) return null;
   const out: Reward = { type: r.type as RewardType };
   if (out.type === 'coins' || out.type === 'pack') out.amount = int(r.amount, 1, out.type === 'pack' ? 10 : 100000, out.type === 'pack' ? 1 : 100);
+  if (out.type === 'stones') out.amount = int(r.amount, 1, 100000, 10);
   if ((out.type === 'card' || out.type === 'alt_art') && typeof r.cardId === 'string' && /^[a-z]\d{2,4}$/.test(r.cardId)) out.cardId = r.cardId;
   const label = str(r.label, 60);
   if (label) out.label = label;
@@ -645,6 +646,7 @@ export function maxWorldStars(content: CampaignContent, worldId: string): number
 export function rewardText(r: Reward): string {
   switch (r.type) {
     case 'coins': return `${r.amount ?? 0} Münzen`;
+    case 'stones': return `${r.amount ?? 0} Runensteine`;
     case 'pack': return `${r.amount ?? 1} Kartenpack${(r.amount ?? 1) > 1 ? 's' : ''}`;
     case 'card': return `Karte: ${r.cardId && isCardId(r.cardId) ? getCard(r.cardId).name : r.cardId ?? '?'}`;
     case 'alt_art': return r.label || `Alternative Illustration: ${r.cardId && isCardId(r.cardId) ? getCard(r.cardId).name : '?'}`;
@@ -652,5 +654,5 @@ export function rewardText(r: Reward): string {
   }
 }
 
-export const REWARD_ICON: Record<RewardType, string> = { coins: '🪙', card: '🃏', pack: '🎁', alt_art: '🖼️', frame: '🖼', title: '🏷️', achievement: '🏅', unlock: '🔓' };
+export const REWARD_ICON: Record<RewardType, string> = { coins: '🪙', stones: '💎', card: '🃏', pack: '🎁', alt_art: '🖼️', frame: '🖼', title: '🏷️', achievement: '🏅', unlock: '🔓' };
 

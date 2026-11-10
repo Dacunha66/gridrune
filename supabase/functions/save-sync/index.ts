@@ -40,6 +40,8 @@ Deno.serve(async (req) => {
   if (!row) {
     // First save of this account (new player, or the browser progress taken over once).
     if ((save.coins as number) > START_COINS_MAX) return json({ error: 'implausible', reason: 'zu viele Münzen' }, 422);
+    // Runensteine are only earned on the server (never taken over from a browser save).
+    save.stones = 0;
     const { error: e } = await admin.from('player_saves').insert({ player_id: uid, save, campaign, version: 1 });
     if (e) return json({ error: 'database' }, 500);
     return json({ version: 1, save, campaign });

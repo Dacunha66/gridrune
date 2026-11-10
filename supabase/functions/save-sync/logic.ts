@@ -21,6 +21,7 @@ export function cleanSave(raw: unknown): Obj {
   const s = isObj(r.stats) ? r.stats : {};
   const sk = isObj(r.skins) ? r.skins : {};
   const ru = isObj(r.runes) ? r.runes : {};
+  const sh = isObj(r.shop) ? r.shop : {};
   const unlocked = ids(r.unlocked, CARD_ID, 2000);
   const deck = ids(r.deck, CARD_ID, 20).filter((id) => unlocked.includes(id));
   const skinsOwned = ids(sk.owned, SKIN_ID, 100);
@@ -38,6 +39,12 @@ export function cleanSave(raw: unknown): Obj {
     },
     leagueDeck: Array.isArray(r.leagueDeck) ? r.leagueDeck.filter((x): x is string => typeof x === 'string' && CARD_ID.test(x)).slice(0, 20) : [],
     runes: { owned: ids(ru.owned, RUNE_ID, 100), equipped: typeof ru.equipped === 'string' && RUNE_ID.test(ru.equipped) ? ru.equipped : null },
+    stones: Math.min(nat(r.stones), 10_000_000),
+    shop: {
+      freeAt: typeof sh.freeAt === 'string' && sh.freeAt.length <= 40 && !Number.isNaN(Date.parse(sh.freeAt)) ? sh.freeAt : null,
+      offerDay: typeof sh.offerDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(sh.offerDay) ? sh.offerDay : '',
+      offerBought: ids(sh.offerBought, CARD_ID, 20),
+    },
   };
 }
 
@@ -77,7 +84,7 @@ export function implausible(oldS: Obj, newS: Obj, oldC: Obj, newC: Obj, minutes:
 }
 
 /**
- * Phase 4d: coins, cards, skins owned, runes owned, statistics and the campaign only change through the checked
+ * Phase 4d: coins, Runensteine, shop timers, cards, skins owned, runes owned, statistics and the campaign only change through the checked
  * server functions (adventure, game). From the game's own save only harmless choices are taken over: deck,
  * league deck, settings, equipped skins and rune – and only with things the stored save owns.
  */

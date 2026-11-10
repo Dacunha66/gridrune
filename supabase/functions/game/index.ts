@@ -4,11 +4,11 @@
 // owed. "league-start" / "league-finish": Collection League match against the computer (ranked), replayed here; a won
 // match unlocks the rarest new discovery of the run. "claim": pays rewards earned earlier (once).
 // "buy-pack" / "buy-skin": coins are taken and the cards drawn
-// here. Every payout goes through pay_ticket: ticket finished and save written together, never twice.
+// here. "free-coins" / "buy-coins" / "buy-offer": Runensteine shop (free coins, coins for Runensteine, card offers). Every payout goes through pay_ticket: ticket finished and save written together, never twice.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyPackServer, buySkinServer, claimCampaign, finishLeague, finishMission, loadContent, prepareLeague, prepareMission, questDelta, questPeriod,
+  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, claimCampaign, freeCoinsServer, finishLeague, finishMission, loadContent, prepareLeague, prepareMission, questDelta, questPeriod,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@505c8c96728039138ba24ba779df3e6fecf54c42/public/server/engine-009c8815623d.js';
 
 const CORS = {
@@ -177,6 +177,27 @@ Deno.serve(async (req) => {
     return payNow('shop', { skin: String(body.skinId ?? '') }, (cur) => {
       const r = buySkinServer(cur.save, body.skinId);
       return r.ok ? { ok: true, save: r.save, result: { ok: true } } : { ok: false, status: 422, result: { ok: false, reason: r.error } };
+    });
+  }
+  // Runensteine: free coins every few hours, coins for Runensteine, a card from today's offers.
+  if (body.action === 'free-coins') {
+    return payNow('shop', { free: true }, (cur) => {
+      const r = freeCoinsServer(cur.save);
+      return r.ok ? { ok: true, save: r.save, result: { ok: true, coins: r.coins } } : { ok: false, status: 422, result: { ok: false, reason: r.error } };
+    });
+  }
+
+  if (body.action === 'buy-coins') {
+    return payNow('shop', { coins: String(body.bundleId ?? '') }, (cur) => {
+      const r = buyCoinsServer(cur.save, body.bundleId);
+      return r.ok ? { ok: true, save: r.save, result: { ok: true, coins: r.coins } } : { ok: false, status: 422, result: { ok: false, reason: r.error } };
+    });
+  }
+
+  if (body.action === 'buy-offer') {
+    return payNow('shop', { offer: String(body.cardId ?? '') }, (cur) => {
+      const r = buyOfferServer(cur.save, uid, body.cardId);
+      return r.ok ? { ok: true, save: r.save, result: { ok: true, cardId: r.cardId } } : { ok: false, status: 422, result: { ok: false, reason: r.error } };
     });
   }
   return json({ error: 'bad_request' }, 400);

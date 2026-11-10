@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { GameIcon, GameIconName } from '../components/GameIcon';
-import { Coin } from '../components/Coin';
+import { Coin, Stone } from '../components/Coin';
 import { Card } from '../components/Card';
 import { Burst } from '../components/Effects';
 import { CloudSave } from '../game/cloudSave';
@@ -31,12 +31,12 @@ interface Props {
   top?: ReactNode;
 }
 
-const REWARD_ICON: Record<QuestReward['type'], GameIconName> = { coins: 'gift', card: 'cards', pack: 'gift', skin: 'deck', rune: 'scroll', title: 'crown' };
+const REWARD_ICON: Record<QuestReward['type'], GameIconName> = { coins: 'gift', stones: 'gift', card: 'cards', pack: 'gift', skin: 'deck', rune: 'scroll', title: 'crown' };
 
 function RewardChip({ reward }: { reward: QuestReward }) {
   return (
     <span className={`quest-reward reward-${reward.type}`}>
-      {reward.type === 'coins' ? <><Coin /> {reward.amount ?? 0}</> : <><GameIcon name={REWARD_ICON[reward.type]} /> {rewardText(reward)}</>}
+      {reward.type === 'coins' ? <><Coin /> {reward.amount ?? 0}</> : reward.type === 'stones' ? <><Stone /> {reward.amount ?? 0}</> : <><GameIcon name={REWARD_ICON[reward.type]} /> {rewardText(reward)}</>}
     </span>
   );
 }

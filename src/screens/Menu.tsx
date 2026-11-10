@@ -1,6 +1,6 @@
 import { RuneBadge } from '../components/RuneBadge';
 import { Avatar } from '../components/Avatar';
-import { Coin, CoinText } from '../components/Coin';
+import { Coin, CoinText, Stone } from '../components/Coin';
 import { findRune } from '../game/runes';
 import { LogoMark } from '../components/LogoMark';
 import { GameIcon, GameIconName } from '../components/GameIcon';
@@ -91,11 +91,12 @@ export function MenuTabBar({ active, onTab, questsReady = 0, showQuests }: { act
 }
 
 /** Top line of the five areas of the bottom bar (Start, Karten, Shop, Erfolge, Mehr): logo, coins, account. */
-export function MenuTop({ coins, account = null, avatar = null, onAccount }: { coins: number; account?: string | 'guest' | null; avatar?: string | null; onAccount?: () => void }) {
+export function MenuTop({ coins, stones = null, account = null, avatar = null, onAccount }: { coins: number; stones?: number | null; account?: string | 'guest' | null; avatar?: string | null; onAccount?: () => void }) {
   return (
     <header className="menu-top">
       <span className="menu-brand"><LogoMark className="menu-mark" /> <span>GridRune</span></span>
       <span className="menu-top-right">
+        {stones !== null && <span key={`s${stones}`} className="menu-coins menu-stones" aria-label={`${stones} Runensteine`}><Stone /> {stones}</span>}
         <span key={coins} className="menu-coins" aria-label={`${coins} Münzen`}><Coin /> {coins}</span>
         {account && (
           <button type="button" className={`menu-account ${account === 'guest' ? 'guest' : ''}`} onClick={onAccount} aria-label={account === 'guest' ? 'Anmelden oder Konto erstellen' : `Konto ${account}`}>
@@ -168,7 +169,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
 
   return (
     <main className="screen menu menu-v2">
-      <MenuTop coins={save.coins} account={account} avatar={avatar} onAccount={onAccount} />
+      <MenuTop coins={save.coins} stones={account && account !== 'guest' ? save.stones : null} account={account} avatar={avatar} onAccount={onAccount} />
 
       {notice && (
         <button type="button" className="menu-notice" onClick={onNotice}><CoinText text={notice} /> <b>OK</b></button>

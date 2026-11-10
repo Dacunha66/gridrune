@@ -1,6 +1,6 @@
 // Big reveal of what a campaign result brought: one reward after the other, with a light burst behind it.
 // Runes show their artwork, rarity and what the effect does; cards are shown large; coins count up.
-import { Coin, CoinText, RewardIcon } from './Coin';
+import { Coin, Stone, CoinText, RewardIcon } from './Coin';
 import { useEffect, useState } from 'react';
 import { Card } from './Card';
 import { RuneBadge } from './RuneBadge';
@@ -14,6 +14,7 @@ import { Reward, rewardText } from '../game/campaign';
 export type RevealItem =
   | { kind: 'rune'; rune: RuneDef }
   | { kind: 'coins'; amount: number; sources: string[] }
+  | { kind: 'stones'; amount: number; sources: string[] }
   | { kind: 'card'; cardId: string; source: string }
   /** A reward type that does not exist in the game yet (or a guest's preview). */
   | { kind: 'preview'; reward: Reward; source: string };
@@ -25,6 +26,11 @@ export function runeFacts(r: RuneDef): string[] {
   const modes = GAME_MODES.filter((m) => r.modes[m]).map((m) => MODE_NAME[m]);
   if (modes.length) facts.push(`Gilt in: ${modes.join(' · ')}.`);
   return facts;
+}
+
+function StoneCount({ amount }: { amount: number }) {
+  const n = useCountUp(amount, 900, 0);
+  return <span className="reveal-coins"><Stone className="big" /> +{n}</span>;
 }
 
 function CoinCount({ amount }: { amount: number }) {
@@ -47,7 +53,7 @@ export function RewardReveal({ items, reducedMotion, guest = false, onClose }: {
   if (!item) return null;
   const last = i === items.length - 1;
   const rarity = item.kind === 'rune' ? item.rune.rarity : item.kind === 'card' ? getCard(item.cardId).rarity : 'rare';
-  const title = item.kind === 'rune' ? 'Neue Rune freigespielt!' : item.kind === 'card' ? 'Neue Karte!' : item.kind === 'coins' ? 'Münzen erhalten!' : 'Belohnung freigeschaltet!';
+  const title = item.kind === 'rune' ? 'Neue Rune freigespielt!' : item.kind === 'card' ? 'Neue Karte!' : item.kind === 'coins' ? 'Münzen erhalten!' : item.kind === 'stones' ? 'Runensteine erhalten!' : 'Belohnung freigeschaltet!';
   return (
     <div className={`reveal-overlay ${reducedMotion ? 'still' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
       <div key={i} className={`reveal-stage rarity-${rarity}`}>
@@ -86,13 +92,20 @@ export function RewardReveal({ items, reducedMotion, guest = false, onClose }: {
           </>
         )}
 
+        {item.kind === 'stones' && (
+          <>
+            <div className="reveal-item"><StoneCount amount={item.amount} /></div>
+            <ul className="reveal-facts">{item.sources.map((s, k) => <li key={k}>{s}</li>)}</ul>
+          </>
+        )}
+
         {item.kind === 'preview' && (
           <>
             <div className="reveal-item"><span className="reveal-icon"><RewardIcon type={item.reward.type} /></span></div>
             <h2 className="reveal-name">{rewardText(item.reward)}</h2>
             <p className="reveal-hint">{item.source}</p>
             <p className="reveal-text muted">
-              {guest && (item.reward.type === 'coins' || item.reward.type === 'card' || item.reward.type === 'pack')
+              {guest && (item.reward.type === 'coins' || item.reward.type === 'stones' || item.reward.type === 'card' || item.reward.type === 'pack')
                 ? 'Vorschau – mit einem Konto wird diese Belohnung gutgeschrieben.'
                 : 'Diese Belohnung kommt mit einem späteren Update ins Spiel.'}
             </p>

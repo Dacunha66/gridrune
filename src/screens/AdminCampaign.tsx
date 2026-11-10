@@ -346,12 +346,12 @@ function RewardEditor({ value, onChange, allowNone = true }: { value: Reward | n
       <select className="admin-input" value={type} onChange={(e) => {
         const t = e.target.value as RewardType | '';
         if (!t) return onChange(null);
-        onChange(t === 'coins' ? { type: t, amount: 100 } : t === 'pack' ? { type: t, amount: 1 } : t === 'card' || t === 'alt_art' ? { type: t, cardId: value?.cardId ?? 'c01' } : { type: t, label: value?.label ?? '' });
+        onChange(t === 'coins' ? { type: t, amount: 100 } : t === 'stones' ? { type: t, amount: 20 } : t === 'pack' ? { type: t, amount: 1 } : t === 'card' || t === 'alt_art' ? { type: t, cardId: value?.cardId ?? 'c01' } : { type: t, label: value?.label ?? '' });
       }} aria-label="Belohnungsart">
         {allowNone && <option value="">– keine –</option>}
         {REWARD_TYPES.map((t) => <option key={t} value={t}>{REWARD_ICON[t]} {REWARD_LABEL[t]}</option>)}
       </select>
-      {value && (value.type === 'coins' || value.type === 'pack') && (
+      {value && (value.type === 'coins' || value.type === 'stones' || value.type === 'pack') && (
         <input className="admin-input num" type="number" inputMode="numeric" min={1} max={value.type === 'pack' ? 10 : 100000} value={value.amount ?? 1}
           onChange={(e) => onChange({ ...value, amount: Math.max(1, Math.round(Number(e.target.value) || 1)) })} aria-label="Menge" />
       )}
@@ -360,7 +360,7 @@ function RewardEditor({ value, onChange, allowNone = true }: { value: Reward | n
           {CARDS.map((c) => <option key={c.id} value={c.id}>{c.name} ({RARITY_LABEL[c.rarity]})</option>)}
         </select>
       )}
-      {value && value.type !== 'coins' && value.type !== 'pack' && value.type !== 'card' && (
+      {value && value.type !== 'coins' && value.type !== 'stones' && value.type !== 'pack' && value.type !== 'card' && (
         <input className="admin-input" value={value.label ?? ''} maxLength={60} placeholder={value.type === 'alt_art' ? 'Name der Illustration' : 'Name'} onChange={(e) => onChange({ ...value, label: e.target.value })} aria-label="Bezeichnung" />
       )}
       {value?.type === 'card' && <small className="field-warn">Spielbare Karten als Belohnung: Liga-Fairness beachten – kosmetische Belohnungen sind bevorzugt.</small>}

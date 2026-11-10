@@ -25,6 +25,7 @@ function RewardEditor({ value, onChange }: { value: QuestReward; onChange: (r: Q
   const cards = useMemo(() => [...CARDS].sort((a, b) => a.name.localeCompare(b.name, 'de')), []);
   const setType = (type: QuestRewardType) => {
     if (type === 'coins') onChange({ type, amount: 50 });
+    else if (type === 'stones') onChange({ type, amount: 10 });
     else if (type === 'pack') onChange({ type, packId: PACKS[0].id, amount: 1 });
     else if (type === 'card') onChange({ type, cardId: cards[0]?.id });
     else if (type === 'skin') onChange({ type, skinId: SKINS.find((s) => s.price > 0 || s.rewardOnly)?.id });
@@ -36,8 +37,8 @@ function RewardEditor({ value, onChange }: { value: QuestReward; onChange: (r: Q
       <select className="admin-input" value={value.type} onChange={(e) => setType(e.target.value as QuestRewardType)} aria-label="Belohnung">
         {QUEST_REWARD_TYPES.map((t) => <option key={t} value={t}>{QUEST_REWARD_LABEL[t]}</option>)}
       </select>
-      {value.type === 'coins' && (
-        <input className="admin-input num" type="number" min={0} max={100000} value={value.amount ?? 0} aria-label="Münzen"
+      {(value.type === 'coins' || value.type === 'stones') && (
+        <input className="admin-input num" type="number" min={0} max={100000} value={value.amount ?? 0} aria-label={value.type === 'coins' ? 'Münzen' : 'Runensteine'}
           onChange={(e) => onChange({ ...value, amount: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
       )}
       {value.type === 'pack' && (

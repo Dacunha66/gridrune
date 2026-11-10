@@ -12,6 +12,7 @@ import {
 } from './campaign';
 import { RUNES_COLLECTION, RuneDef, parseRune, runeToDoc } from './runes';
 import { PackLook, SHOP_DOC, parseShopDoc, shopToDoc } from './shop';
+import { STONES_DOC, StoneConfig, parseStoneDoc, stonesToDoc } from './stones';
 import { DESIGNS_COLLECTION, DESIGN_STATE_DOC, Design, DesignState, designToDoc, displaySize, parseDesign, parseDesignState } from './designs';
 
 export const CARDS_COLLECTION = 'cards';
@@ -284,6 +285,21 @@ export async function loadShopLooks(db: Db | null): Promise<Record<string, PackL
 
 export async function saveShopLooks(db: Db, looks: Record<string, PackLook>): Promise<void> {
   await db.collection(SETTINGS_COLLECTION).doc(SHOP_DOC).set(shopToDoc(looks));
+}
+
+/** Runensteine shop settings (`settings/stones`). null = no database or nothing saved (built-in values). */
+export async function loadStoneConfig(db: Db | null): Promise<StoneConfig | null> {
+  if (!db) return null;
+  try {
+    const snap = await db.collection(SETTINGS_COLLECTION).doc(STONES_DOC).get();
+    return snap.exists ? parseStoneDoc(snap.data()) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveStoneConfig(db: Db, c: StoneConfig): Promise<void> {
+  await db.collection(SETTINGS_COLLECTION).doc(STONES_DOC).set(stonesToDoc(c));
 }
 
 /** Runes saved by the admin. null = no database (the four basic runes apply). */

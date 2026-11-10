@@ -150,10 +150,10 @@ export function eventDelta(e: QuestEvent): Counters {
 
 // ---------- Rewards ----------
 
-export type QuestRewardType = 'coins' | 'card' | 'pack' | 'skin' | 'rune' | 'title';
-export const QUEST_REWARD_TYPES: QuestRewardType[] = ['coins', 'card', 'pack', 'skin', 'rune', 'title'];
+export type QuestRewardType = 'coins' | 'stones' | 'card' | 'pack' | 'skin' | 'rune' | 'title';
+export const QUEST_REWARD_TYPES: QuestRewardType[] = ['coins', 'stones', 'card', 'pack', 'skin', 'rune', 'title'];
 export const QUEST_REWARD_LABEL: Record<QuestRewardType, string> = {
-  coins: 'Münzen', card: 'Karte', pack: 'Booster', skin: 'Kartenrücken / Läufer', rune: 'Rune', title: 'Titel',
+  coins: 'Münzen', stones: 'Runensteine', card: 'Karte', pack: 'Booster', skin: 'Kartenrücken / Läufer', rune: 'Rune', title: 'Titel',
 };
 
 export interface QuestReward {
@@ -175,6 +175,7 @@ export const TITLE_MAX = 24;
 export function rewardText(r: QuestReward): string {
   switch (r.type) {
     case 'coins': return `${r.amount ?? 0} Münzen`;
+    case 'stones': return `${r.amount ?? 0} Runensteine`;
     case 'card': return r.cardId && isCardId(r.cardId) ? `Karte: ${getCard(r.cardId).name}` : 'Karte';
     case 'pack': {
       const pack = PACKS.find((p) => p.id === r.packId) ?? PACKS[0];
@@ -207,7 +208,7 @@ export function grantQuestRewards(save: SaveData, titles: Titles, list: { key: s
   const granted: QuestGranted[] = [];
   for (const o of list) {
     const r = o.reward;
-    if (r.type === 'coins' || r.type === 'card' || r.type === 'pack') {
+    if (r.type === 'coins' || r.type === 'stones' || r.type === 'card' || r.type === 'pack') {
       const res = grantRewards(s, [{ key: o.key, source: o.source, reward: { type: r.type, amount: r.amount, cardId: r.cardId, packId: r.packId } }], rng);
       s = res.save;
       granted.push({ ...res.granted[0], items: [] });
@@ -270,6 +271,7 @@ export interface QuestConfig {
 export const QUEST_ID_RE = /^[a-z0-9_-]{1,32}$/;
 
 const coins = (amount: number): QuestReward => ({ type: 'coins', amount });
+const stones = (amount: number): QuestReward => ({ type: 'stones', amount });
 const q = (id: string, metric: QuestMetric, target: number, reward: QuestReward, chain?: string): QuestDef => ({ id, metric, target, reward, enabled: true, ...(chain ? { chain } : {}) });
 
 /** The quests the game starts with (the admin can change them: content_docs quests/config). */
@@ -291,36 +293,36 @@ export const DEFAULT_QUESTS: QuestConfig = {
   ],
   weekly: [
     q('w-win10', 'wins', 10, coins(250)),
-    q('w-online3', 'online_wins', 3, coins(300)),
+    q('w-online3', 'online_wins', 3, stones(30)),
     q('w-stars5', 'stars', 5, coins(200)),
     q('w-cap100', 'captures', 100, { type: 'pack', packId: 'abenteurer', amount: 1 }),
-    q('w-league', 'league_wins', 1, coins(200)),
+    q('w-league', 'league_wins', 1, stones(20)),
     q('w-big3', 'big_wins', 3, coins(250)),
     q('w-kristall', 'kristall_wins', 2, coins(200)),
   ],
   achievements: [
     q('a-win1', 'wins', 1, coins(30), 'Sieger'),
     q('a-win10', 'wins', 10, coins(100), 'Sieger'),
-    q('a-win50', 'wins', 50, coins(300), 'Sieger'),
+    q('a-win50', 'wins', 50, stones(50), 'Sieger'),
     q('a-win200', 'wins', 200, { type: 'pack', packId: 'helden', amount: 1 }, 'Sieger'),
     q('a-win1000', 'wins', 1000, { type: 'skin', skinId: 'card-runengold' }, 'Sieger'),
     q('a-cards50', 'cards', 50, coins(100), 'Sammler'),
-    q('a-cards100', 'cards', 100, coins(250), 'Sammler'),
+    q('a-cards100', 'cards', 100, stones(50), 'Sammler'),
     q('a-cards150', 'cards', 150, { type: 'pack', packId: 'helden', amount: 1 }, 'Sammler'),
     q('a-cards200', 'cards', 200, { type: 'pack', packId: 'helden', amount: 2 }, 'Sammler'),
     q('a-cards250', 'cards', 250, { type: 'title', title: 'Großsammler' }, 'Sammler'),
     q('a-cap100', 'captures', 100, coins(100), 'Eroberer'),
     q('a-cap500', 'captures', 500, coins(200), 'Eroberer'),
-    q('a-cap1000', 'captures', 1000, coins(400), 'Eroberer'),
+    q('a-cap1000', 'captures', 1000, stones(50), 'Eroberer'),
     q('a-cap5000', 'captures', 5000, { type: 'title', title: 'Eroberer' }, 'Eroberer'),
     q('a-fx5', 'effects_distinct', 5, coins(100), 'Effektmeister'),
     q('a-fx10', 'effects_distinct', 10, coins(200), 'Effektmeister'),
     q('a-fx14', 'effects_distinct', 14, { type: 'title', title: 'Effektmeister' }, 'Effektmeister'),
     q('a-fxn50', 'effects', 50, coins(100), 'Effektfeuerwerk'),
-    q('a-fxn300', 'effects', 300, coins(300), 'Effektfeuerwerk'),
+    q('a-fxn300', 'effects', 300, stones(40), 'Effektfeuerwerk'),
     q('a-fxn1000', 'effects', 1000, { type: 'pack', packId: 'helden', amount: 1 }, 'Effektfeuerwerk'),
     q('a-games25', 'games', 25, coins(100), 'Stammgast'),
-    q('a-games100', 'games', 100, coins(250), 'Stammgast'),
+    q('a-games100', 'games', 100, stones(50), 'Stammgast'),
     q('a-games500', 'games', 500, { type: 'pack', packId: 'helden', amount: 1 }, 'Stammgast'),
     q('a-games2000', 'games', 2000, { type: 'title', title: 'Stammgast' }, 'Stammgast'),
     q('a-strong10', 'wins_strong', 10, coins(150), 'Stratege'),
@@ -367,7 +369,7 @@ function parseReward(raw: unknown): QuestReward | null {
   if (!QUEST_REWARD_TYPES.includes(r.type as QuestRewardType)) return null;
   const int = (v: unknown, min: number, max: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : undefined);
   const out: QuestReward = { type: r.type as QuestRewardType };
-  if (out.type === 'coins') out.amount = int(r.amount, 0, 100000) ?? 0;
+  if (out.type === 'coins' || out.type === 'stones') out.amount = int(r.amount, 0, 100000) ?? 0;
   if (out.type === 'pack') {
     out.amount = int(r.amount, 1, 10) ?? 1;
     out.packId = typeof r.packId === 'string' && PACKS.some((p) => p.id === r.packId) ? r.packId : PACKS[0].id;

@@ -21,13 +21,15 @@ export interface GrantedReward {
   key: string;
   source: string;
   coins: number;
+  /** Runensteine added. */
+  stones?: number;
   /** New cards (unlocked). */
   cards: string[];
   /** Cards already owned – turned into coins (included in `coins`). */
   duplicates: string[];
 }
 
-const PAYABLE = new Set<Reward['type']>(['coins', 'card', 'pack']);
+const PAYABLE = new Set<Reward['type']>(['coins', 'stones', 'card', 'pack']);
 
 /** Rewards the player has earned but not received yet (only types that exist in the game). */
 export function owedRewards(progress: CampaignProgress, content: CampaignContent): OwedReward[] {
@@ -60,6 +62,7 @@ export function payRewards(save: SaveData, progress: CampaignProgress, owed: Owe
 /** Adds rewards to the save: coins, cards (already owned → coins), booster packs opened with `rng`. */
 export function grantRewards(save: SaveData, owed: OwedReward[], rng: Rng): { save: SaveData; granted: GrantedReward[] } {
   let coins = save.coins;
+  let stones = save.stones;
   const unlocked = [...save.unlocked];
   const granted: GrantedReward[] = [];
   const give = (cardId: string, g: GrantedReward) => {
@@ -79,6 +82,9 @@ export function grantRewards(save: SaveData, owed: OwedReward[], rng: Rng): { sa
     if (o.reward.type === 'coins') {
       g.coins += o.reward.amount ?? 0;
       coins += o.reward.amount ?? 0;
+    } else if (o.reward.type === 'stones') {
+      g.stones = (g.stones ?? 0) + (o.reward.amount ?? 0);
+      stones += o.reward.amount ?? 0;
     } else if (o.reward.type === 'card' && o.reward.cardId) {
       give(o.reward.cardId, g);
     } else if (o.reward.type === 'pack') {
@@ -87,7 +93,7 @@ export function grantRewards(save: SaveData, owed: OwedReward[], rng: Rng): { sa
     }
     granted.push(g);
   }
-  return { save: { ...save, coins, unlocked }, granted };
+  return { save: { ...save, coins, stones, unlocked }, granted };
 }
 
 /** Reward types that are really paid out (the others are previews until they exist in the game). */
@@ -96,8 +102,9 @@ export const isPayable = (r: Reward) => PAYABLE.has(r.type);
 /** Short German summary, e.g. "🪙 250 · 2 neue Karten". */
 export function grantedText(list: GrantedReward[]): string {
   const coins = list.reduce((n, g) => n + g.coins, 0);
+  const stones = list.reduce((n, g) => n + (g.stones ?? 0), 0);
   const cards = list.flatMap((g) => g.cards);
-  return [coins ? `🪙 ${coins}` : '', cards.length === 1 ? `neue Karte: ${getCard(cards[0]).name}` : cards.length > 1 ? `${cards.length} neue Karten` : '']
+  return [coins ? `🪙 ${coins}` : '', stones ? `${stones} Runensteine` : '', cards.length === 1 ? `neue Karte: ${getCard(cards[0]).name}` : cards.length > 1 ? `${cards.length} neue Karten` : '']
     .filter(Boolean).join(' · ') || 'nichts Neues';
 }
 

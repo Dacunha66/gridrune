@@ -15,6 +15,16 @@ export interface SaveData {
   leagueDeck: string[];
   /** Runes: unlocked extra runes (the basic ones everyone has) and the equipped rune. */
   runes: { owned: string[]; equipped: string | null };
+  /** Runensteine: the second currency (only with an account – earned in Erfolge, Kampagne, Raid). */
+  stones: number;
+  /** Shop: last free coins (ISO time) and the card offers bought today (Berlin day). */
+  shop: ShopState;
+}
+
+export interface ShopState {
+  freeAt: string | null;
+  offerDay: string;
+  offerBought: string[];
 }
 
 // Kept from the original working title "Project Card Rush" – changing it would lose every existing save.
@@ -36,6 +46,8 @@ export function defaultSave(): SaveData {
     skins: { owned: [DEFAULT_SKINS.card, DEFAULT_SKINS.runner], card: DEFAULT_SKINS.card, runner: DEFAULT_SKINS.runner },
     leagueDeck: [],
     runes: { owned: [], equipped: null },
+    stones: 0,
+    shop: { freeAt: null, offerDay: '', offerBought: [] },
   };
 }
 
@@ -79,7 +91,17 @@ export function sanitize(raw: unknown): SaveData {
       owned: Array.isArray(r.runes?.owned) ? [...new Set(r.runes.owned.filter((x: unknown) => typeof x === 'string' && RUNE_RE.test(x)))] as string[] : [],
       equipped: typeof r.runes?.equipped === 'string' && RUNE_RE.test(r.runes.equipped) ? r.runes.equipped : null,
     },
+    stones: Math.min(num(r.stones), 10_000_000),
+    shop: sanitizeShop(r.shop),
   };
+}
+
+function sanitizeShop(raw: unknown): ShopState {
+  const r = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  const freeAt = typeof r.freeAt === 'string' && r.freeAt.length <= 40 && !Number.isNaN(Date.parse(r.freeAt)) ? r.freeAt : null;
+  const offerDay = typeof r.offerDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.offerDay) ? r.offerDay : '';
+  const offerBought = offerDay && Array.isArray(r.offerBought) ? [...new Set(r.offerBought.filter(isPlausibleCardId))].slice(0, 20) as string[] : [];
+  return { freeAt, offerDay, offerBought };
 }
 
 function browserStore(): KeyValueStore | null {

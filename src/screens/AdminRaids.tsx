@@ -167,16 +167,16 @@ export function RaidsView({ db, assets, onToast, onTestFight }: Props) {
 }
 
 function RewardEdit({ value, onChange }: { value: Reward; onChange: (r: Reward) => void }) {
-  const types: RewardType[] = ['coins', 'pack', 'card'];
+  const types: RewardType[] = ['coins', 'stones', 'pack', 'card'];
   return (
     <span className="raid-reward-edit">
       <select className="admin-input" value={value.type} onChange={(e) => {
         const t = e.target.value as RewardType;
-        onChange(t === 'coins' ? { type: 'coins', amount: 100 } : t === 'pack' ? { type: 'pack', amount: 1, packId: PACKS[0].id } : { type: 'card', cardId: CARDS[0].id });
+        onChange(t === 'coins' ? { type: 'coins', amount: 100 } : t === 'stones' ? { type: 'stones', amount: 20 } : t === 'pack' ? { type: 'pack', amount: 1, packId: PACKS[0].id } : { type: 'card', cardId: CARDS[0].id });
       }}>
         {types.map((t) => <option key={t} value={t}>{REWARD_LABEL[t]}</option>)}
       </select>
-      {(value.type === 'coins' || value.type === 'pack') && (
+      {(value.type === 'coins' || value.type === 'stones' || value.type === 'pack') && (
         <input className="admin-input num" type="number" inputMode="numeric" min={1} value={value.amount ?? 1}
           onChange={(e) => onChange({ ...value, amount: Math.max(1, Math.round(Number(e.target.value) || 1)) })} aria-label="Anzahl" />
       )}

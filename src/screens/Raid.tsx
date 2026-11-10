@@ -9,7 +9,7 @@ import { ResultIcon } from '../components/ResultIcon';
 import { Header } from './Header';
 import { Card } from '../components/Card';
 import { Battle, BattleSetup, DuelRecord } from './Battle';
-import { Coin, CoinText } from '../components/Coin';
+import { Coin, Stone, CoinText } from '../components/Coin';
 import { Confetti } from '../components/Effects';
 import { DesignImage } from '../components/DesignArt';
 import { RuneBadge } from '../components/RuneBadge';
@@ -354,7 +354,7 @@ function RaidLeaderboard({ raid, onBack }: { raid: RaidInfo | null; onBack: () =
 }
 
 function RewardLine({ reward }: { reward: Reward }) {
-  return <>{reward.type === 'coins' ? <><Coin /> {fmt(reward.amount ?? 0)}</> : <>{REWARD_ICON[reward.type]} {rewardText(reward)}</>}</>;
+  return <>{reward.type === 'coins' ? <><Coin /> {fmt(reward.amount ?? 0)}</> : reward.type === 'stones' ? <><Stone /> {fmt(reward.amount ?? 0)} Runensteine</> : <>{REWARD_ICON[reward.type]} {rewardText(reward)}</>}</>;
 }
 
 function RaidRewards({ raid, me, onBack }: { raid: RaidInfo; me: RaidMe; onBack: () => void }) {

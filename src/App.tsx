@@ -19,7 +19,8 @@ import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
 import { CARDS, getCard, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
-import { getDb, isAdmin, loadArenas, loadAvatars, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks } from './game/cardStore';
+import { getDb, isAdmin, loadArenas, loadAvatars, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks, loadStoneConfig } from './game/cardStore';
+import { setStoneConfig } from './game/stones';
 import { setPackLooks } from './game/shop';
 import { ACTIVE, Design, DesignState, setActiveDesigns } from './game/designs';
 import { PageArt } from './components/DesignArt';
@@ -179,10 +180,11 @@ export function App() {
     let alive = true;
     (async () => {
       const db = await getDb();
-      const [records, settings, arenas, designs, designState, savedCampaign, savedRunes, shopLooks, savedAvatars] = await Promise.all([
+      const [records, settings, arenas, designs, designState, savedCampaign, savedRunes, shopLooks, savedAvatars, stoneCfg] = await Promise.all([
         loadCardRecords(db), loadGameSettings(db), loadArenas(db), loadDesigns(db), loadDesignState(db), loadCampaign(db), loadRunes(db),
-        loadShopLooks(db), loadAvatars(db),
+        loadShopLooks(db), loadAvatars(db), loadStoneConfig(db),
       ]);
+      if (alive && stoneCfg) setStoneConfig(stoneCfg);
       if (alive && savedAvatars) setAvatars(savedAvatars);
       if (alive && shopLooks) setPackLooks(shopLooks);
       if (alive && savedCampaign) applyCampaign(mergeContent(savedCampaign));
@@ -255,7 +257,7 @@ export function App() {
   }, [applyRecords]);
   /** Shared top line of the bottom-bar areas (Shop and Erfolge use it too). */
   const menuTop = (
-    <MenuTop coins={save.coins} account={account?.kind === 'signedIn' ? account.account.name : account?.kind === 'signedOut' ? 'guest' : null}
+    <MenuTop coins={save.coins} stones={account?.kind === 'signedIn' ? save.stones : null} account={account?.kind === 'signedIn' ? account.account.name : account?.kind === 'signedOut' ? 'guest' : null}
       avatar={account?.kind === 'signedIn' ? myAvatar : null}
       onAccount={() => (account?.kind === 'signedIn' ? setScreen({ name: 'account' }) : setGuestState(false))} />
   );
@@ -424,7 +426,8 @@ export function App() {
       {screen.name === 'rules' && <Rules onBack={toMenu} runes={runesOn} />}
       {screen.name === 'shop' && (
         <div className="tabbed-screen">
-          <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} top={menuTop} />
+          <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} top={menuTop}
+            player={cloud.accountMode ? cloud.uid : null} admin={admin} onAccount={() => { setGuestState(false); toMenu(); }} />
           {tabBar('shop')}
         </div>
       )}

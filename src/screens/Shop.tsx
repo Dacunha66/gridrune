@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import { GameIcon } from '../components/GameIcon';
 import { CSSProperties, useEffect, useMemo, useState } from 'react';
-import { Coin, CoinText } from '../components/Coin';
+import { Coin, CoinText, Stone } from '../components/Coin';
 import { Burst, useCountUp } from '../components/Effects';
 import { RARITY_COLORS } from './Result';
 import { Card } from '../components/Card';
 import { CARDS, ownedActiveIds, RARITIES, RARITY_LABEL, RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
-import { buyPackRemote, buySkinRemote } from '../game/adventureApi';
+import { buyCoinsRemote, buyOfferRemote, buyPackRemote, buySkinRemote, freeCoinsRemote } from '../game/adventureApi';
+import { claimFreeCoins, dailyOffers, euro, freeCoinsAt, isOfferBought, offerPrice, stoneConfig } from '../game/stones';
 import type { CloudSave } from '../game/cloudSave';
 import { DUPLICATE_REFUND, PACKS, PackCard, PackDef, PackLook, buyPack, buySkin, equipSkin, packPrice, packView } from '../game/shop';
 import { CampaignImage } from './Campaign';
@@ -23,6 +24,27 @@ interface Props {
   onBack: () => void;
   /** Opened from the bottom bar: the shared top line (logo, coins, account) replaces the back button. */
   top?: ReactNode;
+  /** Account id (personal card offers); null = guest. */
+  player?: string | null;
+  /** Admin: sees the prepared Runenstein packages (money – not for sale yet). */
+  admin?: boolean;
+  /** Guest: opens the sign-in (Runensteine need an account). */
+  onAccount?: () => void;
+}
+
+type ShopTab = 'offers' | 'packs' | 'coins' | 'skins';
+const TAB_HINT: Record<ShopTab, string> = {
+  offers: 'Alle 12 Stunden Gratis-Münzen und jeden Tag neue Karten für Runensteine.',
+  packs: 'Münzen verdienst du in jedem Duell – Siege bringen am meisten.',
+  coins: 'Runensteine verdienst du mit Erfolgen, in der Kampagne und im Raid.',
+  skins: 'Skins ändern nur das Aussehen, nie die Kartenwerte.',
+};
+
+/** "in 5 Std. 12 Min." until the given time. */
+function untilText(at: Date, now: number): string {
+  const min = Math.max(1, Math.ceil((at.getTime() - now) / 60000));
+  const h = Math.floor(min / 60);
+  return h > 0 ? `in ${h} Std. ${min % 60} Min.` : `in ${min} Min.`;
 }
 
 export function skinStyle(colors: [string, string, string]): CSSProperties {
@@ -63,9 +85,15 @@ function odds(pack: PackDef): { rarity: Rarity; text: string }[] {
   return RARITIES.map((r) => ({ rarity: r, text: pct(pack.weights[r]) }));
 }
 
-export function Shop({ save, onChange, onBack, server = null, top }: Props) {
+export function Shop({ save, onChange, onBack, server = null, top, player = null, admin = false, onAccount }: Props) {
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<'packs' | 'skins'>('packs');
+  const [tab, setTab] = useState<ShopTab>('offers');
+  // A clock for the free-coins countdown and the day of the card offers.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 20000);
+    return () => clearInterval(t);
+  }, []);
   /** flipped = which cards are already turned over (they come out of the pack face down). */
   const [opened, setOpened] = useState<{ pack: PackDef; cards: PackCard[]; key: number; stage: 'shake' | 'open'; flipped: boolean[] } | null>(null);
   const [justBought, setJustBought] = useState<string | null>(null);
@@ -119,6 +147,43 @@ export function Shop({ save, onChange, onBack, server = null, top }: Props) {
     setOpened((o) => (o ? { ...o, flipped: o.flipped.map(() => true) } : o));
   }
 
+  const cfg = stoneConfig();
+  const freeAt = freeCoinsAt(save, new Date(now));
+  const offers = dailyOffers(save, player ?? 'guest', new Date(now));
+
+  async function takeFree() {
+    if (busy) return;
+    if (server) {
+      setBusy(true);
+      const r = await freeCoinsRemote();
+      setBusy(false);
+      if (r.cloud) server.adopt(r.cloud);
+      return setMessage(r.ok ? `🪙 ${r.coins} Gratis-Münzen abgeholt ✓` : r.reason);
+    }
+    const r = claimFreeCoins(save);
+    if (!r.ok) return setMessage(r.reason);
+    onChange(r.save);
+    setMessage(`🪙 ${r.coins} Gratis-Münzen abgeholt ✓`);
+  }
+
+  async function buyBundle(id: string) {
+    if (busy || !server) return;
+    setBusy(true);
+    const r = await buyCoinsRemote(id);
+    setBusy(false);
+    if (r.cloud) server.adopt(r.cloud);
+    setMessage(r.ok ? `🪙 ${r.coins.toLocaleString('de-DE')} Münzen gutgeschrieben ✓` : r.reason);
+  }
+
+  async function buyCard(id: string) {
+    if (busy || !server) return;
+    setBusy(true);
+    const r = await buyOfferRemote(id);
+    setBusy(false);
+    if (r.cloud) server.adopt(r.cloud);
+    setMessage(r.ok ? `${getCard(id).name} ist jetzt in deiner Sammlung ✓` : r.reason);
+  }
+
   async function skinAction(skin: SkinDef) {
     if (save.skins.owned.includes(skin.id)) {
       onChange(equipSkin(save, skin.id));
@@ -147,13 +212,86 @@ export function Shop({ save, onChange, onBack, server = null, top }: Props) {
   return (
     <main className="screen shop">
       {top ? <>{top}<h2 className="menu-sub-title tab-title">Shop</h2></> : <Header title="Shop" onBack={onBack} right={<span key={save.coins} className="pill coin-pill"><Coin /> {coins}</span>} />}
-      <div className="segmented deck-tabs" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === 'packs'} className={`seg ${tab === 'packs' ? 'active' : ''}`} onClick={() => { setTab('packs'); setMessage(''); }}><GameIcon name="gift" /> Booster</button>
-        <button type="button" role="tab" aria-selected={tab === 'skins'} className={`seg ${tab === 'skins' ? 'active' : ''}`} onClick={() => { setTab('skins'); setMessage(''); }}><GameIcon name="crown" /> Skins</button>
+      <div className="segmented shop-tabs" role="tablist">
+        {([['offers', 'gift', 'Angebote'], ['packs', 'cards', 'Booster'], ['coins', 'shop', 'Münzen'], ['skins', 'crown', 'Skins']] as const).map(([id, icon, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} className={`seg ${tab === id ? 'active' : ''}`} onClick={() => { setTab(id); setMessage(''); }}>
+            <GameIcon name={icon} /> {label}
+          </button>
+        ))}
       </div>
-      <p className="hint" aria-live="polite">{message ? <CoinText text={message} /> : (tab === 'packs' ? 'Münzen verdienst du in jedem Duell – Siege bringen am meisten.' : 'Skins ändern nur das Aussehen, nie die Kartenwerte.')}</p>
+      <p className="hint" aria-live="polite">{message ? <CoinText text={message} /> : TAB_HINT[tab]}</p>
 
       <div className="scroll">
+        {tab === 'offers' && (
+          <div className="shop-list">
+            <section className="free-coins">
+              <span className="free-coins-art" aria-hidden="true"><Coin className="big" /></span>
+              <span className="free-coins-text">
+                <b>Gratis-Münzen</b>
+                <small>{cfg.freeCoins} Münzen alle {cfg.freeHours} Stunden</small>
+              </span>
+              <button type="button" className="btn btn-primary" disabled={!!freeAt || busy} onClick={takeFree}>
+                {freeAt ? untilText(freeAt, now) : <>Abholen <Coin /> {cfg.freeCoins}</>}
+              </button>
+            </section>
+            <h2 className="section-title">Karten des Tages <small className="muted">neu um Mitternacht</small></h2>
+            {!player && <p className="shop-note">Runensteine gibt es mit einem Konto. <button type="button" className="link-btn" onClick={onAccount}>Jetzt anmelden</button></p>}
+            {offers.length === 0 ? <p className="shop-note">Du hast schon alle Karten – heute gibt es keine Angebote.</p> : (
+              <div className="offer-grid">
+                {offers.map((id) => {
+                  const bought = isOfferBought(save, id, new Date(now));
+                  const price = offerPrice(id);
+                  return (
+                    <article key={id} className={`offer-tile rarity-edge-${getCard(id).rarity} ${bought ? 'bought' : ''}`}>
+                      <Card id={id} size="md" showName />
+                      <span className={`rarity-text rarity-${getCard(id).rarity}`}>{RARITY_LABEL[getCard(id).rarity]}</span>
+                      <button type="button" className="btn btn-primary btn-small offer-buy" disabled={bought || busy || !player || save.stones < price} onClick={() => buyCard(id)}>
+                        {bought ? 'Gekauft ✓' : <><Stone /> {price}</>}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'coins' && (
+          <div className="shop-list">
+            <h2 className="section-title">Münzen für Runensteine</h2>
+            {!player && <p className="shop-note">Runensteine gibt es mit einem Konto. <button type="button" className="link-btn" onClick={onAccount}>Jetzt anmelden</button></p>}
+            <div className="bundle-grid">
+              {cfg.coinBundles.map((b, i) => (
+                <article key={b.id} className={`bundle-tile size-${i + 1}`}>
+                  <span className="bundle-amount"><Coin className="big" /> {b.coins.toLocaleString('de-DE')}</span>
+                  <span className="bundle-pile" aria-hidden="true">{Array.from({ length: i + 2 }, (_, k) => <Coin key={k} />)}</span>
+                  <button type="button" className="btn btn-primary btn-small" disabled={busy || !player || save.stones < b.stones} onClick={() => buyBundle(b.id)}>
+                    <Stone /> {b.stones}
+                  </button>
+                </article>
+              ))}
+            </div>
+            <div className="shop-note">
+              <b>Runensteine verdienen:</b> mit Wochenquests und dauerhaften Erfolgen, in der Kampagne und im Raid. Damit kaufst du Münzen
+              und die Karten des Tages.
+            </div>
+            {admin && (
+              <section className="stone-packs-preview">
+                <h2 className="section-title">Runensteine kaufen <small className="muted">Vorschau – nur für Admins sichtbar</small></h2>
+                <p className="muted small">Vorbereitet, aber ausgeschaltet: Es ist noch kein Zahlungsanbieter verbunden. Spieler sehen diesen Bereich nicht.</p>
+                <div className="bundle-grid">
+                  {cfg.stonePacks.map((p, i) => (
+                    <article key={p.id} className={`bundle-tile stone-pack size-${i + 1}`}>
+                      <span className="bundle-amount"><Stone className="big" /> {p.stones.toLocaleString('de-DE')}</span>
+                      <button type="button" className="btn btn-small" disabled>{euro(p.cents)}</button>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
         {tab === 'packs' && (
           <div className="shop-list">
             {complete && <p className="shop-note">Du hast alle Karten! Doppelte Karten werden in Münzen umgetauscht.</p>}
