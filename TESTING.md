@@ -664,5 +664,5 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 
 ## Handkarten Kristall-Feld + Streifen unten am iPhone
 
-- Kristall-Feld (5 Reihen): Handkarten größer (iPhone 430 pt breit: 69 → 81 pt), das Feld dafür minimal kleiner (394 → 381 pt). Im Browser in iPhone-Größe geprüft.
+- Kristall-Feld (5 Reihen): Handkarten größer (iPhone 430 pt breit: 69 → 81 → jetzt 89 pt), das Feld dafür etwas kleiner (394 → 373 pt). Kleines iPhone (667 pt hoch): Hand 74 pt, Feld 230 pt. Im Browser in iPhone-Größe geprüft.
 - Startbildschirm-App am iPhone: Manche iOS-Versionen machen die Seite um die Statusleiste zu kurz → dunkler leerer Streifen unten. Die Seite wird jetzt dann auf volle Bildschirmhöhe gestreckt (nur in der App vom Home-Bildschirm, nur wenn genau die Statusleiste fehlt). Im Browser nicht nachstellbar; vom Spieler auf dem echten iPhone bestätigt: Streifen ist weg.
