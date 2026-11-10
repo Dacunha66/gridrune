@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './styles.css';
+import { fixStandaloneHeight } from './fullHeight';
 import favicon from './assets/favicon.png';
 import touchIcon from './assets/apple-touch-icon.png';
 
@@ -12,6 +13,8 @@ for (const [rel, href] of [['icon', favicon], ['apple-touch-icon', touchIcon]]) 
   link.href = href;
   document.head.appendChild(link);
 }
+
+fixStandaloneHeight();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -40,7 +40,7 @@
 
 html, body, #root {
   margin: 0;
-  height: 100%;
+  height: var(--app-h, 100%);
   background: var(--bg);
   color: var(--text);
   font-family: var(--f-body);
@@ -2077,7 +2077,7 @@ label.btn.disabled { opacity: .45; }
 
 /* ---------- Board shape „Kristall“: 4 columns × 5 rows without the corners ---------- */
 /* The tall board needs the height: the hand cards are a little smaller there, so the board's cards grow. */
-.play-area:has(.board-rows-5) { --hand-w: clamp(54px, min(17cqw, 11cqh), 108px); }
+.play-area:has(.board-rows-5) { --hand-w: clamp(58px, min(20cqw, 12.4cqh), 120px); }
 .play-area .board.board-rows-5 {
   --bw: calc(min(100cqw, calc((100cqh - var(--hand-h) - 24px) * 0.598)) * var(--board-size, 1));
   margin-top: max(0px, calc((100cqh - var(--hand-h) - 24px - var(--bw) * 1.6667) * var(--board-offset, 0)));

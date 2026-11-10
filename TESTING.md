@@ -661,3 +661,8 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 - „Animationen reduzieren" (oder System-Einstellung): festes Leuchten, keine Bewegung.
 - Karten mit Editionsrahmen: nur der Editions-Glanz, kein zusätzliches Leuchten.
 - Geprüft im Browser in iPhone-Größe (Sammlung, Duell, reduzierte Animation, Editionen); auf einem echten Gerät noch nicht geprüft.
+
+## Handkarten Kristall-Feld + Streifen unten am iPhone
+
+- Kristall-Feld (5 Reihen): Handkarten größer (iPhone 430 pt breit: 69 → 81 pt), das Feld dafür minimal kleiner (394 → 381 pt). Im Browser in iPhone-Größe geprüft.
+- Startbildschirm-App am iPhone: Manche iOS-Versionen machen die Seite um die Statusleiste zu kurz → dunkler leerer Streifen unten. Die Seite wird jetzt dann auf volle Bildschirmhöhe gestreckt (nur in der App vom Home-Bildschirm, nur wenn genau die Statusleiste fehlt). Im Browser NICHT nachstellbar – auf dem echten iPhone noch zu prüfen.
