@@ -696,3 +696,16 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
   Bereits erhaltene Ziele zahlen nie doppelt (gleicher Schlüssel wie vorher für das erste Ziel). Anzeige „Stufe 2/3“.
 - Event „Mondfinsternis“: Täglich 2 → 4 Siege, Wöchentlich 10 → 25 → 50 Siege, Kantersiege 1 → 3 → 5 → 10, Runen 5 → 10.
 - Tests: tests/puzzles.test.ts (+2).
+
+## Community: Clans und Chat (v1.44)
+
+- Neuer Bereich „Community“ in der unteren Leiste (nur mit Konto): Chat (Allgemein + eigener Clan), Clans (suchen, gründen 500 Münzen,
+  beitreten offen/auf Anfrage/geschlossen, Rollen Anführer/Offizier/Mitglied, max. 30), Rangliste (Clanpunkte der Woche: 10 pro Sieg).
+- Chat: Regeln einmal bestätigen; max. 200 Zeichen, keine Links, Wortfilter, eine Nachricht alle 3 Sekunden, 30 Tage gespeichert;
+  Melden (Grund wählen), Blockieren (eigene Liste), live über Realtime.
+- Admin → Community: Meldungen (löschen, 24 Std./7 Tage/dauerhaft stumm, verwerfen), Stummgeschaltete, Clans (umbenennen, auflösen), Wortliste.
+- Datenbank (Migration 021) in zurückgerollter Transaktion geprüft: Gründen zieht 500 Münzen ab, zweiter Clan verweigert, Chat erst nach Regeln,
+  3-Sekunden-Sperre, fremder Clan-Chat verweigert, 2 Siege = 20 Clanpunkte, letzter Austritt löst auf.
+  Rechte (RLS): fremder Spieler sieht nur den allgemeinen Chat, Mitglied auch den Clan-Chat, Meldungen für Spieler unsichtbar.
+- Browser (iPhone-Größe) mit nachgebildetem Server: Regeln, Senden, Melden/Blockieren, Clanliste, Gründen (Münzen 1200 → 700), Clan-Seite mit Anfrage, Rangliste.
+- Noch offen: echter Test mit zwei Konten (Live-Chat zwischen zwei Geräten).

@@ -64,6 +64,8 @@ interface Props {
   /** Puzzle-Event shown on the start screen (signed in). */
   eventCard?: EventView | null;
   onEvents?: () => void;
+  /** Community (clans and chat) – signed-in players only. */
+  onCommunity?: () => void;
 }
 
 export interface NextStep {
@@ -77,7 +79,7 @@ export interface NextStep {
 
 export type MenuTab = 'start' | 'cards' | 'more';
 /** The tab shown as active in the bottom bar (Shop and Erfolge are their own screens). */
-export type TabBarItem = MenuTab | 'shop' | 'quests';
+export type TabBarItem = MenuTab | 'shop' | 'quests' | 'community';
 
 /** The bottom bar of the main menu – also under Shop and Erfolge, so it never disappears there. */
 export function MenuTabBar({ active, onTab, questsReady = 0, showQuests }: { active: TabBarItem | null; onTab: (t: TabBarItem) => void; questsReady?: number; showQuests: boolean }) {
@@ -91,6 +93,9 @@ export function MenuTabBar({ active, onTab, questsReady = 0, showQuests }: { act
         <button type="button" className={cls('quests')} aria-current={active === 'quests' ? 'page' : undefined} onClick={() => onTab('quests')}>
           <GameIcon name="trophy" /><span>Erfolge</span>{questsReady > 0 && <b className="menu-tab-badge" aria-label={`${questsReady} bereit`}>{questsReady}</b>}
         </button>
+      )}
+      {showQuests && (
+        <button type="button" className={cls('community')} aria-current={active === 'community' ? 'page' : undefined} onClick={() => onTab('community')}><GameIcon name="handshake" /><span>Community</span></button>
       )}
       <button type="button" className={cls('more')} aria-current={active === 'more' ? 'page' : undefined} onClick={() => onTab('more')}><GameIcon name="gear" /><span>Mehr</span></button>
     </nav>
@@ -115,7 +120,7 @@ export function MenuTop({ coins, stones = null, account = null, avatar = null, o
   );
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests, nextSteps = [], eventCard = null, onEvents, avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests, nextSteps = [], eventCard = null, onEvents, onCommunity, avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
   const equipped = findRune(equippedRune);
   const [chooseLevel, setChooseLevel] = useState(false);
   // The open tab is kept by the app, so coming back from Shop or Erfolge opens the tab chosen in the bar.
@@ -279,6 +284,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
       <MenuTabBar active={playOpen ? 'start' : tab} questsReady={questsReady} showQuests={!!onQuests} onTab={(t) => {
         if (t === 'shop') return onNavigate('shop');
         if (t === 'quests') return onQuests?.();
+        if (t === 'community') return onCommunity?.();
         setTab(t);
         onPlayOpen?.(false);
       }} />

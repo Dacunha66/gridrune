@@ -23,6 +23,7 @@ import { getDb, isAdmin, loadArenas, loadAvatars, loadCampaign, loadCardRecords,
 import { setStoneConfig } from './game/stones';
 import { setForgeConfig } from './game/forge';
 import { Forge } from './screens/Forge';
+import { Community } from './screens/Community';
 import { Header } from './screens/Header';
 import { equipEdition, setEditions, setPuzzles } from './game/puzzles';
 import { EventView, fetchEvents, loadEditions, loadPuzzles } from './game/puzzleApi';
@@ -60,7 +61,7 @@ import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' }
+  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' }
   /** focus = open this card's details right away. */
   | { name: 'collection'; focus?: string }
   /** Einfaches Spiel gegen Spieler: random = look for a random opponent right away. */
@@ -298,6 +299,7 @@ export function App() {
     <MenuTabBar active={active} questsReady={questsReady} showQuests={!!account} onTab={(t) => {
       if (t === 'shop') return setScreen({ name: 'shop' });
       if (t === 'quests') return setScreen({ name: 'quests' });
+      if (t === 'community') return setScreen({ name: 'community' });
       setMenuTab(t);
       setPlayMenu(false);
       toMenu();
@@ -441,6 +443,7 @@ export function App() {
           nextSteps={nextSteps}
           eventCard={eventCard}
           onEvents={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'events' }) : undefined}
+          onCommunity={() => setScreen({ name: 'community' })}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : name === 'collection' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}
@@ -477,6 +480,12 @@ export function App() {
           <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} top={menuTop}
             player={cloud.accountMode ? cloud.uid : null} admin={admin} onAccount={() => { setGuestState(false); toMenu(); }} />
           {tabBar('shop')}
+        </div>
+      )}
+      {screen.name === 'community' && cloud.uid && (
+        <div className="tabbed-screen">
+          <Community uid={cloud.uid} coins={save.coins} top={menuTop} onAdopt={cloud.adoptServer} />
+          {tabBar('community')}
         </div>
       )}
       {screen.name === 'avatars' && <Avatars onAvatar={setMyAvatar} onBack={toMenu} />}

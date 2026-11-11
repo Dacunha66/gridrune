@@ -2591,3 +2591,72 @@ label.btn.disabled { opacity: .45; }
 /* Karten menu: the Runenschmiede button (its line names the duplicates waiting in the melting pot). */
 .btn-forge { position: relative; }
 .screen > .forge { margin-top: 4px; }
+
+/* ---------- Community: chat, clans, clan ranking ---------- */
+.menu-tab span { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.community-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 6px; }
+.community-tabs .seg { display: flex; align-items: center; justify-content: center; white-space: nowrap; min-width: 0; padding: 6px 4px; }
+.community > .hint { margin: 0 0 6px; }
+.chat { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.chat .chips { flex-shrink: 0; }
+.chat-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 6px; padding: 6px 2px; border-radius: 14px; background: rgba(0, 0, 0, 0.22); }
+.chat-list > .muted { margin: auto; }
+.chat-msg { display: flex; align-items: flex-end; gap: 6px; max-width: 88%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.chat-msg.mine { align-self: flex-end; cursor: default; }
+.chat-bubble { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px 7px; border-radius: 14px 14px 14px 4px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.08); min-width: 0; }
+.chat-msg.mine .chat-bubble { border-radius: 14px 14px 4px 14px; background: #1d3b4a; border-color: rgba(69, 227, 207, 0.35); }
+.chat-head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--gold-light, #f3c77a); }
+.chat-head small { margin-left: auto; color: var(--muted, #b9b3d6); font-size: 11px; }
+.chat-tag { color: #7dd3fc; font-weight: 700; }
+.chat-body { font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; color: #f1ecff; }
+.chat-input { flex-shrink: 0; display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.chat-input .admin-input { min-height: 46px; font-size: 16px; }
+.chat-input .btn { min-height: 46px; min-width: 52px; padding: 0 12px; }
+.chat-rules, .chat-muted { flex-shrink: 0; }
+.chat-rules { padding: 10px 12px; border-radius: 14px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--gold-line); }
+.chat-rules ul { margin: 6px 0 10px; padding-left: 18px; font-size: 13px; line-height: 1.45; color: #e4def8; }
+.chat-rules .btn { width: 100%; }
+.chat-sheet { text-align: left; }
+.chat-sheet-msg { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.3); overflow-wrap: anywhere; }
+.chat-sheet h3 { margin: 6px 0; }
+.chat-reasons { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-blocked { flex-shrink: 0; font-size: 12px; color: var(--muted, #b9b3d6); }
+.chat-blocked .link-btn { display: block; margin: 4px 0; }
+.clan-search { width: 100%; margin: 10px 0 8px; }
+.clan-list, .member-list, .clan-ranking { list-style: none; margin: 0; padding: 0 0 14px; display: grid; gap: 8px; }
+.clan-row { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px; border-radius: 14px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.1); }
+.clan-badge { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.clan-badge-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.clan-badge-text small { color: var(--muted, #b9b3d6); font-size: 12px; }
+.clan-desc { margin: 0; font-size: 13px; color: #e4def8; overflow-wrap: anywhere; }
+.clan-head { padding: 12px; border-radius: 16px; background: radial-gradient(120% 120% at 0% 0%, rgba(69, 227, 207, 0.15), rgba(0, 0, 0, 0.25) 60%); border: 1px solid rgba(69, 227, 207, 0.3); margin-bottom: 10px; }
+.clan-points { margin: 8px 0 0; font-size: 13px; color: #e4def8; }
+.clan-settings { display: grid; gap: 8px; margin-bottom: 10px; }
+.clan-form { display: grid; gap: 10px; padding-bottom: 16px; }
+.clan-form h3 { margin: 0; }
+.emblem-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.emblem { padding: 3px; border-radius: 50%; border: 2px solid transparent; background: none; cursor: pointer; }
+.emblem.on { border-color: var(--glow); box-shadow: 0 0 8px rgba(69, 227, 207, 0.5); }
+.member { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--panel); }
+.member.me { border: 1px solid rgba(69, 227, 207, 0.4); }
+.member-name { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; font-weight: 700; }
+.member-name .role { font-weight: 600; font-size: 12px; color: var(--muted, #b9b3d6); }
+.member-name .role-leader { color: #fbbf24; } .member-name .role-officer { color: #7dd3fc; }
+.member-points { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.member-points small { font-size: 11px; color: var(--muted, #b9b3d6); }
+.clan-leave { display: flex; justify-content: center; padding: 6px 0 18px; }
+.clan-mine { padding: 8px 12px; border-radius: 12px; background: rgba(69, 227, 207, 0.1); border: 1px solid rgba(69, 227, 207, 0.3); }
+.rank-row { display: grid; grid-template-columns: 30px auto 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--panel); }
+.rank-row.me { border: 1px solid rgba(69, 227, 207, 0.5); }
+.rank-no { font: 800 18px var(--f-display); color: var(--gold-light, #f3c77a); text-align: center; }
+.rank-name { display: flex; flex-direction: column; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+.rank-name small { font-weight: 500; font-size: 12px; color: var(--muted, #b9b3d6); }
+.rank-points { font-size: 17px; color: #fff; }
+.report { padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.report-msg { margin: 0 0 4px; overflow-wrap: anywhere; }
+.admin-actions.wrap { flex-wrap: wrap; }
+.admin-plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.admin-plain li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-clan > span:nth-child(2) { flex: 1; min-width: 140px; }
+.admin-clan-edit { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.admin-clan-edit .admin-input { flex: 1; min-width: 90px; }

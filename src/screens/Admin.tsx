@@ -24,6 +24,7 @@ import { AvatarsView } from './AdminAvatars';
 import type { RaidConfig } from '../game/raid';
 import { ShopAdminView } from './AdminShop';
 import { EventsAdminView } from './AdminEvents';
+import { CommunityAdminView } from './AdminCommunity';
 import { Design, DesignState } from '../game/designs';
 import { CardClass, CLASS_INFO, CLASSES, effectFitsClass, EffectId, effectPreview, EFFECTS, effectsForClass } from '../game/effects';
 
@@ -45,8 +46,8 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'runes' | 'raids' | 'quests' | 'events' | 'avatars' | 'shop' | 'cardstyle';
-const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', runes: 'Runen', raids: 'Raids', quests: 'Erfolge', events: 'Puzzle-Events', avatars: 'Avatare', shop: 'Shop', cardstyle: 'Kartendesign' };
+type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'runes' | 'raids' | 'quests' | 'events' | 'avatars' | 'shop' | 'community' | 'cardstyle';
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', runes: 'Runen', raids: 'Raids', quests: 'Erfolge', events: 'Puzzle-Events', avatars: 'Avatare', shop: 'Shop', community: 'Community', cardstyle: 'Kartendesign' };
 /** Tab to come back to (e.g. after testing a mission). */
 let lastTab: Tab = 'cards';
 
@@ -207,6 +208,7 @@ export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCa
       {tab === 'quests' && records && records.length > 0 && <QuestsView db={db!} onToast={setToast} />}
       {tab === 'avatars' && records && records.length > 0 && <AvatarsView db={db!} assets={assets} onToast={setToast} />}
       {tab === 'events' && records && records.length > 0 && <EventsAdminView db={db!} assets={assets} onToast={setToast} />}
+      {tab === 'community' && db && <CommunityAdminView db={db} onToast={setToast} />}
       {tab === 'shop' && records && records.length > 0 && <ShopAdminView db={db!} assets={assets} onToast={setToast} />}
       {tab === 'campaign' && records && records.length > 0 && <CampaignView db={db!} assets={assets} onToast={setToast} onCampaignChange={onCampaignChange} onTest={onTestCampaign} />}
       {toast && <div className="admin-toast" role="status">{toast}</div>}
