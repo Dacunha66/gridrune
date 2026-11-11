@@ -686,4 +686,4 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 - Admin → Shop: Abschnitt „Runenschmiede“ mit allen Preisen.
 - Automatische Tests: tests/forge.test.ts (10). Browser (iPhone-Größe, als Gast): Schmelzen 7 Duplikate → +7 Funkenessenz,
   legendäre Wunschkarte geschmiedet (4 Sonnenessenz), Runenrahmen gekauft/angelegt, Glutrahmen auf Handkarten im Duell, nicht auf dem Feld.
-- Server: save-sync v5, game v21, quests v12, adventure v22, events v3, raid v16 eingespielt; alle starten (Antwort not_signed_in). Ein Durchlauf mit echtem Konto steht noch aus.
+- Server: save-sync v5, game v21, quests v12, adventure v22, events v3, raid v16 eingespielt; alle starten (Antwort not_signed_in). Vom Spieler mit echtem Konto bestätigt: funktioniert.
