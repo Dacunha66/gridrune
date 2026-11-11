@@ -4,11 +4,13 @@
 // owed. "league-start" / "league-finish": Collection League match against the computer (ranked), replayed here; a won
 // match unlocks the rarest new discovery of the run. "claim": pays rewards earned earlier (once).
 // "buy-pack" / "buy-skin": coins are taken and the cards drawn
-// here. "free-coins" / "buy-coins" / "buy-offer": Runensteine shop (free coins, coins for Runensteine, card offers). Every payout goes through pay_ticket: ticket finished and save written together, never twice.
+// here. "free-coins" / "buy-coins" / "buy-offer": Runensteine shop (free coins, coins for Runensteine, card offers).
+// "forge-melt" / "forge-refine" / "forge-craft" / "forge-edition" / "forge-frame": Runenschmiede (essences from duplicates).
+// Every payout goes through pay_ticket: ticket finished and save written together, never twice.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, claimCampaign, freeCoinsServer, finishLeague, finishMission, loadContent, prepareLeague, prepareMission, questDelta, questPeriod,
+  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, loadContent, prepareLeague, prepareMission, questDelta, questPeriod,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@66e3f4c46590a05b1a7a768a1c6bece368faede6/public/server/engine-391f86193bb7.js';
 
 const CORS = {
@@ -198,6 +200,14 @@ Deno.serve(async (req) => {
     return payNow('shop', { offer: String(body.cardId ?? '') }, (cur) => {
       const r = buyOfferServer(cur.save, uid, body.cardId);
       return r.ok ? { ok: true, save: r.save, result: { ok: true, cardId: r.cardId } } : { ok: false, status: 422, result: { ok: false, reason: r.error } };
+    });
+  }
+
+  // Runenschmiede: melt duplicates, refine essence, make a card, an edition of an ended event or a frame.
+  if (typeof body.action === 'string' && body.action.startsWith('forge-')) {
+    return payNow('shop', { forge: body.action }, (cur) => {
+      const r = forgeServer(cur.save, body.action, body);
+      return r.ok ? { ok: true, save: r.save, result: r.result } : { ok: false, status: 422, result: { ok: false, reason: r.error } };
     });
   }
   return json({ error: 'bad_request' }, 400);

@@ -675,3 +675,15 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 - Server-Funktion adventure auf neue Engine; Rangliste unverändert (eigene Regel bleibt).
 - Münzen: Normal 65/25/12, Schwer 150/60/25 (Sieg/Unentschieden/Niederlage); Anzeige im Menü, Ergebnis und Regeln liest dieselbe Tabelle.
 - Vom Spieler bestätigt (echtes Gerät): stärkeres KI-Deck und neue Münzbeträge funktionieren.
+
+## Runenschmiede (v1.43)
+
+- Doppelte Karten (Booster, Kampagne, Erfolge, Raid-Belohnungen) kommen in den Schmelztiegel statt in Münzen.
+- Reiter „Runenschmiede“ in der Sammlung: Schmelzen (einzeln oder alle) → Essenz der Seltenheit; Veredeln 4 → 1;
+  Wunschkarte (fehlende Boosterkarten, Preise 3/3/3/4/4/5); verpasste Editionen (nur beendete Events, 2 Sternenessenz);
+  Puzzle-Fragmente (laufende Events, 2 Kristallessenz, höchstens 2 pro Stufe, mit Konto); Kartenrahmen (Runen, Glut, Sterne).
+- Server: game (forge-melt/-refine/-craft/-edition/-frame), events (forge-fragment über puzzle_claim), save-sync übernimmt nur den gewählten Rahmen.
+- Admin → Shop: Abschnitt „Runenschmiede“ mit allen Preisen.
+- Automatische Tests: tests/forge.test.ts (10). Browser (iPhone-Größe, als Gast): Schmelzen 7 Duplikate → +7 Funkenessenz,
+  legendäre Wunschkarte geschmiedet (4 Sonnenessenz), Runenrahmen gekauft/angelegt, Glutrahmen auf Handkarten im Duell, nicht auf dem Feld.
+- Mit Konto über den Server: siehe Live-Prüfung unten.

@@ -3,9 +3,10 @@
 // claim rows, pieces and – for a complete puzzle – the save with the reward in one step, never twice).
 // "overview": every visible event (running, ended, archived) – earned fragments are given on the way.
 // "admin-stats": numbers of one event for the admin.
+// "forge-fragment": Runenschmiede – one missing fragment of the stage being collected, for essence (limited per stage).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { loadContent, puzzleClaimServer, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@3439c1ac0b806edc745ebdc10f87dc4af1a8c3ee/public/server/engine-d57bdb5e04bf.js';
+import { forgeFragmentServer, loadContent, puzzleClaimServer, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@3439c1ac0b806edc745ebdc10f87dc4af1a8c3ee/public/server/engine-d57bdb5e04bf.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -89,6 +90,36 @@ Deno.serve(async (req) => {
     return json({ events, ...(cloud ?? {}) });
   }
 
+  if (body.action === 'forge-fragment') {
+    const p = visiblePuzzles(new Date()).find((x) => x.id === body.puzzleId);
+    if (!p) return json({ ok: false, reason: 'Dieses Event gibt es nicht.' }, 422);
+    // Paid together with the piece in one step (puzzle_claim: claim key, piece, save with the essence taken); retried
+    // when pieces or the save changed in between.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const st = await state(p.id, p.run.id);
+      const { data: saveRow } = await db.from('player_saves').select('save, campaign, version').eq('player_id', uid).maybeSingle();
+      if (!saveRow) return json({ error: 'no_save' }, 409);
+      const r = forgeFragmentServer(saveRow.save, p.id, st.have, st.claimed, seed());
+      if (!r.ok) return json({ ok: false, reason: r.error, save: saveRow.save, campaign: saveRow.campaign, version: saveRow.version }, 422);
+      const { data: res, error } = await db.rpc('puzzle_claim', {
+        p_player: uid, p_puzzle: p.id, p_keys: [r.key], p_pieces: [r.piece], p_total: r.total, p_save: r.save, p_version: saveRow.version,
+      });
+      if (error) return json({ error: 'database' }, 500);
+      if (res === 'paid') {
+        const after = await state(p.id, p.run.id);
+        return json({
+          ok: true, piece: r.piece, event: { ...puzzleView(p, after.have, after.completedAt, after.counters as never, after.claimed, new Date()), gained: [r.piece] },
+          save: r.save, campaign: saveRow.campaign, version: saveRow.version + 1,
+        });
+      }
+      if (res === 'already') {
+        const now = await db.from('player_saves').select('save, campaign, version').eq('player_id', uid).single();
+        return json({ ok: false, reason: 'Schon geschmiedet.', ...(now.data ?? {}) }, 422);
+      }
+    }
+    return json({ error: 'busy' }, 503);
+  }
+
   if (body.action === 'admin-stats') {
     if (!isAdmin) return json({ error: 'forbidden' }, 403);
     const id = typeof body.puzzleId === 'string' ? body.puzzleId : '';
@@ -102,7 +133,7 @@ Deno.serve(async (req) => {
     const pieces = (prog ?? []).map((r: Row) => (r.pieces ?? []).length as number);
     const byTask: Record<string, number> = {};
     for (const c of claims ?? []) {
-      const task = String(c.key).split(':').pop()!;
+      const task = String(c.key).includes(':forge:') ? 'Schmiede' : String(c.key).split(':').pop()!;
       byTask[task] = (byTask[task] ?? 0) + 1;
     }
     return json({
