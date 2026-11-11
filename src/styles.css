@@ -2588,3 +2588,6 @@ label.btn.disabled { opacity: .45; }
 @keyframes ess-float { 0% { opacity: 0; transform: translate(-50%, -4px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 8px); } }
 /* The gain is named in the line under the tabs – the chips only light up. */
 .ess-plus { display: none; }
+/* Karten menu: the Runenschmiede button (its line names the duplicates waiting in the melting pot). */
+.btn-forge { position: relative; }
+.screen > .forge { margin-top: 4px; }

@@ -1,4 +1,5 @@
 import { RuneBadge } from '../components/RuneBadge';
+import { meltCount } from '../game/forge';
 import { Avatar } from '../components/Avatar';
 import { Coin, CoinText, Stone } from '../components/Coin';
 import { findRune } from '../game/runes';
@@ -26,7 +27,7 @@ interface Props {
   isAdmin: boolean;
   /** Simple game against the computer with the chosen difficulty. */
   onPlay: (level: AiLevel) => void;
-  onNavigate: (screen: 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'campaign') => void;
+  onNavigate: (screen: 'collection' | 'forge' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'campaign') => void;
   /** Runes released for this viewer: shows the rune collection. */
   runes?: boolean;
   /** The equipped rune (shown on the Runen button). */
@@ -237,6 +238,10 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
             <h2 className="menu-sub-title tab-title">Karten</h2>
             <p className="muted">{owned} von {CARDS.length} Karten gesammelt</p>
             <button type="button" className="btn btn-big" onClick={() => onNavigate('collection')}><GameIcon name="book" /> Sammlung <span className="btn-sub">alle Karten ansehen</span></button>
+            <button type="button" className="btn btn-big btn-forge" onClick={() => onNavigate('forge')}>
+              <GameIcon name="flame" /> Runenschmiede
+              <span className="btn-sub">{meltCount(save) > 0 ? `${meltCount(save)} doppelte Karte${meltCount(save) === 1 ? '' : 'n'} bereit` : 'Duplikate einschmelzen, Karten schmieden'}</span>
+            </button>
             <button type="button" className="btn btn-big btn-deck" onClick={() => onNavigate('deck')}>
               <GameIcon name="deck" /> Deck bearbeiten
               {runes && (equipped ? <span className="btn-sub"><RuneBadge rune={equipped} className="small" /></span> : <span className="btn-sub">ohne Rune</span>)}

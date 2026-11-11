@@ -22,6 +22,8 @@ import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
 import { getDb, isAdmin, loadArenas, loadAvatars, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks, loadStoneConfig, loadForgeConfig } from './game/cardStore';
 import { setStoneConfig } from './game/stones';
 import { setForgeConfig } from './game/forge';
+import { Forge } from './screens/Forge';
+import { Header } from './screens/Header';
 import { equipEdition, setEditions, setPuzzles } from './game/puzzles';
 import { EventView, fetchEvents, loadEditions, loadPuzzles } from './game/puzzleApi';
 import { setEquippedEditions, setEquippedFrame } from './game/editionArt';
@@ -58,7 +60,7 @@ import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' }
+  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' }
   /** focus = open this card's details right away. */
   | { name: 'collection'; focus?: string }
   /** Einfaches Spiel gegen Spieler: random = look for a random opponent right away. */
@@ -448,9 +450,15 @@ export function App() {
         />
       )}
       {screen.name === 'collection' && (
-        <Collection save={save} onBack={toMenu} focus={screen.focus ?? null} onChange={setSave}
-          server={cloud.accountMode ? { adopt: cloud.adoptServer } : null}
+        <Collection save={save} onBack={toMenu} focus={screen.focus ?? null}
           onEdition={(cardId, editionId) => setSave((s) => equipEdition(s, cardId, editionId))} />
+      )}
+      {screen.name === 'forge' && (
+        <main className="screen">
+          <Header title="Runenschmiede" onBack={toMenu} />
+          <Forge save={save} onChange={setSave} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null}
+            onCard={(cardId) => setScreen({ name: 'collection', focus: cardId })} />
+        </main>
       )}
       {screen.name === 'events' && cloud.uid && (
         <Events reducedMotion={reducedMotion} onAdopt={cloud.adoptServer} onBack={toMenu}

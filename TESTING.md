@@ -679,7 +679,7 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 ## Runenschmiede (v1.43)
 
 - Doppelte Karten (Booster, Kampagne, Erfolge, Raid-Belohnungen) kommen in den Schmelztiegel statt in Münzen.
-- Reiter „Runenschmiede“ in der Sammlung: Schmelzen (einzeln oder alle) → Essenz der Seltenheit; Veredeln 4 → 1;
+- Runenschmiede als eigener Punkt unter „Karten“ (zwischen Sammlung und Deck; zeigt „n doppelte Karten bereit“): Schmelzen (einzeln oder alle) → Essenz der Seltenheit; Veredeln 4 → 1;
   Wunschkarte (fehlende Boosterkarten, Preise 3/3/3/4/4/5); verpasste Editionen (nur beendete Events, 2 Sternenessenz);
   Puzzle-Fragmente (laufende Events, 2 Kristallessenz, höchstens 2 pro Stufe, mit Konto); Kartenrahmen (Runen, Glut, Sterne).
 - Server: game (forge-melt/-refine/-craft/-edition/-frame), events (forge-fragment über puzzle_claim), save-sync übernimmt nur den gewählten Rahmen.

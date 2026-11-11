@@ -5,19 +5,11 @@ import { SaveData } from '../game/storage';
 import { Header } from './Header';
 import { CardDetail } from './CardDetail';
 import { editionsOf } from '../game/puzzles';
-import { CloudSave } from '../game/cloudSave';
-import { meltCount } from '../game/forge';
-import { Forge } from './Forge';
 
 const FILTERS: (Rarity | 'all')[] = ['all', ...RARITIES];
 
-export function Collection({ save, onBack, focus = null, onEdition, onChange, server, startTab = 'cards' }: {
+export function Collection({ save, onBack, focus = null, onEdition }: {
   save: SaveData; onBack: () => void;
-  /** Guests: the save after a step in the Runenschmiede. */
-  onChange?: (s: SaveData) => void;
-  /** Signed-in: the server does the Runenschmiede steps. */
-  server?: { adopt: (c: CloudSave) => void } | null;
-  startTab?: 'cards' | 'forge';
   /** Open this card's details right away (e.g. after unlocking an edition). */
   focus?: string | null;
   /** Choose the edition used for a card (null = original). */
@@ -25,23 +17,12 @@ export function Collection({ save, onBack, focus = null, onEdition, onChange, se
 }) {
   const [filter, setFilter] = useState<Rarity | 'all'>('all');
   const [detail, setDetail] = useState<string | null>(focus);
-  const [tab, setTab] = useState<'cards' | 'forge'>(startTab);
-  const pot = meltCount(save);
   const owned = new Set(save.unlocked);
   const deck = new Set(save.deck);
   const shown = CARDS.filter((c) => filter === 'all' || c.rarity === filter);
   return (
     <main className="screen">
       <Header title="Sammlung" onBack={onBack} right={<span className="pill">{ownedActiveIds(save.unlocked).length}/{CARDS.length}</span>} />
-      <div className="segmented collection-tabs" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === 'cards'} className={`seg ${tab === 'cards' ? 'active' : ''}`} onClick={() => setTab('cards')}>Karten</button>
-        <button type="button" role="tab" aria-selected={tab === 'forge'} className={`seg ${tab === 'forge' ? 'active' : ''}`} onClick={() => setTab('forge')}>
-          Runenschmiede{pot > 0 && <span className="seg-badge">{pot}</span>}
-        </button>
-      </div>
-      {tab === 'forge' ? (
-        <Forge save={save} onChange={(s) => onChange?.(s)} server={server ?? null} onCard={(id) => { setTab('cards'); setDetail(id); }} />
-      ) : (<>
       <div className="chips" role="tablist">
         {FILTERS.map((f) => (
           <button key={f} type="button" role="tab" aria-selected={filter === f} className={`chip ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
@@ -60,7 +41,6 @@ export function Collection({ save, onBack, focus = null, onEdition, onChange, se
           ))}
         </div>
       </div>
-      </>)}
       {detail && (
         <CardDetail
           id={detail}
