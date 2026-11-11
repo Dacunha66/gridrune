@@ -100,9 +100,20 @@ export interface PuzzleTask {
   description: string;
   metric: QuestMetric;
   target: number;
-  /** Fragments for completing it (once per day / week / run). */
+  /** Fragments for completing it (once per day / week / run) – and for every further step. */
   fragments: number;
   period: PuzzlePeriod;
+  /** Further targets after `target` (ascending): each one reached gives the fragments again, e.g. 10 → 25 → 50 wins. */
+  steps: number[];
+}
+
+/** All targets of a task in order: the first one and the further steps. */
+export const taskTargets = (t: PuzzleTask): number[] => [t.target, ...(t.steps ?? [])];
+
+/** Cleans the further targets: whole numbers above the first target, ascending, no doubles, at most 9. */
+export function cleanSteps(target: number, raw: unknown): number[] {
+  const list = (Array.isArray(raw) ? raw : []).map((x) => Math.round(Number(x))).filter((x) => Number.isFinite(x) && x > target && x <= 100000);
+  return [...new Set(list)].sort((a, b) => a - b).slice(0, 9);
 }
 
 export type PuzzleReward = { type: 'edition'; editionId: string };
@@ -208,7 +219,8 @@ export function parsePuzzle(id: string, raw: unknown): PuzzleDef | null {
     const x = t as Record<string, unknown>;
     if (typeof x.id !== 'string' || !TASK_ID_RE.test(x.id) || !PUZZLE_METRICS.includes(x.metric as QuestMetric)) return [];
     const period: PuzzlePeriod = x.period === 'daily' || x.period === 'weekly' ? x.period : 'once';
-    return [{ id: x.id, title: str(x.title, 60), description: str(x.description, 140), metric: x.metric as QuestMetric, target: int(x.target, 1, 100000, 1), fragments: int(x.fragments, 1, 10, 1), period }];
+    const target = int(x.target, 1, 100000, 1);
+    return [{ id: x.id, title: str(x.title, 60), description: str(x.description, 140), metric: x.metric as QuestMetric, target, fragments: int(x.fragments, 1, 10, 1), period, steps: cleanSteps(target, x.steps) }];
   });
   return {
     id,
@@ -279,8 +291,8 @@ export function puzzleProblems(p: PuzzleDef): string[] {
   return out;
 }
 
-export function taskTitle(t: PuzzleTask): string {
-  return t.title || METRIC_TEXT[t.metric](t.target);
+export function taskTitle(t: PuzzleTask, target: number = t.target): string {
+  return t.title || METRIC_TEXT[t.metric](target);
 }
 
 // ---------- Progress and fragments ----------
@@ -294,31 +306,56 @@ export interface PuzzleCounters {
   total: Record<string, number>;
 }
 
-/** Claim key of a task in the current period (unique per player and puzzle in the database – never paid twice). */
-export function taskKey(p: PuzzleDef, t: PuzzleTask, now: Date = new Date()): string {
+/**
+ * Claim key of a task (step) in the current period (unique per player and puzzle in the database – never paid twice).
+ * The first target keeps the original key; further steps get "~2", "~3", …
+ */
+export function taskKey(p: PuzzleDef, t: PuzzleTask, now: Date = new Date(), step = 0): string {
   const period = t.period === 'daily' ? `d:${questDay(now)}` : t.period === 'weekly' ? `w:${questWeek(now)}` : 'o';
-  return `${p.run.id}:${period}:${t.id}`;
+  return `${p.run.id}:${period}:${t.id}${step > 0 ? `~${step + 1}` : ''}`;
 }
 
 export interface TaskView {
   task: PuzzleTask;
   title: string;
   value: number;
+  /** Target of the step being worked on (the last one when all are done). */
   target: number;
   done: boolean;
-  /** Already rewarded in this period. */
+  /** Every step rewarded in this period. */
   claimed: boolean;
   key: string;
+  /** Step being worked on (1-based) and number of steps. */
+  step: number;
+  steps: number;
+}
+
+/** Counter value of a task in its period. */
+function taskValue(t: PuzzleTask, counters: PuzzleCounters | null, now: Date): number {
+  const src = !counters ? {} : t.period === 'daily' ? (counters.day === questDay(now) ? counters.daily : {}) : t.period === 'weekly' ? (counters.week === questWeek(now) ? counters.weekly : {}) : counters.total;
+  return Math.max(0, Math.floor(Number((src as Record<string, number>)[t.metric]) || 0));
+}
+
+/** Every step of every task: reached, and its claim key. */
+export function taskSteps(p: PuzzleDef, counters: PuzzleCounters | null, now: Date = new Date()): { task: PuzzleTask; step: number; target: number; reached: boolean; key: string }[] {
+  return p.tasks.flatMap((t) => {
+    const value = taskValue(t, counters, now);
+    return taskTargets(t).map((target, i) => ({ task: t, step: i, target, reached: value >= target, key: taskKey(p, t, now, i) }));
+  });
 }
 
 export function taskViews(p: PuzzleDef, counters: PuzzleCounters | null, claimed: readonly string[], now: Date = new Date()): TaskView[] {
-  const day = questDay(now);
-  const week = questWeek(now);
   return p.tasks.map((t) => {
-    const src = !counters ? {} : t.period === 'daily' ? (counters.day === day ? counters.daily : {}) : t.period === 'weekly' ? (counters.week === week ? counters.weekly : {}) : counters.total;
-    const value = Math.max(0, Math.floor(Number(src[t.metric]) || 0));
-    const key = taskKey(p, t, now);
-    return { task: t, title: taskTitle(t), value: Math.min(value, t.target), target: t.target, done: value >= t.target, claimed: claimed.includes(key), key };
+    const value = taskValue(t, counters, now);
+    const targets = taskTargets(t);
+    // The first step not rewarded yet; when all are rewarded, the last one (shown as finished).
+    const open = targets.findIndex((_, i) => !claimed.includes(taskKey(p, t, now, i)));
+    const i = open < 0 ? targets.length - 1 : open;
+    const target = targets[i];
+    return {
+      task: t, title: taskTitle(t, target), value: Math.min(value, target), target, done: value >= target, claimed: open < 0, key: taskKey(p, t, now, i),
+      step: i + 1, steps: targets.length,
+    };
   });
 }
 
@@ -357,8 +394,8 @@ export function earnedClaim(p: PuzzleDef, have: readonly number[], counters: Puz
     }
     return null;
   };
-  for (const v of taskViews(p, counters, claimed, now)) {
-    if (!v.done || v.claimed) continue;
+  for (const v of taskSteps(p, counters, now)) {
+    if (!v.reached || claimed.includes(v.key)) continue;
     let given = 0;
     for (let i = 0; i < v.task.fragments; i++) {
       const k = nextPiece();

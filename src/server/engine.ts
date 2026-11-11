@@ -127,7 +127,7 @@ export function puzzleView(p: PuzzleDef, have: number[], completedAt: string | n
     have, completedAt,
     tasks: taskViews(p, counters, claimed, now).map((v) => ({
       id: v.task.id, title: v.title, description: v.task.description, period: v.task.period, fragments: v.task.fragments,
-      value: v.value, target: v.target, done: v.done, claimed: v.claimed,
+      value: v.value, target: v.target, done: v.done, claimed: v.claimed, step: v.step, steps: v.steps,
     })),
   };
 }

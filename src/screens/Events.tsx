@@ -209,7 +209,7 @@ export function EventDetail({ ev: full, reducedMotion, onBack, onCard, onCollect
               <li key={t.id} className={`event-task ${t.claimed ? 'claimed' : t.done ? 'done' : ''}`}>
                 <span className="event-task-text">
                   <b>{t.title}</b>
-                  <small>{PERIOD_LABEL[t.period]}{t.description ? ` · ${t.description}` : ''}</small>
+                  <small>{PERIOD_LABEL[t.period]}{(t.steps ?? 1) > 1 ? ` · Stufe ${t.step}/${t.steps}` : ''}{t.description ? ` · ${t.description}` : ''}</small>
                   <span className="event-bar" aria-hidden="true"><i style={{ width: `${Math.round((t.value / t.target) * 100)}%` }} /></span>
                 </span>
                 <span className="event-task-side">

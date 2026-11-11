@@ -38,7 +38,11 @@ export interface EventView {
   total?: number;
   have: number[];
   completedAt: string | null;
-  tasks: { id: string; title: string; description: string; period: PuzzlePeriod; fragments: number; value: number; target: number; done: boolean; claimed: boolean }[];
+  tasks: {
+    id: string; title: string; description: string; period: PuzzlePeriod; fragments: number; value: number; target: number; done: boolean; claimed: boolean;
+    /** Staged tasks: the step being worked on and how many there are (absent from older answers = one). */
+    step?: number; steps?: number;
+  }[];
   /** Pieces given with this request (for the animation). */
   gained: number[];
   /** Runenschmiede: fragments that may still be made for the stage being collected (absent from older answers). */

@@ -2456,7 +2456,11 @@ label.btn.disabled { opacity: .45; }
 
 /* In the duel (board and hand): still, no light sweep – smooth duels, readable values. The glow sits OUTSIDE the card,
    so the owner ring (blue/red) on the board never covers it. */
-.play-area .card.rarity-legendary, .play-area .card.rarity-mythic { animation: none !important; }
+/* Only the glow stands still – the card's own moves (laying it down, turning it over when captured) keep playing. */
+.play-area .card.rarity-legendary:not(.anim-flip):not(.anim-drop), .play-area .card.rarity-mythic:not(.anim-flip):not(.anim-drop) { animation: none !important; }
+:root:not(.reduced-motion) .play-area .card.anim-flip:is(.rarity-legendary, .rarity-mythic) { animation: flip 0.6s cubic-bezier(.3,.7,.3,1) !important; }
+:root:not(.reduced-motion) .play-area .card.anim-drop:is(.rarity-legendary, .rarity-mythic) { animation: drop 0.5s cubic-bezier(.2,.8,.3,1.1) !important; }
+:root:not(.reduced-motion) .play-area .card.anim-drop.anim-drop-fx:is(.rarity-legendary, .rarity-mythic) { animation: drop 0.5s cubic-bezier(.2,.8,.3,1.1), effect-flare 0.9s ease-out 0.4s !important; }
 .play-area .card.rarity-legendary:not(.locked):not(.edition-moon):not(.edition-gold):not(.edition-ember):not(.edition-frost) {
   box-shadow: 0 3px 9px rgba(0, 0, 0, 0.55), 0 0 0 3px rgba(255, 207, 72, 1), 0 0 14px 5px rgba(251, 191, 36, 0.75) !important;
 }

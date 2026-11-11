@@ -687,3 +687,12 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 - Automatische Tests: tests/forge.test.ts (10). Browser (iPhone-Größe, als Gast): Schmelzen 7 Duplikate → +7 Funkenessenz,
   legendäre Wunschkarte geschmiedet (4 Sonnenessenz), Runenrahmen gekauft/angelegt, Glutrahmen auf Handkarten im Duell, nicht auf dem Feld.
 - Server: save-sync v5, game v21, quests v12, adventure v22, events v3, raid v16 eingespielt; alle starten (Antwort not_signed_in). Vom Spieler mit echtem Konto bestätigt: funktioniert.
+
+## Fehler: Umdrehen leuchtender Karten + gestaffelte Puzzle-Aufgaben
+
+- Legendäre/mystische Karten auf dem Feld: Legen- und Umdreh-Animation laufen wieder (das stille Leuchten hatte sie mit abgeschaltet).
+  Im Browser gemessen: legendär/mystisch mit anim-flip → flip, mit anim-drop → drop, liegend → keine Bewegung; „Animationen reduzieren“ → keine.
+- Puzzle-Aufgaben mit Staffel („Weitere Ziele“): nach 10/10 Siegen steht 10/25 da, jedes erreichte Ziel gibt die Fragmente erneut.
+  Bereits erhaltene Ziele zahlen nie doppelt (gleicher Schlüssel wie vorher für das erste Ziel). Anzeige „Stufe 2/3“.
+- Event „Mondfinsternis“: Täglich 2 → 4 Siege, Wöchentlich 10 → 25 → 50 Siege, Kantersiege 1 → 3 → 5 → 10, Runen 5 → 10.
+- Tests: tests/puzzles.test.ts (+2).

@@ -9,6 +9,7 @@ import {
   PuzzleStage, puzzleStages, stageDone, totalPieces,
   EDITION_FRAMES, EditionDef, FRAME_LABEL, PERIOD_LABEL, PHASE_LABEL, PIECES_BY_RARITY, PUZZLE_METRICS, PuzzleDef, PuzzlePeriod, PuzzleTask, allEditions,
   findEdition, gridFor, nextEditionId, nextPuzzleId, puzzlePhase, puzzleProblems, setEditions, setPuzzles, taskTitle,
+  cleanSteps,
 } from '../game/puzzles';
 import { EventStats, EventView, fetchEventStats, loadEditions, loadPuzzles, saveEdition, savePuzzle } from '../game/puzzleApi';
 import { editionImage } from '../game/editionArt';
@@ -30,9 +31,9 @@ function newPuzzle(id: string, editionId: string): PuzzleDef {
     id, name: 'Neues Puzzle-Event', description: '', image: null, reward: { type: 'edition', editionId }, pieces: 9, cols: 3, rows: 3, status: 'draft',
     run: { id: 'r1', startsAt: new Date(now + DAY).toISOString(), endsAt: new Date(now + 15 * DAY).toISOString() },
     tasks: [
-      { id: 'tday', title: '', description: '', metric: 'wins', target: 2, fragments: 1, period: 'daily' },
-      { id: 'tweek', title: '', description: '', metric: 'wins', target: 10, fragments: 2, period: 'weekly' },
-      { id: 'tonce', title: '', description: '', metric: 'big_wins', target: 1, fragments: 1, period: 'once' },
+      { id: 'tday', title: '', description: '', metric: 'wins', target: 2, fragments: 1, period: 'daily', steps: [4] },
+      { id: 'tweek', title: '', description: '', metric: 'wins', target: 10, fragments: 2, period: 'weekly', steps: [25, 50] },
+      { id: 'tonce', title: '', description: '', metric: 'big_wins', target: 1, fragments: 1, period: 'once', steps: [3, 5, 10] },
     ],
     stages: [],
   };
@@ -357,7 +358,7 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
       <section className="admin-card">
         <h3>Aufgaben</h3>
         <p className="muted small">Gezählt werden nur vom Server geprüfte Ergebnisse, und nur während das Event läuft. Täglich/Wöchentlich: einmal pro Tag/Woche,
-          Einmalig: einmal pro Eventrunde.</p>
+          Einmalig: einmal pro Eventrunde. Mit „Weitere Ziele“ wird eine Aufgabe gestaffelt (z. B. 10 → 25 → 50 Siege): jedes erreichte Ziel gibt die Fragmente erneut.</p>
         {p.tasks.map((t, i) => (
           <div key={t.id} className="event-task-edit">
             <div className="field-row">
@@ -367,9 +368,10 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
                 </select>
               </label>
               <label className="field"><span>Ziel</span>
-                <input className="admin-input num" type="number" min={1} value={t.target} onChange={(ev) => setTask(i, { target: Math.max(1, Math.round(Number(ev.target.value) || 1)) })} />
+                <input className="admin-input num" type="number" min={1} value={t.target} onChange={(ev) => { const target = Math.max(1, Math.round(Number(ev.target.value) || 1)); setTask(i, { target, steps: cleanSteps(target, t.steps) }); }} />
               </label>
             </div>
+            <StepsField target={t.target} steps={t.steps} onChange={(steps) => setTask(i, { steps })} />
             <div className="field-row">
               <label className="field"><span>Art</span>
                 <select className="admin-input" value={t.period} onChange={(ev) => setTask(i, { period: ev.target.value as PuzzlePeriod })}>
@@ -387,7 +389,7 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
         <button type="button" className="btn btn-small" disabled={p.tasks.length >= 12} onClick={() => {
           let n = p.tasks.length + 1;
           while (p.tasks.some((t) => t.id === `t${n}`)) n++;
-          setP({ tasks: [...p.tasks, { id: `t${n}`, title: '', description: '', metric: 'games', target: 3, fragments: 1, period: 'daily' }] });
+          setP({ tasks: [...p.tasks, { id: `t${n}`, title: '', description: '', metric: 'games', target: 3, fragments: 1, period: 'daily', steps: [] }] });
         }}>+ Aufgabe</button>
       </section>
 
@@ -439,5 +441,17 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
         )}
       </section>
     </div>
+  );
+}
+
+/** Further targets of a task as a list "25, 50" (each above the first target). */
+function StepsField({ target, steps, onChange }: { target: number; steps: number[]; onChange: (steps: number[]) => void }) {
+  const [text, setText] = useState(steps.join(', '));
+  useEffect(() => setText(steps.join(', ')), [steps.join(',')]);
+  return (
+    <label className="field grow"><span>Weitere Ziele (Staffel, z. B. 25, 50) – leer = nur ein Ziel</span>
+      <input className="admin-input" inputMode="numeric" value={text} placeholder={`${target * 2}, ${target * 5}`} onChange={(ev) => setText(ev.target.value)}
+        onBlur={() => { const next = cleanSteps(target, text.split(/[^0-9]+/).filter(Boolean)); onChange(next); setText(next.join(', ')); }} />
+    </label>
   );
 }

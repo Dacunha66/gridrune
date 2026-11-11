@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BUILTIN_EDITIONS, PuzzleCounters, currentStage, earnedClaim, newlyDone, puzzleStages, stageDone, totalPieces, equipEdition, grantPuzzleReward, missingPieces, parseEdition, parsePuzzle, puzzlePhase,
-  puzzleProblems, setEditions, taskKey, taskViews,
+  puzzleProblems, setEditions, taskKey, taskTitle, taskViews,
 } from '../src/game/puzzles';
 import { defaultSave, sanitize } from '../src/game/storage';
 import { questDay, questWeek } from '../src/game/quests';
@@ -120,5 +120,36 @@ describe('Puzzle-Events: Stufen (Selten → Episch → Legendär → Mystisch)',
     expect(grantPuzzleReward(defaultSave(), staged, all).editions.owned).toEqual(['ed01', 'ed02', 'ed03', 'ed04']);
     expect(earnedClaim(staged, all, counters(5), [], 's', now)).toBeNull();
     expect(currentStage(staged, all)).toBeNull();
+  });
+});
+
+describe('Puzzle-Events: gestaffelte Aufgaben', () => {
+  const staged = parsePuzzle('pz05', {
+    ...raw, pieces: 20,
+    tasks: [{ id: 'tweek', metric: 'wins', target: 10, fragments: 2, period: 'weekly', steps: [25, 50, 7, 'x', 25] }],
+  })!;
+  const c = (w: number): PuzzleCounters => ({ day: questDay(now), week: questWeek(now), daily: {}, weekly: { wins: w }, total: { wins: w } });
+
+  it('liest die Staffel sauber ein (aufsteigend, nur über dem ersten Ziel, ohne Doppelte)', () => {
+    expect(staged.tasks[0].steps).toEqual([25, 50]);
+    expect(parsePuzzle('pz06', raw)!.tasks[0].steps).toEqual([]);
+  });
+
+  it('10/10 gibt Fragmente, danach steht das nächste Ziel 10/25 da', () => {
+    const a = earnedClaim(staged, [], c(10), [], 's', now)!;
+    expect(a.keys).toEqual([taskKey(staged, staged.tasks[0], now)]);
+    expect(a.pieces.length).toBe(2);
+    const v = taskViews(staged, c(10), a.keys, now)[0];
+    expect(v).toMatchObject({ value: 10, target: 25, done: false, claimed: false, step: 2, steps: 3 });
+    expect(v.title).toBe(taskTitle(staged.tasks[0], 25));
+    // 25 erreicht: das zweite Ziel zahlt, nie das erste noch einmal.
+    const b = earnedClaim(staged, a.pieces, c(25), a.keys, 't', now)!;
+    expect(b.keys).toEqual([taskKey(staged, staged.tasks[0], now, 1)]);
+    expect(b.pieces.length).toBe(2);
+    // Mehrere Ziele auf einmal erreicht: alle zahlen.
+    expect(earnedClaim(staged, [], c(60), [], 'u', now)!.keys.length).toBe(3);
+    const all = [0, 1, 2].map((i) => taskKey(staged, staged.tasks[0], now, i));
+    expect(taskViews(staged, c(60), all, now)[0]).toMatchObject({ claimed: true, step: 3, target: 50 });
+    expect(earnedClaim(staged, [], c(60), all, 'v', now)).toBeNull();
   });
 });
