@@ -41,6 +41,8 @@ export interface EventView {
   tasks: { id: string; title: string; description: string; period: PuzzlePeriod; fragments: number; value: number; target: number; done: boolean; claimed: boolean }[];
   /** Pieces given with this request (for the animation). */
   gained: number[];
+  /** Runenschmiede: fragments that may still be made for the stage being collected (absent from older answers). */
+  forge?: { stage: number | null; left: number };
 }
 
 async function call(body: Record<string, unknown>): Promise<{ status: number; data: Record<string, unknown> | null } | null> {
@@ -110,4 +112,15 @@ export async function loadPuzzles(db: Db | null): Promise<PuzzleDef[] | null> {
 
 export async function savePuzzle(db: Db, p: PuzzleDef): Promise<void> {
   await db.collection(PUZZLES_COLLECTION).doc(p.id).set(puzzleToDoc(p));
+}
+
+/** Runenschmiede: one missing fragment of an event for essence; returns the updated event. */
+export async function forgeFragmentRemote(puzzleId: string): Promise<{ ok: true; event: EventView; cloud: CloudSave } | { ok: false; reason: string; cloud: CloudSave | null }> {
+  const r = await call({ action: 'forge-fragment', puzzleId });
+  const d = r?.data;
+  const cloud = d && typeof d.version === 'number' && d.save
+    ? { version: d.version, save: sanitize(d.save), campaign: sanitizeProgress(d.campaign as CampaignProgress) }
+    : null;
+  if (d?.ok === true && cloud) return { ok: true, event: d.event as EventView, cloud };
+  return { ok: false, reason: !d ? 'Keine Verbindung – zum Schmieden brauchst du kurz Internet.' : typeof d.reason === 'string' ? d.reason : 'Das hat nicht geklappt.', cloud };
 }

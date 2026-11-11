@@ -19,11 +19,12 @@ import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
 import { CARDS, getCard, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
-import { getDb, isAdmin, loadArenas, loadAvatars, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks, loadStoneConfig } from './game/cardStore';
+import { getDb, isAdmin, loadArenas, loadAvatars, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks, loadStoneConfig, loadForgeConfig } from './game/cardStore';
 import { setStoneConfig } from './game/stones';
-import { equipEdition, setEditions } from './game/puzzles';
-import { EventView, fetchEvents, loadEditions } from './game/puzzleApi';
-import { setEquippedEditions } from './game/editionArt';
+import { setForgeConfig } from './game/forge';
+import { equipEdition, setEditions, setPuzzles } from './game/puzzles';
+import { EventView, fetchEvents, loadEditions, loadPuzzles } from './game/puzzleApi';
+import { setEquippedEditions, setEquippedFrame } from './game/editionArt';
 import { Events } from './screens/Events';
 import { setPackLooks } from './game/shop';
 import { ACTIVE, Design, DesignState, setActiveDesigns } from './game/designs';
@@ -87,6 +88,7 @@ export function App() {
   const reducedMotion = save.settings.reducedMotion || prefersReducedMotion();
   // The card editions the player uses are shown on every own card (collection, deck, own duel cards).
   setEquippedEditions(save.editions.equipped);
+  setEquippedFrame(save.forge.frame);
 
   // Guests save in the browser; a signed-in player's save goes to the account (see useCloudSync below).
   const accountModeRef = useRef(false);
@@ -204,10 +206,13 @@ export function App() {
     let alive = true;
     (async () => {
       const db = await getDb();
-      const [records, settings, arenas, designs, designState, savedCampaign, savedRunes, shopLooks, savedAvatars, stoneCfg, savedEditions] = await Promise.all([
+      const [records, settings, arenas, designs, designState, savedCampaign, savedRunes, shopLooks, savedAvatars, stoneCfg, savedEditions, forgeCfg, savedPuzzles] = await Promise.all([
         loadCardRecords(db), loadGameSettings(db), loadArenas(db), loadDesigns(db), loadDesignState(db), loadCampaign(db), loadRunes(db),
-        loadShopLooks(db), loadAvatars(db), loadStoneConfig(db), loadEditions(db),
+        loadShopLooks(db), loadAvatars(db), loadStoneConfig(db), loadEditions(db), loadForgeConfig(db), loadPuzzles(db),
       ]);
+      if (alive && forgeCfg) setForgeConfig(forgeCfg);
+      // Events: the forge offers editions of events that have ended.
+      if (alive && savedPuzzles) setPuzzles(savedPuzzles);
       if (alive && stoneCfg) setStoneConfig(stoneCfg);
       if (alive && savedAvatars) setAvatars(savedAvatars);
       if (alive && savedEditions) setEditions(savedEditions);
@@ -443,7 +448,8 @@ export function App() {
         />
       )}
       {screen.name === 'collection' && (
-        <Collection save={save} onBack={toMenu} focus={screen.focus ?? null}
+        <Collection save={save} onBack={toMenu} focus={screen.focus ?? null} onChange={setSave}
+          server={cloud.accountMode ? { adopt: cloud.adoptServer } : null}
           onEdition={(cardId, editionId) => setSave((s) => equipEdition(s, cardId, editionId))} />
       )}
       {screen.name === 'events' && cloud.uid && (

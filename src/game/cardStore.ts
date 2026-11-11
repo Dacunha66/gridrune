@@ -13,6 +13,7 @@ import {
 import { RUNES_COLLECTION, RuneDef, parseRune, runeToDoc } from './runes';
 import { PackLook, SHOP_DOC, parseShopDoc, shopToDoc } from './shop';
 import { STONES_DOC, StoneConfig, parseStoneDoc, stonesToDoc } from './stones';
+import { FORGE_DOC, ForgeConfig, forgeToDoc, parseForgeDoc } from './forge';
 import { DESIGNS_COLLECTION, DESIGN_STATE_DOC, Design, DesignState, designToDoc, displaySize, parseDesign, parseDesignState } from './designs';
 
 export const CARDS_COLLECTION = 'cards';
@@ -300,6 +301,21 @@ export async function loadStoneConfig(db: Db | null): Promise<StoneConfig | null
 
 export async function saveStoneConfig(db: Db, c: StoneConfig): Promise<void> {
   await db.collection(SETTINGS_COLLECTION).doc(STONES_DOC).set(stonesToDoc(c));
+}
+
+/** Runenschmiede prices (settings/forge); null = none saved yet (the built-in prices apply). */
+export async function loadForgeConfig(db: Db | null): Promise<ForgeConfig | null> {
+  if (!db) return null;
+  try {
+    const snap = await db.collection(SETTINGS_COLLECTION).doc(FORGE_DOC).get();
+    return snap.exists ? parseForgeDoc(snap.data()) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveForgeConfig(db: Db, c: ForgeConfig): Promise<void> {
+  await db.collection(SETTINGS_COLLECTION).doc(FORGE_DOC).set(forgeToDoc(c));
 }
 
 /** Runes saved by the admin. null = no database (the four basic runes apply). */

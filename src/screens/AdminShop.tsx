@@ -2,7 +2,9 @@
 // changed here. The server reads the same document, so a new price is what buying really costs.
 import { Coin } from '../components/Coin';
 import { useEffect, useState } from 'react';
-import { Assets, Db, describeError, loadShopLooks, loadStoneConfig, saveShopLooks, saveStoneConfig } from '../game/cardStore';
+import { Assets, Db, describeError, loadForgeConfig, loadShopLooks, loadStoneConfig, saveForgeConfig, saveShopLooks, saveStoneConfig } from '../game/cardStore';
+import { ESSENCE_NAME, FORGE_FRAMES, ForgeConfig, forgeConfig, setForgeConfig } from '../game/forge';
+import { Essence } from './Forge';
 import { Stone } from '../components/Coin';
 import { StoneConfig, euro, setStoneConfig, stoneConfig } from '../game/stones';
 import { PACKS, PACK_NAME_MAX, PACK_PRICE_MAX, PACK_PRICE_MIN, PACK_TEXT_MAX, PackLook, packLooks, packPrice, packView, setPackLooks } from '../game/shop';
@@ -88,6 +90,7 @@ export function ShopAdminView({ db, assets, onToast }: { db: Db; assets: Assets 
         <button type="button" className="btn btn-primary btn-wide" disabled={!dirty || busy} onClick={save}>{busy ? 'Speichert …' : dirty ? 'Booster speichern' : 'Gespeichert ✓'}</button>
       </div>
       <StonesAdmin db={db} onToast={onToast} />
+      <ForgeAdmin db={db} onToast={onToast} />
     </div>
   );
 }
@@ -164,6 +167,86 @@ function StonesAdmin({ db, onToast }: { db: Db; onToast: (m: string) => void }) 
       ))}
       <div className="admin-actions">
         <button type="button" className="btn btn-primary btn-wide" disabled={!dirty || busy} onClick={save}>{busy ? 'Speichert …' : dirty ? 'Runensteine speichern' : 'Gespeichert ✓'}</button>
+      </div>
+    </section>
+  );
+}
+
+/** Runenschmiede: what a wished-for card, refining, a fragment, an edition and the frames cost (in essence). */
+function ForgeAdmin({ db, onToast }: { db: Db; onToast: (m: string) => void }) {
+  const [cfg, setCfg] = useState<ForgeConfig | null>(null);
+  const [saved, setSaved] = useState<ForgeConfig | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    loadForgeConfig(db).then((c) => {
+      if (!alive) return;
+      const start = c ?? forgeConfig();
+      setCfg(start);
+      setSaved(start);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [db]);
+  if (!cfg) return <p className="muted center">Runenschmiede wird geladen …</p>;
+  const dirty = JSON.stringify(cfg) !== JSON.stringify(saved);
+  const n = (v: string, min: number, max: number) => Math.min(max, Math.max(min, Math.round(Number(v) || min)));
+  const num = (label: string, value: number, min: number, max: number, onSet: (v: number) => void) => (
+    <label className="field">
+      <span>{label}</span>
+      <input className="admin-input num" type="number" inputMode="numeric" min={min} max={max} value={value} onChange={(e) => onSet(n(e.target.value, min, max))} />
+    </label>
+  );
+  const pick = (label: string, value: Rarity, onSet: (r: Rarity) => void) => (
+    <label className="field">
+      <span>{label}</span>
+      <select className="admin-input" value={value} onChange={(e) => onSet(e.target.value as Rarity)}>
+        {RARITIES.map((r) => <option key={r} value={r}>{ESSENCE_NAME[r]}</option>)}
+      </select>
+    </label>
+  );
+  async function save() {
+    setBusy(true);
+    try {
+      await saveForgeConfig(db, cfg!);
+      setSaved(cfg);
+      setForgeConfig(cfg!);
+      onToast('Runenschmiede gespeichert ✓ – gilt sofort, auch auf dem Server');
+    } catch (e) {
+      onToast(describeError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="admin-card stones-admin">
+      <h3><Essence rarity="mythic" /> Runenschmiede</h3>
+      <p className="muted small">Doppelte Karten werden zu Essenzen (eine pro Kopie, nach Seltenheit). Hier stellst du ein, was man damit schmieden kann und was es kostet.</p>
+      <h4>Wunschkarte (Essenz ihrer Seltenheit)</h4>
+      <div className="field-row wrap">
+        {RARITIES.map((r) => <span key={r}>{num(RARITY_LABEL[r], cfg.craft[r], 1, 999, (v) => setCfg({ ...cfg, craft: { ...cfg.craft, [r]: v } }))}</span>)}
+      </div>
+      <div className="field-row">
+        {num('Veredeln: so viele → 1 der nächsten Stufe', cfg.refine, 2, 20, (v) => setCfg({ ...cfg, refine: v }))}
+      </div>
+      <h4>Puzzle-Fragment (laufende Events)</h4>
+      <div className="field-row wrap">
+        {pick('Essenz', cfg.fragment.rarity, (r) => setCfg({ ...cfg, fragment: { ...cfg.fragment, rarity: r } }))}
+        {num('Anzahl', cfg.fragment.cost, 1, 999, (v) => setCfg({ ...cfg, fragment: { ...cfg.fragment, cost: v } }))}
+        {num('höchstens pro Stufe', cfg.fragment.perStage, 0, 20, (v) => setCfg({ ...cfg, fragment: { ...cfg.fragment, perStage: v } }))}
+      </div>
+      <h4>Edition aus beendeten Events</h4>
+      <div className="field-row wrap">
+        {pick('Essenz', cfg.edition.rarity, (r) => setCfg({ ...cfg, edition: { ...cfg.edition, rarity: r } }))}
+        {num('Anzahl', cfg.edition.cost, 1, 999, (v) => setCfg({ ...cfg, edition: { ...cfg.edition, cost: v } }))}
+      </div>
+      <h4>Kartenrahmen</h4>
+      <div className="field-row wrap">
+        {FORGE_FRAMES.map((f) => <span key={f.id}>{num(`${f.name} (${ESSENCE_NAME[f.rarity]})`, cfg.frames[f.id] ?? f.cost, 1, 999, (v) => setCfg({ ...cfg, frames: { ...cfg.frames, [f.id]: v } }))}</span>)}
+      </div>
+      <div className="admin-actions">
+        <button type="button" className="btn btn-primary btn-wide" disabled={!dirty || busy} onClick={save}>{busy ? 'Speichert …' : dirty ? 'Runenschmiede speichern' : 'Gespeichert ✓'}</button>
       </div>
     </section>
   );

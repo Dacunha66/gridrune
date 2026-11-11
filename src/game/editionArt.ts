@@ -34,3 +34,12 @@ export function equippedEdition(cardId: string): EditionDef | null {
   const e = findEdition(EQUIPPED[cardId]);
   return e && e.cardId === cardId ? e : null;
 }
+
+/** Runenschmiede frame shown on the player's own cards (null = none), set by the app from the save. */
+let FRAME: string | null = null;
+export function setEquippedFrame(id: string | null): void {
+  FRAME = id;
+}
+export function equippedFrame(): string | null {
+  return FRAME;
+}

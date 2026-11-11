@@ -15,6 +15,9 @@ import { deriveRng } from '../game/league';
 import { PackCard, SHOP_DOC, buyPack, buySkin, parseShopDoc, setPackLooks } from '../game/shop';
 import { STONES_DOC, buyCoins, buyOffer, claimFreeCoins, parseStoneDoc, setStoneConfig } from '../game/stones';
 import { SaveData, sanitize } from '../game/storage';
+import {
+  FORGE_DOC, buyFrame, craftCard, fragmentsLeft, craftEdition, forgeFragment, parseForgeDoc, refineEssence, meltCards, setForgeConfig,
+} from '../game/forge';
 import { validPvpHand } from '../game/pvp';
 import {
   AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, MissionLog, MissionTicket, checkAdventure, checkLeague, checkMission, leagueCpuRune,
@@ -66,6 +69,9 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
   // Runensteine: free coins, coin bundles and card prices set by the admin (settings/stones).
   const stonesRow = rows.find((r) => r.collection === 'settings' && r.id === STONES_DOC);
   setStoneConfig(parseStoneDoc(stonesRow?.data));
+  // Runenschmiede: prices set by the admin (settings/forge).
+  const forgeRow = rows.find((r) => r.collection === 'settings' && r.id === FORGE_DOC);
+  setForgeConfig(parseForgeDoc(forgeRow?.data));
   const questsRow = rows.find((r) => r.collection === QUESTS_COLLECTION && r.id === QUESTS_DOC);
   QUEST_CONFIG = questsRow ? parseQuestConfig(questsRow.data) : structuredClone(DEFAULT_QUESTS);
   setArenas(of<Arena>('arenas', parseArena));
@@ -117,6 +123,7 @@ export function puzzleView(p: PuzzleDef, have: number[], completedAt: string | n
       };
     }),
     total: totalPieces(p),
+    forge: (({ stage, left }) => ({ stage: stage?.index ?? null, left }))(fragmentsLeft(p, have, claimed, now)),
     have, completedAt,
     tasks: taskViews(p, counters, claimed, now).map((v) => ({
       id: v.task.id, title: v.title, description: v.task.description, period: v.task.period, fragments: v.task.fragments,
@@ -389,6 +396,47 @@ export function buyCoinsServer(saveRaw: unknown, bundleId: unknown): { ok: true;
 export function buyOfferServer(saveRaw: unknown, player: string, cardId: unknown, now: Date = new Date()): { ok: true; save: SaveData; cardId: string } | { ok: false; error: string } {
   const r = buyOffer(sanitize(saveRaw), player, cardId, now);
   return r.ok ? { ok: true, save: r.save, cardId: r.cardId } : { ok: false, error: r.reason };
+}
+
+// ---------- Runenschmiede ----------
+
+export type ForgeAnswer = { ok: true; save: SaveData; result: Record<string, unknown> } | { ok: false; error: string };
+
+/** One action of the Runenschmiede on the stored save: melt, refine, craft (card), edition, frame. */
+export function forgeServer(saveRaw: unknown, action: unknown, body: Record<string, unknown>, now: Date = new Date()): ForgeAnswer {
+  const save = sanitize(saveRaw);
+  switch (action) {
+    case 'forge-melt': {
+      const r = meltCards(save, body.cardIds);
+      return r.ok ? { ok: true, save: r.save, result: { ok: true, gained: r.gained } } : { ok: false, error: r.reason };
+    }
+    case 'forge-refine': {
+      const r = refineEssence(save, body.rarity, body.times);
+      return r.ok ? { ok: true, save: r.save, result: { ok: true, to: r.to, amount: r.amount } } : { ok: false, error: r.reason };
+    }
+    case 'forge-craft': {
+      const r = craftCard(save, body.cardId);
+      return r.ok ? { ok: true, save: r.save, result: { ok: true, cardId: r.cardId } } : { ok: false, error: r.reason };
+    }
+    case 'forge-edition': {
+      const r = craftEdition(save, body.editionId, now);
+      return r.ok ? { ok: true, save: r.save, result: { ok: true, editionId: r.editionId } } : { ok: false, error: r.reason };
+    }
+    case 'forge-frame': {
+      const r = buyFrame(save, body.frameId);
+      return r.ok ? { ok: true, save: r.save, result: { ok: true, frameId: r.frameId } } : { ok: false, error: r.reason };
+    }
+  }
+  return { ok: false, error: 'Unbekannte Aktion.' };
+}
+
+/** A missing puzzle fragment for essence (running events, limited per stage). */
+export function forgeFragmentServer(saveRaw: unknown, puzzleId: unknown, have: number[], claimed: string[], seed: string, now: Date = new Date()):
+  { ok: true; key: string; piece: number; total: number; save: SaveData } | { ok: false; error: string } {
+  const p = allPuzzles().find((x) => x.id === puzzleId);
+  if (!p) return { ok: false, error: 'Dieses Event gibt es nicht.' };
+  const r = forgeFragment(sanitize(saveRaw), p, have, claimed, seed, now);
+  return r.ok ? r : { ok: false, error: r.reason };
 }
 
 // ---------- Online duels (PvP) ----------

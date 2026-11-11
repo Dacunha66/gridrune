@@ -179,3 +179,13 @@ export function writePending(uid: string, list: PendingResult[]): void {
     // Private mode: the result can only be sent while the page is open.
   }
 }
+
+// ---------- Runenschmiede (server function "game") ----------
+
+/** One action of the Runenschmiede on the server: forge-melt, forge-refine, forge-craft, forge-edition, forge-frame. */
+export async function forgeRemote(action: string, args: Record<string, unknown> = {}): Promise<ShopReply<{ result: Record<string, unknown> }>> {
+  const r = await call({ ...args, action }, 'game');
+  const cloud = r?.data ? cloudOf(r.data) : null;
+  if (r?.data?.ok === true && cloud) return { ok: true, cloud, result: r.data };
+  return { ok: false, reason: shopError(r?.data), cloud };
+}
