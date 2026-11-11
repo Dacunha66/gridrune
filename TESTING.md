@@ -674,3 +674,4 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 - Automatische Tests: gleiche Seltenheiten, keine eigene/doppelte Karte, Normal schwächer als Schwer, alte Tickets unverändert.
 - Server-Funktion adventure auf neue Engine; Rangliste unverändert (eigene Regel bleibt).
 - Münzen: Normal 65/25/12, Schwer 150/60/25 (Sieg/Unentschieden/Niederlage); Anzeige im Menü, Ergebnis und Regeln liest dieselbe Tabelle.
+- Vom Spieler bestätigt (echtes Gerät): stärkeres KI-Deck und neue Münzbeträge funktionieren.
