@@ -6,6 +6,8 @@ const RUNE_ID = /^rn[0-9]{2,4}$/;
 const SKIN_ID = /^[a-z0-9_-]{1,30}$/;
 const MISSION_ID = /^m[0-9]{3,5}$/;
 const EDITION_ID = /^ed[0-9]{2,4}$/;
+const FRAME_ID = /^fr-[a-z]{2,20}$/;
+const ESSENCES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
 /** Coins one sync may add: the biggest single reward plus pack refunds, plus some time allowance (offline play). */
 export const COIN_STEP = 2500;
 export const COINS_PER_MINUTE = 300;
@@ -15,6 +17,26 @@ export const START_COINS_MAX = 100000;
 const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.isArray(v);
 const nat = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
 const ids = (v: unknown, re: RegExp, max: number) => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && re.test(x)))].slice(0, max) : []);
+
+/** Runenschmiede part of the save: essences, duplicates waiting to be melted, frames made and the one shown. */
+function cleanForge(raw: unknown): Obj {
+  const f = isObj(raw) ? raw : {};
+  const es = isObj(f.essence) ? f.essence : {};
+  const melt: Record<string, number> = {};
+  if (isObj(f.melt)) {
+    for (const [id, n] of Object.entries(f.melt).slice(0, 1000)) {
+      const k = Math.min(nat(n), 999);
+      if (CARD_ID.test(id) && k > 0) melt[id] = k;
+    }
+  }
+  const frames = ids(f.frames, FRAME_ID, 50);
+  return {
+    essence: Object.fromEntries(ESSENCES.map((r) => [r, Math.min(nat(es[r]), 1_000_000)])),
+    melt,
+    frames,
+    frame: typeof f.frame === 'string' && frames.includes(f.frame) ? f.frame : null,
+  };
+}
 
 /** Same shape as the game's save, everything checked (unknown fields dropped). */
 export function cleanSave(raw: unknown): Obj {
@@ -53,6 +75,7 @@ export function cleanSave(raw: unknown): Obj {
       offerBought: ids(sh.offerBought, CARD_ID, 20),
     },
     editions: { owned: edOwned, equipped: edEquipped },
+    forge: cleanForge(r.forge),
   };
 }
 
@@ -93,7 +116,7 @@ export function implausible(oldS: Obj, newS: Obj, oldC: Obj, newC: Obj, minutes:
 
 /**
  * Phase 4d: coins, Runensteine, shop timers, card editions owned, cards, skins owned, runes owned, statistics and the campaign only change through the checked
- * server functions (adventure, game). From the game's own save only harmless choices are taken over: deck,
+ * server functions (adventure, game; the Runenschmiede too). From the game's own save only harmless choices are taken over: deck,
  * league deck, settings, equipped skins and rune – and only with things the stored save owns.
  */
 export function mergeChoices(stored: Obj, incoming: Obj): Obj {
@@ -118,5 +141,11 @@ export function mergeChoices(stored: Obj, incoming: Obj): Obj {
       equipped: Object.fromEntries(Object.entries((n.editions as { equipped: Record<string, string> }).equipped)
         .filter(([, e]) => (s.editions as { owned: string[] }).owned.includes(e))),
     },
+    // Runenschmiede: essences, melting pot and frames only through the server; the frame shown is the player's choice.
+    forge: (() => {
+      const f = s.forge as { frames: string[] } & Obj;
+      const want = (n.forge as { frame: string | null }).frame;
+      return { ...f, frame: want && f.frames.includes(want) ? want : null };
+    })(),
   };
 }

@@ -83,7 +83,7 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
         <p><b>Runensteine</b> (mit Konto) – die zweite Währung. Du verdienst sie mit Wochenquests und dauerhaften Erfolgen, in der Kampagne und im Raid. Im Shop tauschst du sie gegen Münzen oder kaufst die <b>Karten des Tages</b>. Außerdem gibt es im Shop alle 12 Stunden <b>Gratis-Münzen</b>.</p>
 
         <h2>Shop</h2>
-        <p>Im Shop kaufst du mit Münzen <b>Booster-Packs</b> (3 Karten, neue Karten werden sofort freigeschaltet, doppelte in Münzen umgetauscht) und <b>Skins</b>, die nur das Aussehen ändern.</p>
+        <p>Im Shop kaufst du mit Münzen <b>Booster-Packs</b> (3 Karten, neue Karten werden sofort freigeschaltet, doppelte kommen in den Schmelztiegel der Runenschmiede) und <b>Skins</b>, die nur das Aussehen ändern.</p>
 
         <h2>Symbole auf Karten</h2>
         <p><b style={{ color: 'var(--accent)' }}>★</b> in der Ecke = Entdeckung (gold leuchtend: neue Karte) · <b style={{ color: '#22d3ee' }}>◆</b> = neutrale Entdeckung in der Rangliste · orange Zahl = geschwächt (Stolperstein) · Zahnrad oben links = Klasse · Edelstein = Seltenheit · goldenes Symbol unten rechts = Spezialeffekt.</p>

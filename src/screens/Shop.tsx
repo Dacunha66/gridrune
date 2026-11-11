@@ -10,7 +10,7 @@ import { createRng } from '../game/rng';
 import { buyCoinsRemote, buyOfferRemote, buyPackRemote, buySkinRemote, freeCoinsRemote } from '../game/adventureApi';
 import { claimFreeCoins, dailyOffers, euro, freeCoinsAt, isOfferBought, offerPrice, stoneConfig } from '../game/stones';
 import type { CloudSave } from '../game/cloudSave';
-import { DUPLICATE_REFUND, PACKS, PackCard, PackDef, PackLook, buyPack, buySkin, equipSkin, packPrice, packView } from '../game/shop';
+import { PACKS, PackCard, PackDef, PackLook, buyPack, buySkin, equipSkin, packPrice, packView } from '../game/shop';
 import { CampaignImage } from './Campaign';
 import { SKINS, SkinDef, getSkin } from '../game/skins';
 import { SaveData } from '../game/storage';
@@ -294,7 +294,7 @@ export function Shop({ save, onChange, onBack, server = null, top, player = null
 
         {tab === 'packs' && (
           <div className="shop-list">
-            {complete && <p className="shop-note">Du hast alle Karten! Doppelte Karten werden in Münzen umgetauscht.</p>}
+            {complete && <p className="shop-note">Du hast alle Karten! Doppelte Karten kommen in den Schmelztiegel der Runenschmiede.</p>}
             <div className="pack-grid">
               {PACKS.map((pack) => {
                 const view = packView(pack);
@@ -325,10 +325,7 @@ export function Shop({ save, onChange, onBack, server = null, top, player = null
               })}
             </div>
             <div className="shop-note">
-              <b>Doppelte Karten</b> werden in Münzen umgetauscht:{' '}
-              {(['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as Rarity[]).map((r, i) => (
-                <span key={r}>{i > 0 && ' · '}<span className={`rarity-text rarity-${r}`}>{RARITY_LABEL[r]}</span> <Coin /> {DUPLICATE_REFUND[r]}</span>
-              ))}
+              <b>Doppelte Karten</b> kommen in den Schmelztiegel der <b>Runenschmiede</b> (Sammlung). Dort werden sie zu Essenzen – damit schmiedest du deine Wunschkarte.
             </div>
           </div>
         )}
@@ -407,7 +404,7 @@ export function Shop({ save, onChange, onBack, server = null, top, player = null
                         </span>
                         <span className="flip-face flip-front"><Card id={c.cardId} size="md" showName /></span>
                       </span>
-                      <span className={`reveal-tag ${c.isNew ? 'new' : ''}`} style={{ visibility: up ? 'visible' : 'hidden' }}>{c.isNew ? 'NEU!' : <>Doppelt +<Coin /> {c.refund}</>}</span>
+                      <span className={`reveal-tag ${c.isNew ? 'new' : ''}`} style={{ visibility: up ? 'visible' : 'hidden' }}>{c.isNew ? 'NEU!' : c.refund ? <>Doppelt +<Coin /> {c.refund}</> : 'Doppelt → Schmiede'}</span>
                     </button>
                   );
                 })}

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { CARDS, RARITY_ORDER, getCard } from '../src/game/cards';
 import { createRng } from '../src/game/rng';
-import { DUPLICATE_REFUND, PACKS, buyPack, buySkin, equipSkin, packPrice, parseShopDoc, rollPack, setPackLooks } from '../src/game/shop';
+import { PACKS, buyPack, buySkin, equipSkin, packPrice, parseShopDoc, rollPack, setPackLooks } from '../src/game/shop';
 import { DEFAULT_SKINS } from '../src/game/skins';
 import { KeyValueStore, defaultSave, loadSave, writeSave } from '../src/game/storage';
 
@@ -26,17 +26,17 @@ describe('Kartenshop – Booster-Packs', () => {
     }
   });
 
-  it('Kauf zieht Münzen ab, schaltet neue Karten frei und erstattet Doppelte', () => {
+  it('Kauf zieht Münzen ab, schaltet neue Karten frei; Doppelte kommen in den Schmelztiegel', () => {
     const save = rich(1000);
     const r = buyPack(save, 'abenteurer', createRng(11));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    const refund = r.cards.reduce((s, c) => s + c.refund, 0);
-    expect(r.save.coins).toBe(1000 - 150 + refund);
+    expect(r.save.coins).toBe(1000 - 150);
     for (const c of r.cards) {
       expect(r.save.unlocked).toContain(c.cardId);
       expect(c.isNew).toBe(!save.unlocked.includes(c.cardId));
-      expect(c.refund).toBe(c.isNew ? 0 : DUPLICATE_REFUND[getCard(c.cardId).rarity]);
+      expect(c.refund).toBe(0);
+      if (!c.isNew) expect(r.save.forge.melt[c.cardId]).toBe(1);
     }
     expect(new Set(r.save.unlocked).size).toBe(r.save.unlocked.length);
   });
@@ -126,7 +126,7 @@ describe('Booster-Preis aus dem Admin', () => {
     expect(buyPack(save, pack.id, createRng(1)).ok).toBe(false);
     const r = buyPack({ ...save, coins: 300 }, pack.id, createRng(1));
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.save.coins).toBe(r.cards.reduce((n, c) => n + c.refund, 0));
+    if (r.ok) expect(r.save.coins).toBe(0);
   });
   it('unsinnige Preise werden begrenzt', () => {
     expect(parseShopDoc({ packs: { [PACKS[0].id]: { price: 1 } } })[PACKS[0].id].price).toBe(10);

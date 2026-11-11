@@ -264,7 +264,7 @@ function GrantedLine({ g }: { g: GrantedReward }) {
     g.coins ? `🪙 ${g.coins}` : '',
     g.stones ? `${g.stones} Runensteine` : '',
     ...g.cards.map((id) => `🃏 ${getCard(id).name} (neu)`),
-    g.duplicates.length ? `${g.duplicates.length} doppelte Karte${g.duplicates.length === 1 ? '' : 'n'} → Münzen` : '',
+    g.duplicates.length ? `${g.duplicates.length} doppelte Karte${g.duplicates.length === 1 ? '' : 'n'} → Runenschmiede` : '',
   ].filter(Boolean);
   return <span className="reward-line">{g.source}: <CoinText text={parts.join(' · ') || '–'} /></span>;
 }
@@ -651,7 +651,7 @@ function MissionResultView({ mission, opponent, world, content, progress, previe
     ...(view.status === 'paid'
       ? [
         ...((view.granted ?? []).some((g) => g.coins > 0)
-          ? [{ kind: 'coins', amount: (view.granted ?? []).reduce((n, g) => n + g.coins, 0), sources: (view.granted ?? []).filter((g) => g.coins > 0).map((g) => `${g.source}: 🪙 ${g.coins}${g.duplicates.length ? ' (inkl. doppelte Karten)' : ''}`) } as RevealItem]
+          ? [{ kind: 'coins', amount: (view.granted ?? []).reduce((n, g) => n + g.coins, 0), sources: (view.granted ?? []).filter((g) => g.coins > 0).map((g) => `${g.source}: 🪙 ${g.coins}`) } as RevealItem]
           : []),
         ...((view.granted ?? []).some((g) => (g.stones ?? 0) > 0)
           ? [{ kind: 'stones', amount: (view.granted ?? []).reduce((n, g) => n + (g.stones ?? 0), 0), sources: (view.granted ?? []).filter((g) => (g.stones ?? 0) > 0).map((g) => `${g.source}: ${g.stones} Runensteine`) } as RevealItem]

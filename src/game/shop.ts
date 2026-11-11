@@ -1,8 +1,9 @@
 // Card shop: booster packs and skins, paid with coins earned in duels.
-import { CARDS, Rarity, getCard, pickByRarity } from './cards';
+import { CARDS, Rarity, pickByRarity } from './cards';
 import { Rng } from './rng';
 import { SkinKind, getSkin, isSkinId } from './skins';
 import { SaveData } from './storage';
+import { addDuplicate } from './forge';
 import { ImageRef, parseImage } from './campaign';
 
 export interface PackDef {
@@ -28,12 +29,10 @@ export const PACKS: PackDef[] = [
   },
 ];
 
-/** Coins returned for a card you already own. */
-export const DUPLICATE_REFUND: Record<Rarity, number> = { common: 10, uncommon: 15, rare: 25, epic: 60, legendary: 150, mythic: 400 };
-
 export interface PackCard {
   cardId: string;
   isNew: boolean;
+  /** Coins for a duplicate – always 0 since the Runenschmiede (duplicates go into the melting pot); kept for old answers. */
   refund: number;
 }
 
@@ -62,19 +61,12 @@ export function buyPack(save: SaveData, packId: string, rng: Rng): ShopResult<{ 
   const cards: PackCard[] = rollPack(pack, rng).map((cardId) => {
     const isNew = !owned.has(cardId);
     owned.add(cardId);
-    const rarity = getCard(cardId).rarity;
-    return { cardId, isNew, refund: isNew ? 0 : DUPLICATE_REFUND[rarity] };
+    return { cardId, isNew, refund: 0 };
   });
-  const refund = cards.reduce((sum, c) => sum + c.refund, 0);
-  return {
-    ok: true,
-    cards,
-    save: {
-      ...save,
-      coins: save.coins - price + refund,
-      unlocked: [...save.unlocked, ...cards.filter((c) => c.isNew).map((c) => c.cardId)],
-    },
-  };
+  // Runenschmiede: a card already owned goes into the melting pot.
+  let next: SaveData = { ...save, coins: save.coins - price, unlocked: [...save.unlocked, ...cards.filter((c) => c.isNew).map((c) => c.cardId)] };
+  for (const c of cards) if (!c.isNew) next = addDuplicate(next, c.cardId);
+  return { ok: true, cards, save: next };
 }
 
 export function buySkin(save: SaveData, skinId: string): ShopResult {

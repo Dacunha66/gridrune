@@ -5,7 +5,8 @@
 import { CampaignContent, Reward, STARS_PER_MISSION } from './campaign';
 import { CampaignProgress, missionDone, starSlots, worldStars } from './campaignProgress';
 import { getCard, isCardId } from './cards';
-import { DUPLICATE_REFUND, PACKS, rollPack } from './shop';
+import { addDuplicate } from './forge';
+import { PACKS, rollPack } from './shop';
 import { Rng } from './rng';
 import { SaveData } from './storage';
 
@@ -25,7 +26,7 @@ export interface GrantedReward {
   stones?: number;
   /** New cards (unlocked). */
   cards: string[];
-  /** Cards already owned – turned into coins (included in `coins`). */
+  /** Cards already owned – put into the melting pot of the Runenschmiede. */
   duplicates: string[];
 }
 
@@ -59,18 +60,17 @@ export function payRewards(save: SaveData, progress: CampaignProgress, owed: Owe
   return { save: r.save, progress: { ...progress, paid }, granted: r.granted };
 }
 
-/** Adds rewards to the save: coins, cards (already owned → coins), booster packs opened with `rng`. */
+/** Adds rewards to the save: coins, cards (already owned → melting pot), booster packs opened with `rng`. */
 export function grantRewards(save: SaveData, owed: OwedReward[], rng: Rng): { save: SaveData; granted: GrantedReward[] } {
   let coins = save.coins;
+  let forgeSave = save;
   let stones = save.stones;
   const unlocked = [...save.unlocked];
   const granted: GrantedReward[] = [];
   const give = (cardId: string, g: GrantedReward) => {
     if (!isCardId(cardId)) return;
     if (unlocked.includes(cardId)) {
-      const refund = DUPLICATE_REFUND[getCard(cardId).rarity];
-      coins += refund;
-      g.coins += refund;
+      forgeSave = addDuplicate(forgeSave, cardId);
       g.duplicates.push(cardId);
     } else {
       unlocked.push(cardId);
@@ -93,7 +93,7 @@ export function grantRewards(save: SaveData, owed: OwedReward[], rng: Rng): { sa
     }
     granted.push(g);
   }
-  return { save: { ...save, coins, stones, unlocked }, granted };
+  return { save: { ...save, coins, stones, unlocked, forge: forgeSave.forge }, granted };
 }
 
 /** Reward types that are really paid out (the others are previews until they exist in the game). */

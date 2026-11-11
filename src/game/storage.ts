@@ -1,6 +1,7 @@
 // Progress is stored only in this browser (localStorage) – no account, no cloud backup.
 import { DECK_SIZE, STARTER_DECK, STARTING_UNLOCKED, isPlausibleCardId } from './cards';
 import { DEFAULT_SKINS, getSkin, isSkinId } from './skins';
+import { ForgeState, emptyForge, sanitizeForge } from './forgeState';
 
 export interface SaveData {
   version: 1;
@@ -21,6 +22,8 @@ export interface SaveData {
   shop: ShopState;
   /** Card editions (Puzzle-Events): owned editions and the one used per card (cardId → editionId). */
   editions: { owned: string[]; equipped: Record<string, string> };
+  /** Runenschmiede: essences, duplicates waiting to be melted, frames (only the server changes it for accounts). */
+  forge: ForgeState;
 }
 
 export interface ShopState {
@@ -51,6 +54,7 @@ export function defaultSave(): SaveData {
     stones: 0,
     shop: { freeAt: null, offerDay: '', offerBought: [] },
     editions: { owned: [], equipped: {} },
+    forge: emptyForge(),
   };
 }
 
@@ -97,6 +101,7 @@ export function sanitize(raw: unknown): SaveData {
     stones: Math.min(num(r.stones), 10_000_000),
     shop: sanitizeShop(r.shop),
     editions: sanitizeEditions(r.editions),
+    forge: sanitizeForge(r.forge),
   };
 }
 
