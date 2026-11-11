@@ -6,7 +6,7 @@
 // "forge-fragment": Runenschmiede – one missing fragment of the stage being collected, for essence (limited per stage).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { forgeFragmentServer, loadContent, puzzleClaimServer, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@3439c1ac0b806edc745ebdc10f87dc4af1a8c3ee/public/server/engine-d57bdb5e04bf.js';
+import { forgeFragmentServer, loadContent, puzzleClaimServer, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@6711886e2689abe11b8c650dd2cbc410ab4f9771/public/server/engine-7e5d69d03d8f.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
