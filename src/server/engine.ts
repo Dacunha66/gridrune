@@ -29,6 +29,7 @@ import { KRISTALL_CELLS, Outcome, Side } from '../game/battle';
 import { PlayedDuel } from '../game/verify';
 import { duelStats } from '../game/campaignGoals';
 import { RaidCheck } from '../game/raid';
+import { LOGIN_DOC, LoginState, loginClaim, loginConfig, loginView, parseLoginConfig, parseLoginState, setLoginConfig } from '../game/loginCalendar';
 import {
   QUESTS_COLLECTION, QUESTS_DOC, QuestConfig, QuestEvent, QuestState, Titles, claimQuests, eventDelta, parseQuestConfig, parseQuestState, questBoard,
   questContext, questDay, questWeek, DEFAULT_QUESTS, BIG_WIN_FIELDS,
@@ -72,6 +73,9 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
   // Runenschmiede: prices set by the admin (settings/forge).
   const forgeRow = rows.find((r) => r.collection === 'settings' && r.id === FORGE_DOC);
   setForgeConfig(parseForgeDoc(forgeRow?.data));
+  // Login-Kalender: the 7 rewards and on/off set by the admin (settings/login).
+  const loginRow = rows.find((r) => r.collection === 'settings' && r.id === LOGIN_DOC);
+  setLoginConfig(parseLoginConfig(loginRow?.data));
   const questsRow = rows.find((r) => r.collection === QUESTS_COLLECTION && r.id === QUESTS_DOC);
   QUEST_CONFIG = questsRow ? parseQuestConfig(questsRow.data) : structuredClone(DEFAULT_QUESTS);
   setArenas(of<Arena>('arenas', parseArena));
@@ -487,6 +491,23 @@ export function payRaidRewards(saveRaw: unknown, config: RaidConfig, stats: { to
 export function raidOwedServer(config: RaidConfig, stats: { totalDamage: number; attacks: number }, currentHp: number, claimed: string[]):
   { key: string; title: string; reward: CampaignReward }[] {
   return raidOwed(config, stats, currentHp, claimed).filter((o) => isPayable(o.reward)).map((o) => ({ key: o.key, title: o.source, reward: o.reward }));
+}
+
+// ---------- Login-Kalender ----------
+
+/** The calendar for a player (stored state from the table login_calendar). */
+export function loginStatusServer(stateRaw: unknown, now: Date = new Date()) {
+  return loginView(parseLoginState(stateRaw), loginConfig(), now);
+}
+
+/** Collects today's field: new save (packs opened with the seed), what was paid, the new state; null = nothing today. */
+export function loginClaimServer(saveRaw: unknown, stateRaw: unknown, seed: string, now: Date = new Date()):
+  { save: SaveData; granted: GrantedReward; state: LoginState; day: number; before: number } | null {
+  const before = parseLoginState(stateRaw);
+  const c = loginClaim(before, loginConfig(), now);
+  if (!c || !isPayable(c.reward)) return null;
+  const r = grantRewards(sanitize(saveRaw), [{ key: `login:${c.state.lastDay}`, reward: c.reward, source: `Login-Kalender – Tag ${c.day}` }], deriveRng(seed, 'login'));
+  return { save: r.save, granted: r.granted[0], state: c.state, day: c.day, before: before.claimed };
 }
 
 // ---------- Postfach ----------

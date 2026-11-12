@@ -26,7 +26,7 @@ const day = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: '2
 const daysLeft = (iso: string) => Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / 86400_000));
 
 /** Cards from collected packs, turned over one by one like in the shop. */
-function PackReveal({ cards, cardSkin, onClose }: { cards: { cardId: string; isNew: boolean }[]; cardSkin: string; onClose: () => void }) {
+export function PackReveal({ cards, cardSkin, onClose }: { cards: { cardId: string; isNew: boolean }[]; cardSkin: string; onClose: () => void }) {
   const [up, setUp] = useState<boolean[]>(cards.map(() => false));
   const back = getSkin(cardSkin).colors;
   const all = up.every(Boolean);

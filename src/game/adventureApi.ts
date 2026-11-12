@@ -11,6 +11,7 @@ import { Reward } from './rewards';
 import { Outcome, Side } from './battle';
 import { sanitize } from './storage';
 import type { AiLevel } from './ai';
+import type { LoginView } from './loginCalendar';
 
 export type StartResult = { kind: 'ticket'; ticket: AdventureTicket } | { kind: 'offline' } | { kind: 'error'; error: string };
 export type FinishResult =
@@ -188,4 +189,19 @@ export async function forgeRemote(action: string, args: Record<string, unknown> 
   const cloud = r?.data ? cloudOf(r.data) : null;
   if (r?.data?.ok === true && cloud) return { ok: true, cloud, result: r.data };
   return { ok: false, reason: shopError(r?.data), cloud };
+}
+
+// ---------- Login-Kalender (server function "game") ----------
+
+export async function loginStatusRemote(): Promise<LoginView | null> {
+  const r = await call({ action: 'login-status' }, 'game');
+  return r?.data?.ok === true ? (r.data.calendar as LoginView) : null;
+}
+
+export async function loginClaimRemote(): Promise<{ ok: true; cloud: CloudSave; granted: GrantedReward; calendar: LoginView } | { ok: false; reason: string; cloud: CloudSave | null; calendar: LoginView | null }> {
+  const r = await call({ action: 'login-claim' }, 'game');
+  const cloud = r?.data ? cloudOf(r.data) : null;
+  const calendar = (r?.data?.calendar as LoginView | undefined) ?? null;
+  if (r?.data?.ok === true && cloud && calendar) return { ok: true, cloud, granted: r.data.granted as GrantedReward, calendar };
+  return { ok: false, reason: !r?.data ? 'Keine Verbindung – zum Abholen brauchst du kurz Internet.' : typeof r.data.reason === 'string' ? r.data.reason : 'Abholen hat nicht geklappt. Bitte noch einmal versuchen.', cloud, calendar };
 }

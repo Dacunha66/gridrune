@@ -27,6 +27,8 @@ import { Community } from './screens/Community';
 import { Privacy } from './screens/Privacy';
 import { Inbox } from './screens/Inbox';
 import { inboxList, openCount } from './game/inboxApi';
+import { LoginCalendar } from './components/LoginCalendar';
+import type { LoginView } from './game/loginCalendar';
 import { PRIVACY_DOC, parsePrivacy, setPrivacyInfo } from './game/privacy';
 import { Header } from './screens/Header';
 import { equipEdition, setEditions, setPuzzles } from './game/puzzles';
@@ -52,11 +54,11 @@ import { AccountPage, CloudGate, NewPassword, Welcome } from './screens/Account'
 import { useCloudSync } from './game/useCloudSync';
 import { Quests } from './screens/Quests';
 import { questOverview } from './game/questApi';
-import { QuestItem, claimable, rewardText } from './game/quests';
+import { QuestItem, claimable, questDay, rewardText } from './game/quests';
 import { NextStep } from './screens/Menu';
 import { nextMission } from './game/campaignProgress';
 import {
-  claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, readPending, startAdventure, writePending,
+  claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, loginStatusRemote, readPending, startAdventure, writePending,
 } from './game/adventureApi';
 import { grantedText } from './game/campaignRewards';
 import { AdventureLog, AdventureTicket, handPicks } from './game/verify';
@@ -170,6 +172,29 @@ export function App() {
   const [questDaily, setQuestDaily] = useState<QuestItem | null>(null);
   /** Puzzle-Events for the start screen (the running one with the most to do), looked up when the menu opens. */
   const [eventCard, setEventCard] = useState<EventView | null>(null);
+  // Login-Kalender: looked up when the menu opens; opens by itself once a day while today's field waits.
+  const [loginCal, setLoginCal] = useState<LoginView | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  useEffect(() => {
+    if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
+    let alive = true;
+    loginStatusRemote().then((v) => {
+      if (!alive || !v) return;
+      setLoginCal(v);
+      if (!v.canClaim) return;
+      const key = `gridrune/login-shown/${cloud.uid}`;
+      try {
+        if (localStorage.getItem(key) === questDay()) return;
+        localStorage.setItem(key, questDay());
+      } catch {
+        // Without storage it simply opens every time the menu is shown.
+      }
+      setLoginOpen(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [screen.name, cloud.uid, cloud.phase]);
   // Postfach: how many items wait (number on the envelope), looked up when the menu opens.
   const [inboxCount, setInboxCount] = useState(0);
   useEffect(() => {
@@ -413,6 +438,7 @@ export function App() {
   {
     const next = nextMission(CAMPAIGN, campaignProgress);
     const firstTime = save.stats.wins + save.stats.draws + save.stats.losses === 0;
+    if (loginCal?.canClaim && cloud.uid) nextSteps.push({ icon: 'gift', title: `Login-Bonus: Tag ${loginCal.index + 1}`, sub: 'Login-Kalender – jetzt abholen', onClick: () => setLoginOpen(true) });
     if (firstTime) nextSteps.push({ icon: 'run', title: 'Dein erstes Spiel', sub: 'Einfaches Spiel auf „Leicht“ – lerne die Regeln kennen', onClick: () => void startRun('easy') });
     if (next) nextSteps.push({ icon: 'map', title: next.number === 1 && next.world.order <= 1 ? 'Kampagne beginnen' : 'Kampagne fortsetzen', sub: `${next.world.name} · ${next.mission.name}`, onClick: () => setScreen({ name: 'campaign' }) });
     if (questsReady > 0) nextSteps.push({ icon: 'gift', title: questsReady === 1 ? '1 Belohnung bereit' : `${questsReady} Belohnungen bereit`, sub: 'Erfolge – jetzt abholen', onClick: () => setScreen({ name: 'quests' }) });
@@ -425,6 +451,9 @@ export function App() {
     <PageArt design={pageDesign} />
     <SymbolTips />
     <div className={`app ${screen.name === 'admin' ? 'app-wide' : ''} ${pageDesign ? 'has-page-art' : ''}`} style={skinStyle(getSkin(save.skins.card).colors)}>
+      {loginOpen && loginCal && screen.name === 'menu' && (
+        <LoginCalendar view={loginCal} onView={setLoginCal} onClose={() => setLoginOpen(false)} onAdopt={cloud.adoptServer} reducedMotion={reducedMotion} cardSkin={save.skins.card} />
+      )}
       {account?.kind === 'recovery' && <NewPassword onDone={() => setAccount({ kind: 'signedIn', account: account.account })} />}
       {account?.kind === 'signedOut' && !guest && screen.name === 'menu' && <Welcome onGuest={() => setGuestState(true)} />}
       {screen.name === 'account' && account?.kind === 'signedIn' && (

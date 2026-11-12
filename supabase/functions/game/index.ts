@@ -5,12 +5,13 @@
 // match unlocks the rarest new discovery of the run. "claim": pays rewards earned earlier (once).
 // "buy-pack" / "buy-skin": coins are taken and the cards drawn
 // here. "free-coins" / "buy-coins" / "buy-offer": Runensteine shop (free coins, coins for Runensteine, card offers).
+// "login-status" / "login-claim": Login-Kalender (one field per day).
 // "forge-melt" / "forge-refine" / "forge-craft" / "forge-edition" / "forge-frame": Runenschmiede (essences from duplicates).
 // Every payout goes through pay_ticket: ticket finished and save written together, never twice.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, loadContent, prepareLeague, prepareMission, questDelta, questPeriod,
+  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@b998b5ae75017b029c0ed5679268ea53783ca76e/public/server/engine-fac78c159612.js';
 
 const CORS = {
@@ -201,6 +202,23 @@ Deno.serve(async (req) => {
       const r = buyOfferServer(cur.save, uid, body.cardId);
       return r.ok ? { ok: true, save: r.save, result: { ok: true, cardId: r.cardId } } : { ok: false, status: 422, result: { ok: false, reason: r.error } };
     });
+  }
+
+  // Login-Kalender: "login-status" shows the 7 fields, "login-claim" collects today's field (once a day, Berlin).
+  if (body.action === 'login-status' || body.action === 'login-claim') {
+    const readCal = async () => (await db.from('login_calendar').select('claimed, last_day').eq('player_id', uid).maybeSingle()).data;
+    const stateOf = (row: { claimed: number; last_day: string | null } | null) => ({ claimed: row?.claimed ?? 0, lastDay: row?.last_day ?? null });
+    if (body.action === 'login-status') return json({ ok: true, calendar: loginStatusServer(stateOf(await readCal())) });
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const [cur, cal] = await Promise.all([readSave(), readCal()]);
+      const r = loginClaimServer(cur.save, stateOf(cal), seed());
+      if (!r) return json({ ok: false, reason: 'Heute ist schon abgeholt.', calendar: loginStatusServer(stateOf(cal)), save: cur.save, campaign: cur.campaign, version: cur.version }, 409);
+      const { data: res, error } = await db.rpc('login_claim', { p_player: uid, p_day: r.state.lastDay, p_before: r.before, p_save: r.save, p_version: cur.version });
+      if (error) return json({ error: 'database' }, 500);
+      if (res === 'paid') return json({ ok: true, granted: r.granted, day: r.day, calendar: loginStatusServer(r.state), save: r.save, campaign: cur.campaign, version: cur.version + 1 });
+      // 'already' (another device collected meanwhile) or 'conflict' (the save changed): look again.
+    }
+    return json({ error: 'busy' }, 503);
   }
 
   // Runenschmiede: melt duplicates, refine essence, make a card, an edition of an ended event or a frame.

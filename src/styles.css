@@ -2712,3 +2712,30 @@ label.btn.disabled { opacity: .45; }
 .crop-frame:active { cursor: grabbing; }
 .crop-frame img { position: absolute; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .card-cropper .modal-actions { flex-wrap: wrap; }
+
+/* Login-Kalender: 7 fields (day 7 wide), today's field shines. */
+.login-calendar { max-width: 420px; }
+.login-days { list-style: none; margin: 12px 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.login-day.is-big { grid-column: 1 / -1; }
+.login-day-btn { width: 100%; min-height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px;
+  border-radius: 12px; border: 1px solid var(--gold-faint); background: rgba(255, 255, 255, 0.04); color: inherit; font: inherit; text-align: center; }
+.login-day-btn small { font-size: 0.72rem; opacity: 0.75; letter-spacing: 0.04em; text-transform: uppercase; }
+.login-day-btn b { font-size: 0.82rem; line-height: 1.15; }
+.login-icon { font-size: 1.6rem; line-height: 1; display: inline-flex; }
+.login-icon .coin-icon, .login-icon .stone-icon, .login-icon svg { width: 1.6rem; height: 1.6rem; }
+.login-day.is-done .login-day-btn { opacity: 0.55; }
+.login-day.is-done .login-icon { color: var(--gold, #e8c46a); }
+.login-day.is-today .login-day-btn { border-color: var(--gold-line); background: linear-gradient(160deg, rgba(232, 196, 106, 0.25), rgba(232, 196, 106, 0.06)); cursor: pointer;
+  box-shadow: 0 0 0 1px var(--gold-line), 0 0 18px rgba(232, 196, 106, 0.45); }
+:root:not(.reduced-motion) .login-day.is-today .login-day-btn { animation: login-glow 1.8s ease-in-out infinite; }
+@keyframes login-glow { 50% { box-shadow: 0 0 0 1px var(--gold-line), 0 0 28px rgba(232, 196, 106, 0.7); } }
+.login-calendar .modal-actions { flex-wrap: wrap; justify-content: center; }
+.field-check { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; }
+.admin-login-day { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--gold-faint); }
+.admin-login-day > b { min-width: 52px; }
+.admin-login-day .admin-input.num { width: 96px; }
+.admin-login-day select.admin-input { max-width: 220px; }
+.login-pack { display: inline-flex; width: 30px; }
+.login-pack .pack-art { width: 30px; border-radius: 5px; border-width: 1px; font-size: 16px; gap: 0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
+.login-pack .pack-label, .login-pack .pack-crimp { display: none; }
+.login-pack .pack-emblem svg { width: 16px; height: 16px; }
