@@ -736,3 +736,14 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
   und beim Öffnen der Raid-Übersicht. Ist der Boss besiegt, zeigt die Übersicht einen Kasten „Gemeinsam geschafft“ mit der Belohnung (✓).
 - Hochzählen der Münzen in der Belohnungsanzeige repariert (blieb im Entwicklungsmodus bei +0).
 - Browser (iPhone-Größe, nachgebildeter Server): Anzeige +15 Münzen und neue Karten, Kasten erscheint, keine Fehler.
+
+## Postfach (Briefumschlag oben)
+
+- Raid-Belohnungen (Schadensziele, Gemeinschaftsstufen, Boss besiegt) gehen ab jetzt ins Postfach statt direkt in den Spielstand;
+  Abholfrist 30 Tage. Abholen einzeln oder „Alle abholen“: Münzen/Runensteine groß, Packs werden wie im Shop verdeckt geöffnet,
+  Doppelte → Runenschmiede. Abgeholtes bleibt 30 Tage als „Abgeholt“ sichtbar. Raid zeigt „X Belohnungen liegen im Postfach“ mit Knopf.
+- Admin → Postfach: Geschenk an einen Spieler (Name) oder an alle; Münzen, Runensteine, Pack (1–10), Karte; Betreff + Nachricht.
+- Datenbank (Migration 022) in zurückgerollter Transaktion: raid_to_inbox vergibt nichts doppelt (auch nicht schon früher ausgezahlte Raid-Belohnungen),
+  inbox_send, inbox_claim mit altem Spielstand → conflict, richtig → paid, nochmal → already.
+- Tests: tests/inbox.test.ts (3). Browser (iPhone-Größe, nachgebildeter Server): Briefumschlag mit Zahl, Postfach-Liste, Pack öffnen/aufdecken.
+- Server: raid v17, inbox v1 (starten, not_signed_in).

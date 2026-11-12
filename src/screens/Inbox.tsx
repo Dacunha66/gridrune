@@ -12,6 +12,14 @@ import { rewardText } from '../game/campaign';
 import type { GrantedReward } from '../game/campaignRewards';
 import { InboxItem, inboxClaim, inboxList, openCount } from '../game/inboxApi';
 import { getSkin } from '../game/skins';
+import { PACKS, packView } from '../game/shop';
+import type { Reward } from '../game/campaign';
+
+/** "1 × Helden-Pack" instead of "1 Kartenpack". */
+function giftText(r: Reward): string {
+  const pack = r.type === 'pack' ? PACKS.find((p) => p.id === r.packId) ?? PACKS[0] : null;
+  return pack ? `${r.amount ?? 1} × ${packView(pack).name}` : rewardText(r);
+}
 
 const SENDER: Record<InboxItem['sender'], string> = { raid: 'Raid', admin: 'GridRune-Team' };
 const day = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
@@ -114,7 +122,7 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
                     <small>{SENDER[i.sender]} · {day(i.createdAt)} · noch {daysLeft(i.expiresAt)} {daysLeft(i.expiresAt) === 1 ? 'Tag' : 'Tage'}</small>
                     <b>{i.title}</b>
                     {i.message && <span className="inbox-msg">{i.message}</span>}
-                    <span className="inbox-reward"><GameIcon name="gift" /> {rewardText(i.reward)}</span>
+                    <span className="inbox-reward"><GameIcon name="gift" /> {giftText(i.reward)}</span>
                   </span>
                   <button type="button" className="btn btn-small btn-primary" disabled={busy} onClick={() => claim([i.id])}>Abholen</button>
                 </li>
@@ -127,7 +135,7 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
                   {done.map((i) => (
                     <li key={i.id} className="inbox-item">
                       <span className={`inbox-icon sender-${i.sender}`} aria-hidden="true"><GameIcon name="check" /></span>
-                      <span className="inbox-text"><small>{SENDER[i.sender]} · abgeholt am {day(i.claimedAt!)}</small><b>{i.title}</b><span className="inbox-reward">{rewardText(i.reward)}</span></span>
+                      <span className="inbox-text"><small>{SENDER[i.sender]} · abgeholt am {day(i.claimedAt!)}</small><b>{i.title}</b><span className="inbox-reward">{giftText(i.reward)}</span></span>
                     </li>
                   ))}
                 </ul>
