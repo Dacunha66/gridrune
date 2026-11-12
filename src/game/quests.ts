@@ -436,10 +436,16 @@ export const QUESTS_DOC = 'config';
 export const questText = (d: QuestDef) => d.text || METRIC_TEXT[d.metric](d.target);
 
 /** The quests active in a period: the same for every player, picked from the enabled ones with the period as seed. */
-export function activeQuests(list: readonly QuestDef[], count: number, period: string): QuestDef[] {
+export function activeQuests(list: readonly QuestDef[], count: number, period: string, fits: (d: QuestDef) => boolean = () => true): QuestDef[] {
   const enabled = list.filter((d) => d.enabled);
-  return shuffle(deriveRng(`quests:${period}`, 'pick'), enabled).slice(0, count);
+  // Shuffled first, filtered after: a quest that does not fit right now (no raid running) is skipped and the next one
+  // moves up, the others stay where they are.
+  return shuffle(deriveRng(`quests:${period}`, 'pick'), enabled).filter(fits).slice(0, count);
 }
+
+/** Raid quests only while a Weltboss can be attacked – or when the player already made progress on it in this period. */
+const questFits = (ctx: QuestContext, counters: Counters) => (d: QuestDef) =>
+  d.metric !== 'raid_attacks' || ctx.raidActive !== false || (counters.raid_attacks ?? 0) > 0;
 
 // ---------- Progress and the board ----------
 
@@ -482,14 +488,16 @@ export interface QuestContext {
   cards: number;
   worldsComplete: number;
   raidsDefeated: number;
+  /** A Weltboss can be attacked right now (false: raid quests are not handed out). Missing = yes. */
+  raidActive?: boolean;
 }
 
-export function questContext(save: SaveData, content: CampaignContent, progress: CampaignProgress, raidsDefeated: number): QuestContext {
+export function questContext(save: SaveData, content: CampaignContent, progress: CampaignProgress, raidsDefeated: number, raidActive = true): QuestContext {
   const worldsComplete = visibleWorlds(content).filter((w) => {
     const ms = worldMissions(content, w.id);
     return ms.length > 0 && ms.every((m) => missionStars(progress, m) >= STARS_PER_MISSION);
   }).length;
-  return { cards: ownedActiveIds(save.unlocked).length, worldsComplete, raidsDefeated };
+  return { cards: ownedActiveIds(save.unlocked).length, worldsComplete, raidsDefeated, raidActive };
 }
 
 function metricValue(metric: QuestMetric, counters: Counters, total: Counters, ctx: QuestContext): number {
@@ -537,8 +545,8 @@ export function questBoard(config: QuestConfig, stateRaw: QuestState, ctx: Quest
       ...(d.chain ? { chain: d.chain } : {}),
     };
   };
-  const daily = activeQuests(config.daily, config.perDay, s.day).map((d) => item('daily', `d:${s.day}:`, d, s.daily));
-  const weekly = activeQuests(config.weekly, config.perWeek, s.week).map((d) => item('weekly', `w:${s.week}:`, d, s.weekly));
+  const daily = activeQuests(config.daily, config.perDay, s.day, questFits(ctx, s.daily)).map((d) => item('daily', `d:${s.day}:`, d, s.daily));
+  const weekly = activeQuests(config.weekly, config.perWeek, s.week, questFits(ctx, s.weekly)).map((d) => item('weekly', `w:${s.week}:`, d, s.weekly));
   const bonus = (kind: QuestKind, key: string, list: QuestItem[], reward: QuestReward): QuestItem => {
     const progress = list.filter((i) => i.done).length;
     return { key, kind, id: 'bonus', text: `Alle ${list.length} ${kind === 'daily' ? 'Tagesquests' : 'Wochenquests'} geschafft`, progress, target: list.length, reward, done: list.length > 0 && progress >= list.length, claimed: claimed.has(key) };

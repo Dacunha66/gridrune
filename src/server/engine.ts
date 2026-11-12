@@ -175,9 +175,14 @@ export function onlineQuestEvent(won: boolean): QuestEvent {
 }
 
 /** The player's quest board: what is active, how far, what is ready to collect. */
-export function questOverview(saveRaw: unknown, campaignRaw: unknown, stateRaw: unknown, raidsDefeated: number, now: Date = new Date()) {
+/** Raids for the quests: how many the player helped defeat, and whether one can be attacked now (a number = only the count). */
+type QuestRaids = number | { defeated: number; active: boolean };
+const raidCtx = (r: QuestRaids) => (typeof r === 'number' ? { defeated: r, active: true } : r);
+
+export function questOverview(saveRaw: unknown, campaignRaw: unknown, stateRaw: unknown, raids: QuestRaids, now: Date = new Date()) {
   const state = parseQuestState(stateRaw, now);
-  const ctx = questContext(sanitize(saveRaw), CAMPAIGN, sanitizeProgress(campaignRaw), raidsDefeated);
+  const r = raidCtx(raids);
+  const ctx = questContext(sanitize(saveRaw), CAMPAIGN, sanitizeProgress(campaignRaw), r.defeated, r.active);
   return { board: questBoard(QUEST_CONFIG, state, ctx, now), titles: state.titles, avatars: unlockedAvatars(state.claimed) };
 }
 
@@ -194,9 +199,10 @@ export function shownAvatar(titlesRaw: unknown): string {
 }
 
 /** Collects ready rewards (all, or the given keys): new save and titles; null = nothing to collect. */
-export function questClaim(saveRaw: unknown, campaignRaw: unknown, stateRaw: unknown, raidsDefeated: number, keys: unknown, seed: string, now: Date = new Date()) {
+export function questClaim(saveRaw: unknown, campaignRaw: unknown, stateRaw: unknown, raids: QuestRaids, keys: unknown, seed: string, now: Date = new Date()) {
   const state: QuestState = parseQuestState(stateRaw, now);
-  const ctx = questContext(sanitize(saveRaw), CAMPAIGN, sanitizeProgress(campaignRaw), raidsDefeated);
+  const r = raidCtx(raids);
+  const ctx = questContext(sanitize(saveRaw), CAMPAIGN, sanitizeProgress(campaignRaw), r.defeated, r.active);
   const wanted = Array.isArray(keys) ? keys.filter((k): k is string => typeof k === 'string') : null;
   return claimQuests(sanitize(saveRaw), state, QUEST_CONFIG, ctx, wanted, seed, now);
 }

@@ -4,7 +4,7 @@
 // "equip-avatar" (only avatars unlocked by collected achievements).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { loadContent, questClaim, questDay, questEquipAvatar, questEquipTitle, questOverview, questWeek } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@b998b5ae75017b029c0ed5679268ea53783ca76e/public/server/engine-fac78c159612.js';
+import { loadContent, parseRaid, questClaim, questDay, questEquipAvatar, questEquipTitle, questOverview, questWeek, raidOpen } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@b998b5ae75017b029c0ed5679268ea53783ca76e/public/server/engine-fac78c159612.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -61,16 +61,30 @@ Deno.serve(async (req) => {
     return count ?? 0;
   }
 
+  /** A Weltboss can be attacked right now (published, started, not over, not defeated, not paused or ended). */
+  async function raidActive(): Promise<boolean> {
+    const { data: states } = await db.from('raid_state').select('raid_id, status, current_hp').eq('scope', 'global').eq('status', 'active').gt('current_hp', 0);
+    return (states ?? []).some((st: Row) => {
+      const doc = (rows ?? []).find((r: Row) => r.collection === 'raids' && r.id === st.raid_id);
+      const c = doc ? parseRaid(doc.id, doc.data) : null;
+      return !!c && c.status === 'published' && raidOpen(c, st.current_hp, now.getTime()) === 'active';
+    });
+  }
+  const raidInfo = async () => {
+    const [defeated, active] = await Promise.all([raidsDefeated(), raidActive()]);
+    return { defeated, active };
+  };
+
   const readSave = async () => (await db.from('player_saves').select('save, campaign, version').eq('player_id', uid).maybeSingle()).data as Row | null;
 
   if (body.action === 'overview') {
-    const [save, state, raids] = await Promise.all([readSave(), readState(), raidsDefeated()]);
+    const [save, state, raids] = await Promise.all([readSave(), readState(), raidInfo()]);
     if (!save) return json({ error: 'no_save' }, 409);
     return json(questOverview(save.save, save.campaign, state, raids, now));
   }
 
   if (body.action === 'claim') {
-    const raids = await raidsDefeated();
+    const raids = await raidInfo();
     for (let attempt = 0; attempt < 4; attempt++) {
       const [save, state] = await Promise.all([readSave(), readState()]);
       if (!save) return json({ error: 'no_save' }, 409);
