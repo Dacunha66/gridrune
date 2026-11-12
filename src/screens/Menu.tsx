@@ -113,20 +113,23 @@ export function MenuTop({ coins, stones = null, account = null, avatar = null, o
 }) {
   return (
     <header className="menu-top">
+      {/* First line: the logo in the middle; second line: account on the left, Runensteine, coins and Postfach on the right. */}
       <span className="menu-brand"><LogoMark className="menu-mark" /> <span>GridRune</span></span>
-      <span className="menu-top-right">
-        {inbox !== null && onInbox && (
-          <button type="button" className={`menu-inbox ${inbox > 0 ? 'has' : ''}`} onClick={onInbox} aria-label={inbox > 0 ? `Postfach, ${inbox} neu` : 'Postfach'}>
-            <GameIcon name="mail" />{inbox > 0 && <b className="menu-tab-badge inbox-badge">{inbox}</b>}
-          </button>
-        )}
-        {stones !== null && <span key={`s${stones}`} className="menu-coins menu-stones" aria-label={`${stones} Runensteine`}><Stone /> {stones}</span>}
-        <span key={coins} className="menu-coins" aria-label={`${coins} Münzen`}><Coin /> {coins}</span>
-        {account && (
+      <span className="menu-top-row">
+        {account ? (
           <button type="button" className={`menu-account ${account === 'guest' ? 'guest' : ''}`} onClick={onAccount} aria-label={account === 'guest' ? 'Anmelden oder Konto erstellen' : `Konto ${account}`}>
-            {avatar && account !== 'guest' ? <Avatar id={avatar} size={34} /> : <GameIcon name="user" />}{account === 'guest' && <span>Anmelden</span>}
+            {avatar && account !== 'guest' ? <Avatar id={avatar} size={38} /> : <GameIcon name="user" />}{account === 'guest' && <span>Anmelden</span>}
           </button>
-        )}
+        ) : <span />}
+        <span className="menu-top-right">
+          {stones !== null && <span key={`s${stones}`} className="menu-coins menu-stones" aria-label={`${stones} Runensteine`}><Stone /> {stones}</span>}
+          <span key={coins} className="menu-coins" aria-label={`${coins} Münzen`}><Coin /> {coins}</span>
+          {inbox !== null && onInbox && (
+            <button type="button" className={`menu-inbox ${inbox > 0 ? 'has' : ''}`} onClick={onInbox} aria-label={inbox > 0 ? `Postfach, ${inbox} neu` : 'Postfach'}>
+              <GameIcon name="mail" />{inbox > 0 && <b className="menu-tab-badge inbox-badge">{inbox}</b>}
+            </button>
+          )}
+        </span>
       </span>
     </header>
   );
