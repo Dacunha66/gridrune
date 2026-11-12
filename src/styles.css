@@ -2739,3 +2739,43 @@ label.btn.disabled { opacity: .45; }
 .login-pack .pack-art { width: 30px; border-radius: 5px; border-width: 1px; font-size: 16px; gap: 0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
 .login-pack .pack-label, .login-pack .pack-crimp { display: none; }
 .login-pack .pack-emblem svg { width: 16px; height: 16px; }
+
+/* Admin-Statistik */
+.admin-stats { display: flex; flex-direction: column; gap: 14px; }
+.admin-stats > .segmented { align-self: flex-start; }
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 8px 0 12px; }
+.stat-tile { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--gold-faint); }
+.stat-label { font-size: 0.78rem; color: var(--muted); }
+.stat-value { font-size: 1.6rem; font-variant-numeric: tabular-nums; color: var(--text); line-height: 1.15; }
+.stat-sub { font-size: 0.72rem; color: var(--muted); }
+.day-bars { margin: 10px 0 14px; }
+.day-bars figcaption { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.day-bars-read b { color: var(--text); font-variant-numeric: tabular-nums; }
+.day-bars-plot { position: relative; display: flex; align-items: flex-end; gap: 2px; height: 120px; padding-top: 14px; border-bottom: 1px solid var(--gold-faint);
+  background: repeating-linear-gradient(to top, transparent 0 39px, rgba(255, 255, 255, 0.05) 39px 40px); }
+.day-bars-max { position: absolute; top: 0; left: 0; font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.day-bar { flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: flex-end; padding: 0; border: 0; background: none; cursor: pointer; }
+.day-bar span { display: block; width: 100%; min-height: 0; background: var(--gold); border-radius: 4px 4px 0 0; opacity: 0.8; }
+.day-bar:hover span, .day-bar.is-sel span { opacity: 1; background: var(--gold-light); }
+.day-bars-axis { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+.stats-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.stats-table th { text-align: left; font-weight: 600; color: var(--muted); font-size: 0.78rem; padding: 6px 8px; border-bottom: 1px solid var(--gold-line); white-space: nowrap; }
+.stats-table td { padding: 7px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.stats-table .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stats-table tr.total td { font-weight: 700; border-top: 1px solid var(--gold-line); }
+.stats-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.rarity-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; background: var(--common); }
+.rarity-dot.r-uncommon { background: var(--uncommon); } .rarity-dot.r-rare { background: var(--rare); } .rarity-dot.r-epic { background: var(--epic); }
+.rarity-dot.r-legendary { background: var(--legendary); } .rarity-dot.r-mythic { background: var(--mythic); }
+.verdict { white-space: nowrap; font-size: 0.8rem; color: var(--muted); }
+.verdict.v-strong { color: #ff9b8a; font-weight: 700; }
+.verdict.v-weak { color: #8fc1ff; font-weight: 700; }
+.stats-unused summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
+.bucket-bars { margin: 6px 0 12px; }
+.bucket-bars figcaption { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.bucket-row { display: grid; grid-template-columns: 104px 1fr 36px; align-items: center; gap: 8px; margin: 4px 0; font-size: 0.82rem; }
+.bucket-track { height: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden; }
+.bucket-track span { display: block; height: 100%; background: var(--gold); border-radius: 0 4px 4px 0; }
+.bucket-n { text-align: right; font-variant-numeric: tabular-nums; }
+.stats-table small.block { display: block; font-size: 0.7rem; }

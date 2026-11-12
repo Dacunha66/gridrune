@@ -208,7 +208,11 @@ Deno.serve(async (req) => {
   if (body.action === 'login-status' || body.action === 'login-claim') {
     const readCal = async () => (await db.from('login_calendar').select('claimed, last_day').eq('player_id', uid).maybeSingle()).data;
     const stateOf = (row: { claimed: number; last_day: string | null } | null) => ({ claimed: row?.claimed ?? 0, lastDay: row?.last_day ?? null });
-    if (body.action === 'login-status') return json({ ok: true, calendar: loginStatusServer(stateOf(await readCal())) });
+    if (body.action === 'login-status') {
+      // Admin-Statistik: the game was opened today (one row per player and day; never fails the request).
+      const [cal] = await Promise.all([readCal(), db.rpc('activity_mark', { p_player: uid }).then(() => undefined, () => undefined)]);
+      return json({ ok: true, calendar: loginStatusServer(stateOf(cal)) });
+    }
     for (let attempt = 0; attempt < 5; attempt++) {
       const [cur, cal] = await Promise.all([readSave(), readCal()]);
       const r = loginClaimServer(cur.save, stateOf(cal), seed());

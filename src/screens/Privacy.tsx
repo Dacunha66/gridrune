@@ -34,7 +34,7 @@ export function Privacy({ onBack }: { onBack: () => void }) {
 
         <Section title="Kurz gesagt">
           <ul>
-            <li>GridRune zeigt keine Werbung und nutzt kein Tracking und keine Analyse-Dienste.</li>
+            <li>GridRune zeigt keine Werbung und nutzt kein Tracking und keine Analyse-Dienste von Drittanbietern.</li>
             <li>Ohne Konto bleibt dein Spielstand nur auf deinem Gerät.</li>
             <li>Mit Konto speichern wir, was für das Spiel nötig ist: E-Mail, Anzeigename, Spielstand und Spielergebnisse.</li>
             <li>Bezahlen mit Geld ist derzeit nicht möglich.</li>
@@ -53,8 +53,11 @@ export function Privacy({ onBack }: { onBack: () => void }) {
           <p>Für ein Konto verarbeiten wir deine E-Mail-Adresse, dein Passwort (nur verschlüsselt gespeichert, wir können es nicht lesen) und deinen Anzeigenamen.
             Zur Bestätigung und zum Zurücksetzen des Passworts erhältst du E-Mails.</p>
           <p>Mit Konto speichern wir deinen Spielstand und Fortschritt: Karten, Deck, Münzen, Runensteine, Essenzen, Editionen, Kampagne, Erfolge und Titel,
-            Avatar, Puzzle-Event-Fortschritt sowie die Ergebnisse geprüfter Spiele (Einfaches Spiel, Kampagne, Rangliste, Raid, Online-Duell).
+            Avatar, Puzzle-Event-Fortschritt, Login-Kalender sowie die Ergebnisse geprüfter Spiele (Einfaches Spiel, Kampagne, Rangliste, Raid, Online-Duell).
             Damit niemand schummeln kann, prüft der Server Spielverläufe und schreibt Belohnungen selbst gut.</p>
+          <p>Für eine Spiel-Statistik des Betreibers speichern wir außerdem, an welchen Tagen du das Spiel mit Konto geöffnet hast (nur das Datum, höchstens 400 Tage lang).
+            Die Statistik zeigt nur Summen über alle Spieler – etwa wie viele Spieler an einem Tag aktiv waren, wie oft Karten in gewonnenen Spielen dabei waren
+            und wie viele Münzen insgesamt im Spiel sind –, keine einzelnen Spieler.</p>
           <p>Andere angemeldete Spieler sehen deinen Anzeigenamen und Avatar in Online-Duellen, Bestenlisten und in der Community.</p>
           <p>Rechtsgrundlage ist die Bereitstellung des Spiels, das du nutzen möchtest (Art. 6 Abs. 1 lit. b DSGVO); die Prüfung gegen Schummeln dient zusätzlich
             einem fairen Spiel für alle (Art. 6 Abs. 1 lit. f DSGVO). Die Daten bleiben gespeichert, solange dein Konto besteht.
