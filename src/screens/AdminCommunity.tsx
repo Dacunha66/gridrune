@@ -7,6 +7,7 @@ import { ClanInfo, adminCommunity, listClans } from '../game/communityApi';
 import { COMMUNITY_DOC, cleanWords } from '../../supabase/functions/community/logic';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { Avatar } from '../components/Avatar';
+import { PRIVACY_DOC, PrivacyInfo, EMPTY_PRIVACY, parsePrivacy, setPrivacyInfo } from '../game/privacy';
 
 interface Report {
   id: number;
@@ -26,6 +27,8 @@ export function CommunityAdminView({ db, onToast }: { db: Db; onToast: (m: strin
   const [words, setWords] = useState('');
   const [savedWords, setSavedWords] = useState('');
   const [rename, setRename] = useState<{ id: string; name: string; tag: string } | null>(null);
+  const [privacy, setPrivacy] = useState<PrivacyInfo>(EMPTY_PRIVACY);
+  const [savedPrivacy, setSavedPrivacy] = useState<PrivacyInfo>(EMPTY_PRIVACY);
 
   async function load() {
     const [r, m, c] = await Promise.all([adminCommunity('admin-reports'), adminCommunity('admin-muted'), listClans('')]);
@@ -40,7 +43,28 @@ export function CommunityAdminView({ db, onToast }: { db: Db; onToast: (m: strin
       setWords(list);
       setSavedWords(list);
     }).catch(() => undefined);
+    db.collection('settings').doc(PRIVACY_DOC).get().then((s) => {
+      const p = s.exists ? parsePrivacy(s.data()) : EMPTY_PRIVACY;
+      setPrivacy(p);
+      setSavedPrivacy(p);
+    }).catch(() => undefined);
   }, [db]);
+
+  async function savePrivacy() {
+    const p = parsePrivacy(privacy);
+    if (privacy.contact && !p.contact) return onToast('Bitte eine gültige E-Mail-Adresse eintragen.');
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const next = { ...p, updated: today };
+      await db.collection('settings').doc(PRIVACY_DOC).set({ ...next, updatedAt: new Date().toISOString() });
+      setPrivacy(next);
+      setSavedPrivacy(next);
+      setPrivacyInfo(next);
+      onToast('Datenschutz-Angaben gespeichert ✓');
+    } catch (e) {
+      onToast(describeError(e));
+    }
+  }
 
   async function run(action: string, args: Record<string, unknown>, ok: string) {
     const r = await adminCommunity(action, args);
@@ -123,6 +147,22 @@ export function CommunityAdminView({ db, onToast }: { db: Db; onToast: (m: strin
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="admin-card">
+        <h3>Datenschutz-Angaben</h3>
+        <p className="muted small">Erscheinen auf der Seite „Datenschutz“ (Mehr → Datenschutz). Pflicht: Name und Anschrift der verantwortlichen Person sowie eine E-Mail für Anfragen.</p>
+        <label className="field"><span>Verantwortlich (Name und Anschrift, mehrere Zeilen)</span>
+          <textarea className="admin-input" rows={3} value={privacy.operator} maxLength={400} onChange={(e) => setPrivacy({ ...privacy, operator: e.target.value })} />
+        </label>
+        <label className="field"><span>E-Mail für Datenschutzfragen</span>
+          <input className="admin-input" type="email" value={privacy.contact} maxLength={120} onChange={(e) => setPrivacy({ ...privacy, contact: e.target.value.trim() })} />
+        </label>
+        <div className="admin-actions">
+          <button type="button" className="btn btn-primary" disabled={JSON.stringify(privacy) === JSON.stringify(savedPrivacy)} onClick={savePrivacy}>
+            {JSON.stringify(privacy) === JSON.stringify(savedPrivacy) ? 'Gespeichert ✓' : 'Angaben speichern'}
+          </button>
+        </div>
       </section>
 
       <section className="admin-card">

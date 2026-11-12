@@ -709,3 +709,11 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
   Rechte (RLS): fremder Spieler sieht nur den allgemeinen Chat, Mitglied auch den Clan-Chat, Meldungen für Spieler unsichtbar.
 - Browser (iPhone-Größe) mit nachgebildetem Server: Regeln, Senden, Melden/Blockieren, Clanliste, Gründen (Münzen 1200 → 700), Clan-Seite mit Anfrage, Rangliste.
 - Noch offen: echter Test mit zwei Konten (Live-Chat zwischen zwei Geräten).
+
+## Datenschutz-Seite (Mehr → Datenschutz)
+
+- Beschreibt den tatsächlichen Stand: Gast (nur Browser), Konto (Supabase, EU/Irland), Community (Daten, Sichtbarkeit, Filter, Speicherdauer),
+  Hosting (Cloudflare), Google Fonts, Rechte. Verantwortliche Person und E-Mail trägt der Admin unter Admin → Community → Datenschutz-Angaben ein
+  (fehlt etwas, steht dort rot „[noch nicht eingetragen]“). Link aus den Chat-Regeln.
+- Gäste sehen unter „Community“ einen Hinweis mit Anmelden statt einer leeren Seite.
+- Browser (iPhone-Größe): Seite mit 7 Abschnitten, keine Fehler.

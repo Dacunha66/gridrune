@@ -26,12 +26,14 @@ const time = (iso: string) => {
   return d.toLocaleString('de-DE', today ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
-export function Community({ uid, coins, top, onAdopt }: {
+export function Community({ uid, coins, top, onAdopt, onPrivacy }: {
   uid: string;
   coins: number;
   /** The shared top line (logo, coins, account). */
   top: ReactNode;
   onAdopt: (c: CloudSave) => void;
+  /** Opens the privacy page (linked from the chat rules). */
+  onPrivacy?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>('chat');
   const [state, setState] = useState<CommunityState | null>(null);
@@ -72,7 +74,7 @@ export function Community({ uid, coins, top, onAdopt }: {
       {message && <p className="hint" aria-live="polite">{message}</p>}
       {!state ? <p className="muted center">{error || 'Lädt …'}</p> : (
         <>
-          {tab === 'chat' && <Chat uid={uid} state={state} act={act} busy={busy} onMessage={setMessage} />}
+          {tab === 'chat' && <Chat uid={uid} state={state} act={act} busy={busy} onMessage={setMessage} onPrivacy={onPrivacy} />}
           {tab === 'clan' && (state.clan
             ? <ClanPage clan={state.clan} act={act} busy={busy} />
             : <ClanFinder state={state} coins={coins} act={act} busy={busy} />)}
@@ -87,7 +89,7 @@ type Act = (action: string, args?: Record<string, unknown>, ok?: (data: Record<s
 
 // ---------- Chat ----------
 
-function Chat({ uid, state, act, busy, onMessage }: { uid: string; state: CommunityState; act: Act; busy: boolean; onMessage: (m: string) => void }) {
+function Chat({ uid, state, act, busy, onMessage, onPrivacy }: { uid: string; state: CommunityState; act: Act; busy: boolean; onMessage: (m: string) => void; onPrivacy?: () => void }) {
   const channels = useMemo(() => [{ id: 'global', label: 'Allgemein' }, ...(state.clan ? [{ id: clanChannel(state.clan.id), label: `Clan [${state.clan.tag}]` }] : [])], [state.clan]);
   const [channel, setChannel] = useState('global');
   const [list, setList] = useState<ChatMessage[] | null>(null);
@@ -157,6 +159,7 @@ function Chat({ uid, state, act, busy, onMessage }: { uid: string; state: Commun
         <div className="chat-rules">
           <b>Chat-Regeln</b>
           <ul>{CHAT_RULES.map((r) => <li key={r}>{r}</li>)}</ul>
+          {onPrivacy && <p className="muted small">Was wir speichern, steht in der <button type="button" className="link-btn" onClick={onPrivacy}>Datenschutzerklärung</button>.</p>}
           <button type="button" className="btn btn-primary" disabled={busy} onClick={() => act('rules-accept', {}, () => 'Danke! Viel Spaß beim Schreiben.')}>Verstanden – ich halte mich daran</button>
         </div>
       ) : muted ? (

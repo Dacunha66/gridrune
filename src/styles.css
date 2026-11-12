@@ -2660,3 +2660,13 @@ label.btn.disabled { opacity: .45; }
 .admin-clan > span:nth-child(2) { flex: 1; min-width: 140px; }
 .admin-clan-edit { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .admin-clan-edit .admin-input { flex: 1; min-width: 90px; }
+
+/* ---------- Datenschutz ---------- */
+.privacy-text { line-height: 1.5; font-size: 15px; color: #e8e2fa; padding-bottom: 24px; }
+.privacy-section h2 { font-size: 18px; margin: 18px 0 6px; color: var(--gold-light, #f3c77a); }
+.privacy-section p { margin: 0 0 8px; }
+.privacy-section ul { margin: 0 0 8px; padding-left: 20px; }
+.privacy-section li { margin-bottom: 4px; }
+.privacy-operator { white-space: pre-line; }
+.privacy-missing { color: #fca5a5; font-style: italic; }
+.privacy-text a { color: #7dd3fc; }

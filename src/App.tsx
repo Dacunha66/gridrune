@@ -24,6 +24,8 @@ import { setStoneConfig } from './game/stones';
 import { setForgeConfig } from './game/forge';
 import { Forge } from './screens/Forge';
 import { Community } from './screens/Community';
+import { Privacy } from './screens/Privacy';
+import { PRIVACY_DOC, parsePrivacy, setPrivacyInfo } from './game/privacy';
 import { Header } from './screens/Header';
 import { equipEdition, setEditions, setPuzzles } from './game/puzzles';
 import { EventView, fetchEvents, loadEditions, loadPuzzles } from './game/puzzleApi';
@@ -61,7 +63,7 @@ import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' }
+  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' | 'privacy' }
   /** focus = open this card's details right away. */
   | { name: 'collection'; focus?: string }
   /** Einfaches Spiel gegen Spieler: random = look for a random opponent right away. */
@@ -214,6 +216,8 @@ export function App() {
         loadShopLooks(db), loadAvatars(db), loadStoneConfig(db), loadEditions(db), loadForgeConfig(db), loadPuzzles(db),
       ]);
       if (alive && forgeCfg) setForgeConfig(forgeCfg);
+      // Datenschutz: the operator's details entered by the admin.
+      db?.collection('settings').doc(PRIVACY_DOC).get().then((d) => { if (alive && d.exists) setPrivacyInfo(parsePrivacy(d.data())); }).catch(() => undefined);
       // Events: the forge offers editions of events that have ended.
       if (alive && savedPuzzles) setPuzzles(savedPuzzles);
       if (alive && stoneCfg) setStoneConfig(stoneCfg);
@@ -475,6 +479,7 @@ export function App() {
           } : null} />
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} runes={runesOn} />}
+      {screen.name === 'privacy' && <Privacy onBack={toMenu} />}
       {screen.name === 'shop' && (
         <div className="tabbed-screen">
           <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} top={menuTop}
@@ -482,9 +487,20 @@ export function App() {
           {tabBar('shop')}
         </div>
       )}
+      {screen.name === 'community' && !cloud.uid && (
+        <div className="tabbed-screen">
+          <main className="screen community">
+            {menuTop}
+            <h2 className="menu-sub-title tab-title">Community</h2>
+            <p className="shop-note">Clans und Chat gibt es mit einem kostenlosen Konto – so wissen die anderen Spieler, mit wem sie schreiben.</p>
+            {account?.kind === 'signedOut' && <button type="button" className="btn btn-primary btn-wide" onClick={() => { setGuestState(false); toMenu(); }}>Anmelden oder Konto erstellen</button>}
+          </main>
+          {tabBar('community')}
+        </div>
+      )}
       {screen.name === 'community' && cloud.uid && (
         <div className="tabbed-screen">
-          <Community uid={cloud.uid} coins={save.coins} top={menuTop} onAdopt={cloud.adoptServer} />
+          <Community uid={cloud.uid} coins={save.coins} top={menuTop} onAdopt={cloud.adoptServer} onPrivacy={() => setScreen({ name: 'privacy' })} />
           {tabBar('community')}
         </div>
       )}
