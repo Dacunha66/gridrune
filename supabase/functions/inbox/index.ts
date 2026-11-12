@@ -3,7 +3,7 @@
 // collected in one step, never twice). Admin: "admin-send" puts a gift into the Postfach of one player or of everyone.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { checkGift, inboxClaimServer, loadContent } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@89d5acf4eb988c37b2f5a658e47f8c8a53345476/public/server/engine-09e8e5e677cb.js';
+import { checkGift, inboxClaimServer, loadContent } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@b998b5ae75017b029c0ed5679268ea53783ca76e/public/server/engine-fac78c159612.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
