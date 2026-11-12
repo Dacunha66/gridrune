@@ -2,7 +2,7 @@
 // the recorded run and duel afterwards; the server replays both and pays out. Results that could not be sent
 // (no connection) wait on the device and are sent later – a ticket stays valid for 24 hours.
 import { webBackend } from './cardStore';
-import { AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, MissionLog, MissionTicket } from './verify';
+import { AdventureLog, AdventureTicket, DuelLog, LeagueLog, LeagueTicket, MissionLog, MissionTicket } from './verify';
 import type { GrantedReward } from './campaignRewards';
 import type { PackCard } from './shop';
 import { CloudSave } from './cloudSave';
@@ -204,4 +204,14 @@ export async function loginClaimRemote(): Promise<{ ok: true; cloud: CloudSave; 
   const calendar = (r?.data?.calendar as LoginView | undefined) ?? null;
   if (r?.data?.ok === true && cloud && calendar) return { ok: true, cloud, granted: r.data.granted as GrantedReward, calendar };
   return { ok: false, reason: !r?.data ? 'Keine Verbindung – zum Abholen brauchst du kurz Internet.' : typeof r.data.reason === 'string' ? r.data.reason : 'Abholen hat nicht geklappt. Bitte noch einmal versuchen.', cloud, calendar };
+}
+
+// ---------- Tutorial (server function "game") ----------
+
+/** Sends a finished tutorial: 'paid' = reward in the Postfach, 'already' = this account got it before. */
+export async function tutorialFinishRemote(log: DuelLog): Promise<'paid' | 'already' | 'rejected' | 'offline'> {
+  const r = await call({ action: 'tutorial-finish', log }, 'game');
+  if (!r?.data) return 'offline';
+  if (r.data.ok === true) return r.data.result === 'already' ? 'already' : 'paid';
+  return r.status >= 500 ? 'offline' : 'rejected';
 }

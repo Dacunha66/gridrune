@@ -497,6 +497,10 @@ export function raidOwedServer(config: RaidConfig, stats: { totalDamage: number;
   return raidOwed(config, stats, currentHp, claimed).filter((o) => isPayable(o.reward)).map((o) => ({ key: o.key, title: o.source, reward: o.reward }));
 }
 
+// ---------- Tutorial ----------
+
+export { checkTutorial } from '../game/tutorial';
+
 // ---------- Login-Kalender ----------
 
 /** The calendar for a player (stored state from the table login_calendar). */

@@ -2785,3 +2785,28 @@ label.btn.disabled { opacity: .45; }
 .nightmare-coins .admin-input.num { width: 90px; }
 .level-btn.level-nightmare { border-color: rgba(255, 90, 120, 0.55); }
 .level-btn.level-nightmare .level-name { color: #ff9bb0; }
+
+/* Tutorial: speech bubble in the duel, glowing card and field, start offer, end screen. */
+.guide-bubble { position: absolute; left: 6px; right: 6px; z-index: 40; padding: 10px 12px; border-radius: 12px; background: linear-gradient(160deg, #173a49, #111a30 70%);
+  border: 1px solid var(--glow-soft); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); font-size: 0.9rem; line-height: 1.35; }
+.guide-bubble p { margin: 2px 0 0; }
+.guide-bubble .guide-title { color: var(--glow); font-family: var(--f-display); font-size: 0.95rem; }
+.guide-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
+.guide-actions .link-btn { font-size: 0.78rem; color: var(--muted); }
+.guide-bubble.is-info { border-color: var(--glow); }
+.guide-bubble.at-bottom { bottom: 6px; }
+.guide-bubble.at-top { top: 6px; }
+.guide-skip { margin: 2px 0 0; text-align: center; }
+.guide-skip .link-btn { font-size: 0.78rem; color: var(--muted); }
+.hand-slot.guide-glow .card, .cell.guide-glow { box-shadow: 0 0 0 3px var(--glow), 0 0 22px var(--glow-soft); border-radius: 10px; }
+:root:not(.reduced-motion) .hand-slot.guide-glow, :root:not(.reduced-motion) .cell.guide-glow { animation: guide-pulse 1.4s ease-in-out infinite; }
+@keyframes guide-pulse { 50% { filter: brightness(1.25); } }
+.tutorial-offer { max-width: 400px; text-align: center; }
+.tutorial-reward { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 10px; border-radius: 10px; background: rgba(212, 166, 74, 0.12); border: 1px solid var(--gold-faint); text-align: left; }
+.tutorial-reward svg { flex: none; width: 22px; height: 22px; color: var(--gold-light); }
+.tutorial-end { display: flex; align-items: center; justify-content: center; }
+.tutorial-card { max-width: 420px; margin: 24px auto; padding: 20px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center;
+  border-radius: 16px; background: var(--panel); border: 1px solid var(--gold-line); }
+.tutorial-card > svg { width: 44px; height: 44px; color: var(--gold-light); }
+.tutorial-card h1 { margin: 0; font-family: var(--f-display); }
+.tutorial-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }

@@ -28,7 +28,7 @@ interface Props {
   isAdmin: boolean;
   /** Simple game against the computer with the chosen difficulty. */
   onPlay: (level: AiLevel) => void;
-  onNavigate: (screen: 'collection' | 'forge' | 'deck' | 'rules' | 'privacy' | 'shop' | 'admin' | 'league' | 'campaign') => void;
+  onNavigate: (screen: 'collection' | 'forge' | 'deck' | 'rules' | 'tutorial' | 'privacy' | 'shop' | 'admin' | 'league' | 'campaign') => void;
   /** Runes released for this viewer: shows the rune collection. */
   runes?: boolean;
   /** The equipped rune (shown on the Runen button). */
@@ -278,6 +278,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
             </div>
             {account && <button type="button" className="btn" onClick={onAccount}><GameIcon name="user" /> {account === 'guest' ? 'Anmelden / Konto erstellen' : 'Konto'}</button>}
             {onAvatars && <button type="button" className="btn" onClick={onAvatars}>{avatar ? <Avatar id={avatar} size={24} /> : <GameIcon name="user" />} Avatar wählen</button>}
+            <button type="button" className="btn" onClick={() => onNavigate('tutorial')}><GameIcon name="book" /> Tutorial</button>
             <button type="button" className="btn" onClick={() => onNavigate('rules')}><GameIcon name="scroll" /> Regeln</button>
             <button type="button" className="btn" onClick={() => onNavigate('privacy')}><GameIcon name="lock" /> Datenschutz</button>
             {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}><GameIcon name="gear" /> Kartenverwaltung</button>}

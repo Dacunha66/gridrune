@@ -23,6 +23,7 @@ import { AiOptions, chooseCpuMove, chooseCpuRune } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
 import { AdventureTicket, adventureDuel, adventureRngs, simpleCpuDeck } from '../game/verify';
+import type { GuideBubble } from '../game/tutorial';
 import { Action, RuneDef, RuneUse, applyRune, basicRunes, echoCapturable, findRune, placedCount, runeChoices, runeOpen, runeProblem, runeRules, runeUsable } from '../game/runes';
 import { RuneBadge } from '../components/RuneBadge';
 import { CardClass } from '../game/effects';
@@ -49,6 +50,8 @@ interface Props {
   resume?: { begin: BattleState; state: BattleState; moves: Action[]; ai: Rng; handOrigin: number[] };
   /** Called after every action with the fight so far (raid: kept on the device to continue after reloading). */
   onProgress?: (record: DuelRecord) => void;
+  /** Tutorial: speech bubbles for the position; a bubble with a hand card and field allows only that move. */
+  guide?: { bubble: (state: BattleState, seen: ReadonlySet<string>) => GuideBubble | null; onSkip: () => void };
 }
 
 export interface OnlineLink {
@@ -84,6 +87,8 @@ export interface BattleSetup {
   runes?: { player: string | null; cpu: string | null };
   /** Nachziehen: the shuffle's random source (checked games: from the seed, so the server deals the same). */
   deal?: () => Rng;
+  /** Keep both decks in the given order (tutorial: the server replays exactly this duel). */
+  fixedOrder?: boolean;
 }
 
 /** A finished duel that can be replayed exactly: start position (after the toss) and all moves. */
@@ -112,7 +117,7 @@ function cellCenterOn(cell: number, rows: number): { x: number; y: number } {
   return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / rows) };
 }
 
-export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket, online, ai, resume, onProgress }: Props) {
+export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, runes, ticket, online, ai, resume, onProgress, guide }: Props) {
   // Computer strength: league/campaign setups bring their own; a checked adventure uses the ticket's level.
   const aiOptions: AiOptions | undefined = setup?.ai ?? (ticket ? { level: ticket.level ?? 'medium' } : ai);
   // Checked adventures use the seed's random sources (the server replays them); otherwise a fresh random source.
@@ -135,7 +140,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     const cpuRune = r?.cpu === 'random' ? basic[Math.floor(rng() * basic.length)] : r?.cpu ?? null;
     return createBattle(
       picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? simpleCpuDeck(rng, aiOptions?.level ?? 'medium', picks.map((p) => p.cardId)), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells,
-      { player: r?.player ?? null, cpu: cpuRune }, setup?.deal?.() ?? createRng(),
+      { player: r?.player ?? null, cpu: cpuRune }, setup?.fixedOrder ? undefined : setup?.deal?.() ?? createRng(),
     );
   });
   const [state, setState] = useState<BattleState>(initial);
@@ -223,6 +228,10 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   }, [state, phase]);
   const animating = pendingFlips.length > 0;
   const fxTime = reducedMotion ? 0 : 1;
+  // Tutorial: the current speech bubble (info bubbles wait for "Weiter"; the computer waits meanwhile).
+  const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set());
+  const bubble = guide && phase === 'play' && !animating ? guide.bubble(state, seen) : null;
+  const guideBlocks = !!bubble?.info;
   // Admin test of the card designs: switch the look mid-duel (nothing in the game changes).
   const devTools = useDevTools();
   const cardStyle = useCardStyle();
@@ -261,7 +270,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
 
   // Computer turn.
   useEffect(() => {
-    if (online || phase !== 'play' || over || state.turn !== 'cpu') return;
+    if (online || phase !== 'play' || over || state.turn !== 'cpu' || guideBlocks) return;
     const delay = reducedMotion ? 450 : state.lastClashes.length > 0 || state.lastEvents.length > 0 ? 1250 : 800;
     const t = setTimeout(() => {
       // The computer may use its rune first (still its turn afterwards), then it places a card.
@@ -276,7 +285,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       setState(applyMove(state, move));
     }, delay);
     return () => clearTimeout(t);
-  }, [state, over, rng, reducedMotion, phase, setup?.ai]);
+  }, [state, over, rng, reducedMotion, phase, setup?.ai, guideBlocks]);
 
   const start = useCallback((first: Side) => {
     starter.current = first;
@@ -372,6 +381,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       return;
     }
     if (phase !== 'play' || over || animating || state.turn !== 'player' || selected === null) return;
+    if (guideBlocks || (bubble?.cell !== undefined && cell !== bubble.cell)) return;
     // With several enemies next to the cell, "Schwächender Blick" asks for its target first.
     const targets = blickTargets(state.board, cell, state.hands.player[selected], 'player');
     if (targets.length > 1) setTargeting({ cell, targets });
@@ -403,7 +413,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       : targeting
         ? '👁 Ziel für −1 antippen · anderes Feld = zurück'
         : state.turn === 'cpu'
-          ? online ? `${online.opponentName} ist am Zug …` : 'Der Gegner überlegt …'
+          ? guideBlocks ? '' : online ? `${online.opponentName} ist am Zug …` : 'Der Gegner überlegt …'
           : selected === null
             ? 'Karte wählen · Feldkarte antippen = Details'
             : selectedEffect
@@ -496,7 +506,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 key={i}
                 type="button"
                 role="gridcell"
-                className={`cell terrain-${terrain} ${canDrop && !placing && !runeMode ? 'droppable' : ''} ${elementHere && !placing ? 'element-here' : ''} ${isTarget ? 'targetable' : ''} ${runePicked ? 'rune-picked' : ''} ${targeting?.cell === i || ghost ? 'pending' : ''}`}
+                className={`cell terrain-${terrain} ${canDrop && !placing && !runeMode ? 'droppable' : ''} ${elementHere && !placing ? 'element-here' : ''} ${isTarget ? 'targetable' : ''} ${runePicked ? 'rune-picked' : ''} ${targeting?.cell === i || ghost ? 'pending' : ''} ${bubble?.cell === i && selected === bubble.hand ? 'guide-glow' : ''}`}
                 onClick={() => tapCell(i)}
                 disabled={!cell && (over || phase !== 'play')}
                 aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei${terrain !== 'normal' ? `, ${TERRAIN_INFO[terrain].label}` : ''}`}
@@ -591,6 +601,17 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           )}
 
           {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={setup?.tossRng ?? seeded?.rngs.toss ?? rng} onDecide={start} />}
+          {bubble && guide && !over && (
+            // Over the half of the board that is not needed right now (the field to use stays free).
+            <div className={`guide-bubble ${bubble.info ? 'is-info' : ''} ${(bubble.cell ?? state.lastOrigin ?? 12) < 8 ? 'at-bottom' : 'at-top'}`} role="status" aria-live="polite">
+              <b className="guide-title">{bubble.title}</b>
+              <p>{bubble.text}</p>
+              <div className="guide-actions">
+                <button type="button" className="link-btn" onClick={guide.onSkip}>Tutorial überspringen</button>
+                {bubble.info && <button type="button" className="btn btn-primary btn-small" onClick={() => setSeen((x) => new Set([...x, bubble.key]))}>Weiter</button>}
+              </div>
+            </div>
+          )}
           {banner && <div className="board-banner">{banner}</div>}
           {result && (
             <div className={`board-banner end ${result}`}>
@@ -600,6 +621,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           )}
         </div>
 
+        {guide && !over && !bubble && (
+          <p className="guide-skip"><button type="button" className="link-btn" onClick={guide.onSkip}>Tutorial überspringen</button></p>
+        )}
         <p className="hint" aria-live="polite">
           {secondsLeft !== null && !over && <span className={`turn-timer ${secondsLeft <= 10 ? 'urgent' : ''}`}>{secondsLeft}s</span>} {hint}
         </p>
@@ -632,7 +656,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           {state.hands.player.map(({ cardId: id, mod }, i) => {
             const t = i - (state.hands.player.length - 1) / 2;
             return (
-            <div key={handOrigin[i]} className={`hand-slot ${selected === i ? 'sel' : ''} ${state.lastDraw === 'player' && (i === state.hands.player.length - 1 || state.lastRune?.side === 'player') && !reducedMotion ? 'drawn' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
+            <div key={handOrigin[i]} className={`hand-slot ${selected === i ? 'sel' : ''} ${bubble?.hand === i && selected !== i ? 'guide-glow' : ''} ${state.lastDraw === 'player' && (i === state.hands.player.length - 1 || state.lastRune?.side === 'player') && !reducedMotion ? 'drawn' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
               {...longPress(() => setPreview({ id, mod }))}>
               <Card
                 id={id}
@@ -644,6 +668,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 onClick={() => {
                   if (pressedLong.current) return;
                   if (phase !== 'play' || state.turn !== 'player' || over || runeMode) return;
+                  if (guideBlocks || (bubble?.hand !== undefined && i !== bubble.hand)) return;
                   setTargeting(null);
                   setPlacing(null);
                   setSelected(selected === i ? null : i);

@@ -28,6 +28,8 @@ import { Privacy } from './screens/Privacy';
 import { Inbox } from './screens/Inbox';
 import { inboxList, openCount } from './game/inboxApi';
 import { LoginCalendar } from './components/LoginCalendar';
+import { Tutorial, TutorialOffer } from './screens/Tutorial';
+import { TUTORIAL_REWARD_TEXT, pendingTutorialLog, setPendingTutorialLog, setTutorialState, tutorialState } from './game/tutorial';
 import type { LoginView } from './game/loginCalendar';
 import { PRIVACY_DOC, parsePrivacy, setPrivacyInfo } from './game/privacy';
 import { NIGHTMARE_DOC, parseNightmare, setNightmareConfig } from './game/nightmare';
@@ -59,7 +61,7 @@ import { QuestItem, claimable, questDay, rewardText } from './game/quests';
 import { NextStep } from './screens/Menu';
 import { nextMission } from './game/campaignProgress';
 import {
-  claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, loginStatusRemote, readPending, startAdventure, writePending,
+  claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, loginStatusRemote, tutorialFinishRemote, readPending, startAdventure, writePending,
 } from './game/adventureApi';
 import { grantedText } from './game/campaignRewards';
 import { AdventureLog, AdventureTicket, handPicks } from './game/verify';
@@ -68,7 +70,7 @@ import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' | 'privacy' | 'inbox' }
+  | { name: 'menu' | 'tutorial' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' | 'privacy' | 'inbox' }
   /** focus = open this card's details right away. */
   | { name: 'collection'; focus?: string }
   /** Einfaches Spiel gegen Spieler: random = look for a random opponent right away. */
@@ -173,6 +175,23 @@ export function App() {
   const [questDaily, setQuestDaily] = useState<QuestItem | null>(null);
   /** Puzzle-Events for the start screen (the running one with the most to do), looked up when the menu opens. */
   const [eventCard, setEventCard] = useState<EventView | null>(null);
+  // Tutorial: offered once to new players (no game yet, never finished or skipped); a guest's finished tutorial is sent
+  // after signing in (the reward goes into the Postfach).
+  const [tutorialOffer, setTutorialOffer] = useState(() => tutorialState() === null);
+  useEffect(() => {
+    if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
+    const log = pendingTutorialLog();
+    if (!log) return;
+    let alive = true;
+    tutorialFinishRemote(log).then((r) => {
+      if (r === 'offline') return;
+      setPendingTutorialLog(null);
+      if (alive && r === 'paid') inboxList().then((l) => { if (alive && l) setInboxCount(openCount(l)); });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [screen.name, cloud.uid, cloud.phase]);
   // Login-Kalender: looked up when the menu opens; opens by itself once a day while today's field waits.
   const [loginCal, setLoginCal] = useState<LoginView | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -437,12 +456,16 @@ export function App() {
   }, [cloud.uid, cloud.phase]);
 
   // Home screen: what the player can do next – first game, the next campaign mission, rewards ready, today's quest.
+  // The tutorial offer appears on the start screen for players who have not played yet.
+  const showTutorialOffer = tutorialOffer && screen.name === 'menu' && save.stats.wins + save.stats.draws + save.stats.losses === 0
+    && account?.kind !== 'recovery' && !(account?.kind === 'signedOut' && !guest) && !(cloud.accountMode && cloud.phase !== 'ready');
   const nextSteps: NextStep[] = [];
   {
     const next = nextMission(CAMPAIGN, campaignProgress);
     const firstTime = save.stats.wins + save.stats.draws + save.stats.losses === 0;
+    if (tutorialState() !== 'done') nextSteps.push({ icon: 'book', title: 'Tutorial', sub: `Lerne das Spiel Schritt für Schritt – ${TUTORIAL_REWARD_TEXT}`, onClick: () => setScreen({ name: 'tutorial' }) });
     if (loginCal?.canClaim && cloud.uid) nextSteps.push({ icon: 'gift', title: `Login-Bonus: Tag ${loginCal.index + 1}`, sub: 'Login-Kalender – jetzt abholen', onClick: () => setLoginOpen(true) });
-    if (firstTime) nextSteps.push({ icon: 'run', title: 'Dein erstes Spiel', sub: 'Einfaches Spiel auf „Leicht“ – lerne die Regeln kennen', onClick: () => void startRun('easy') });
+    if (firstTime && tutorialState() === 'done') nextSteps.push({ icon: 'run', title: 'Dein erstes Spiel', sub: 'Einfaches Spiel auf „Leicht“ – lerne die Regeln kennen', onClick: () => void startRun('easy') });
     if (next) nextSteps.push({ icon: 'map', title: next.number === 1 && next.world.order <= 1 ? 'Kampagne beginnen' : 'Kampagne fortsetzen', sub: `${next.world.name} · ${next.mission.name}`, onClick: () => setScreen({ name: 'campaign' }) });
     if (questsReady > 0) nextSteps.push({ icon: 'gift', title: questsReady === 1 ? '1 Belohnung bereit' : `${questsReady} Belohnungen bereit`, sub: 'Erfolge – jetzt abholen', onClick: () => setScreen({ name: 'quests' }) });
     if (questDaily) nextSteps.push({ icon: 'hourglass', title: questDaily.text, sub: `Tagesquest · ${rewardText(questDaily.reward)}`, progress: questDaily.progress / questDaily.target, onClick: () => setScreen({ name: 'quests' }) });
@@ -454,7 +477,11 @@ export function App() {
     <PageArt design={pageDesign} />
     <SymbolTips />
     <div className={`app ${screen.name === 'admin' ? 'app-wide' : ''} ${pageDesign ? 'has-page-art' : ''}`} style={skinStyle(getSkin(save.skins.card).colors)}>
-      {loginOpen && loginCal && screen.name === 'menu' && (
+      {showTutorialOffer && (
+        <TutorialOffer onStart={() => { setTutorialOffer(false); setScreen({ name: 'tutorial' }); }}
+          onSkip={() => { setTutorialState('skipped'); setTutorialOffer(false); }} />
+      )}
+      {loginOpen && loginCal && screen.name === 'menu' && !showTutorialOffer && (
         <LoginCalendar view={loginCal} onView={setLoginCal} onClose={() => setLoginOpen(false)} onAdopt={cloud.adoptServer} reducedMotion={reducedMotion} cardSkin={save.skins.card} />
       )}
       {account?.kind === 'recovery' && <NewPassword onDone={() => setAccount({ kind: 'signedIn', account: account.account })} />}
@@ -669,6 +696,10 @@ export function App() {
           onQuit={toMenu}
           runes={{ player: duelRune('adventure'), cpu: duelRune('adventure') ? 'random' : null }}
         />
+      )}
+      {screen.name === 'tutorial' && (
+        <Tutorial signedIn={!!cloud.uid && cloud.phase === 'ready'} unlocked={save.unlocked} reducedMotion={reducedMotion}
+          onMenu={toMenu} onInbox={() => setScreen({ name: 'inbox' })} onAccount={() => { setGuestState(false); toMenu(); }} />
       )}
       {screen.name === 'result' && (
         <Result outcome={screen.outcome} reward={screen.reward} score={screen.score} coins={screen.status === "checking" ? save.coins + screen.reward.coins : save.coins} status={screen.status} level={screen.level} onAgain={() => startRun(screen.level)} onMenu={toMenu} />
