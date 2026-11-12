@@ -1,6 +1,6 @@
 // Weltboss-Raid: the referee for raid fights of signed-in players.
 // "overview": the raid, its live life points and phase, the player's attacks left today, totals, rank and an open
-// fight to continue; rewards earned are paid on the way. "start": checks the 8 cards and the rune, freezes the
+// fight to continue; rewards earned go into the Postfach on the way. "start": checks the 8 cards and the rune, freezes the
 // fight setup of the current phase and reserves one attack (atomic, daily limit per UTC day). "finish": replays
 // the fight with the game's own rules, computes the damage here and books it once (raid_finish: result, boss life
 // points, statistics in one step). "leaderboard": totals by damage. Admin: "admin-list", "admin-publish",
@@ -8,9 +8,9 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  checkRaid, expiredDamage, loadContent, parseRaid, payRaidRewards, phaseIndex, prepareRaid, questDelta, questPeriod, raidDay, raidOpen, raidProblems,
-  raidQuestEvent, raidSnapshot, shownAvatar,
-} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@6711886e2689abe11b8c650dd2cbc410ab4f9771/public/server/engine-7e5d69d03d8f.js';
+  checkRaid, expiredDamage, loadContent, parseRaid, phaseIndex, prepareRaid, questDelta, questPeriod, raidDay, raidOpen, raidProblems,
+  raidOwedServer, raidQuestEvent, raidSnapshot, shownAvatar,
+} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@89d5acf4eb988c37b2f5a658e47f8c8a53345476/public/server/engine-09e8e5e677cb.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -115,27 +115,14 @@ Deno.serve(async (req) => {
     return (higher ?? 0) + (earlier ?? 0) + 1;
   }
 
-  /** Pays raid rewards the player has earned and not received yet (milestones, community goals). */
-  async function claimRewards(c: NonNullable<ReturnType<typeof configOf>>, st: Row, stats: Row | null) {
-    if (!stats) return [];
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const [{ data: claims }, { data: saveRow }] = await Promise.all([
-        db.from('raid_reward_claims').select('reward_key').eq('instance', st.id).eq('player_id', uid),
-        db.from('player_saves').select('save, version').eq('player_id', uid).maybeSingle(),
-      ]);
-      if (!saveRow) return [];
-      const pay = payRaidRewards(saveRow.save, c, { totalDamage: Number(stats.total_damage), attacks: stats.attacks }, st.current_hp,
-        (claims ?? []).map((x: Row) => x.reward_key), seed());
-      if (!pay) return [];
-      const granted = Object.fromEntries(pay.granted.map((g: Row) => [g.key, g]));
-      const { data: res, error } = await db.rpc('raid_claim', {
-        p_instance: st.id, p_player: uid, p_keys: pay.keys, p_granted: granted, p_save: pay.save, p_version: saveRow.version,
-      });
-      if (error) return [];
-      if (res === 'paid') return pay.granted;
-      // 'already' (another request paid a part) or 'conflict' (save changed): look again.
-    }
-    return [];
+  /** Raid rewards earned and not given yet (milestones, community goals) go into the Postfach. Returns how many. */
+  async function claimRewards(c: NonNullable<ReturnType<typeof configOf>>, st: Row, stats: Row | null): Promise<number> {
+    if (!stats) return 0;
+    const { data: claims } = await db.from('raid_reward_claims').select('reward_key').eq('instance', st.id).eq('player_id', uid);
+    const owed = raidOwedServer(c, { totalDamage: Number(stats.total_damage), attacks: stats.attacks }, st.current_hp, (claims ?? []).map((x: Row) => x.reward_key));
+    if (!owed.length) return 0;
+    const { data: n, error } = await db.rpc('raid_to_inbox', { p_instance: st.id, p_player: uid, p_items: owed });
+    return error ? 0 : Number(n) || 0;
   }
 
   async function attacksToday(instance: string) {
@@ -169,7 +156,7 @@ Deno.serve(async (req) => {
     await expireOld(cur.st.id);
     const st = (await stateOf(cur.c.id))!;
     let stats = await myStats(st.id);
-    const granted = await claimRewards(cur.c, st, stats);
+    const inboxed = await claimRewards(cur.c, st, stats);
     stats = await myStats(st.id);
     const [{ data: claims }, used, open, rank] = await Promise.all([
       db.from('raid_reward_claims').select('reward_key').eq('instance', st.id).eq('player_id', uid),
@@ -182,7 +169,7 @@ Deno.serve(async (req) => {
         wins: stats?.wins ?? 0, draws: stats?.draws ?? 0, losses: stats?.losses ?? 0, best: stats?.best_damage ?? 0, rank,
         claimed: (claims ?? []).map((x: Row) => x.reward_key),
       },
-      open, granted, nextReset: `${raidDay(new Date(Date.now() + 86400_000))}T00:00:00.000Z`,
+      open, granted: [], inboxed, nextReset: `${raidDay(new Date(Date.now() + 86400_000))}T00:00:00.000Z`,
     });
   }
 
@@ -223,12 +210,12 @@ Deno.serve(async (req) => {
       const { data: st } = await db.from('raid_state').select('*').eq('id', row.instance).single();
       const stats = await myStats(row.instance);
       const c = configOf(st.raid_id);
-      const granted = c ? await claimRewards(c, st, stats) : [];
+      const inboxed = c ? await claimRewards(c, st, stats) : 0;
       const used = await attacksToday(row.instance);
       return json({
         ok: true, outcome: row.outcome, fields: row.fields, damage: row.damage, applied: row.applied_damage, currentHp: st.current_hp, maxHp: st.max_hp,
         totalDamage: Number(stats?.total_damage ?? 0), attacks: stats?.attacks ?? 0, attacksLeft: c ? Math.max(0, c.dailyLimit - used) : 0,
-        rank: await myRank(row.instance, stats), granted, ...extra,
+        rank: await myRank(row.instance, stats), granted: [], inboxed, ...extra,
       });
     };
     // Finished before: the same answer again, nothing is booked twice.
