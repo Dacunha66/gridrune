@@ -5,14 +5,14 @@
 // match unlocks the rarest new discovery of the run. "claim": pays rewards earned earlier (once).
 // "buy-pack" / "buy-skin": coins are taken and the cards drawn
 // here. "free-coins" / "buy-coins" / "buy-offer": Runensteine shop (free coins, coins for Runensteine, card offers).
-// "login-status" / "login-claim": Login-Kalender (one field per day).
+// "login-status" / "login-claim": Login-Kalender (one field per day). "tutorial-finish": tutorial reward (once).
 // "forge-melt" / "forge-refine" / "forge-craft" / "forge-edition" / "forge-frame": Runenschmiede (essences from duplicates).
 // Every payout goes through pay_ticket: ticket finished and save written together, never twice.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod,
-} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@c0ff838db6602f9aae59432766832020c1c8ce96/public/server/engine-4be1029e7d4d.js';
+  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, checkTutorial, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod,
+} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@b004f6347e3b0cd7b7a34755409d20facd757260/public/server/engine-c26c83be92e3.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -223,6 +223,15 @@ Deno.serve(async (req) => {
       // 'already' (another device collected meanwhile) or 'conflict' (the save changed): look again.
     }
     return json({ error: 'busy' }, 503);
+  }
+
+  // Tutorial: the finished tutorial duel is replayed; the reward goes into the Postfach once per account.
+  if (body.action === 'tutorial-finish') {
+    const check = checkTutorial(body.log);
+    if (!check.ok) return json({ ok: false, reason: check.error }, 422);
+    const { data: res, error } = await db.rpc('tutorial_reward', { p_player: uid });
+    if (error) return json({ error: 'database' }, 500);
+    return json({ ok: true, result: res === 'already' ? 'already' : 'paid' });
   }
 
   // Runenschmiede: melt duplicates, refine essence, make a card, an edition of an ended event or a frame.
