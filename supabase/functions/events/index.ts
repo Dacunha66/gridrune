@@ -4,9 +4,11 @@
 // "overview": every visible event (running, ended, archived) – earned fragments are given on the way.
 // "admin-stats": numbers of one event for the admin.
 // "forge-fragment": Runenschmiede – one missing fragment of the stage being collected, for essence (limited per stage).
+// Every further stage starts its tasks again (puzzle_set_base: the counters when the stage began). The card of a
+// completed stage goes into the Postfach once (puzzle_stage_reward); "newCards" tells the game to show it.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { forgeFragmentServer, loadContent, puzzleClaimServer, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@03e7a6a406339700199735f398a8d990c5008b18/public/server/engine-19f449ba16f9.js';
+import { forgeFragmentServer, loadContent, puzzleClaimServer, puzzleStageBase, puzzleStageRewards, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@40daff1aa4ecf0e6a9bf02caf9d182b8eb7caa07/public/server/engine-a93a7e6fbcb9.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -49,16 +51,35 @@ Deno.serve(async (req) => {
 
   async function state(puzzleId: string, runId: string) {
     const [{ data: prog }, { data: counters }, { data: claims }] = await Promise.all([
-      db.from('puzzle_progress').select('pieces, completed_at').eq('player_id', uid).eq('puzzle_id', puzzleId).maybeSingle(),
+      db.from('puzzle_progress').select('pieces, completed_at, stage_base').eq('player_id', uid).eq('puzzle_id', puzzleId).maybeSingle(),
       db.from('puzzle_counters').select('day, week, daily, weekly, total').eq('player_id', uid).eq('puzzle_id', puzzleId).eq('run_id', runId).maybeSingle(),
       db.from('puzzle_claims').select('key').eq('player_id', uid).eq('puzzle_id', puzzleId).like('key', `${runId}:%`),
     ]);
     return {
       have: ((prog?.pieces ?? []) as number[]).map(Number),
       completedAt: (prog?.completed_at ?? null) as string | null,
+      stageBase: (prog?.stage_base ?? null) as unknown,
       counters: (counters ?? null) as Row | null,
       claimed: (claims ?? []).map((c: Row) => c.key as string),
     };
+  }
+
+  /** A further stage begins: its tasks count from now on (stored once per stage). */
+  async function ensureBase(puzzleId: string, st: Awaited<ReturnType<typeof state>>) {
+    const base = puzzleStageBase(puzzleId, st.have, st.counters as never, st.stageBase);
+    if (!base) return st;
+    await db.rpc('puzzle_set_base', { p_player: uid, p_puzzle: puzzleId, p_base: base });
+    return { ...st, stageBase: base };
+  }
+
+  /** Cards of completed stages into the Postfach (once each); the ones sent now are returned for the animation. */
+  async function sendStageCards(p: { id: string; name: string }, have: number[]) {
+    const sent: Row[] = [];
+    for (const r of puzzleStageRewards(p.id, have)) {
+      const { data: ok } = await db.rpc('puzzle_stage_reward', { p_player: uid, p_puzzle: p.id, p_key: r.key, p_title: r.title, p_message: r.message, p_reward: r.reward });
+      if (ok === true) sent.push({ puzzleId: p.id, puzzleName: p.name, stage: r.stage, cardId: r.cardId, editionId: r.reward.editionId, editionName: r.editionName });
+    }
+    return sent;
   }
 
   if (body.action === 'overview') {
@@ -66,13 +87,14 @@ Deno.serve(async (req) => {
     const events = [];
     let cloud: Row | null = null;
     const gained: Record<string, number[]> = {};
+    const newCards: Row[] = [];
     for (const p of visiblePuzzles(now)) {
-      let st = await state(p.id, p.run.id);
+      let st = await ensureBase(p.id, await state(p.id, p.run.id));
       // Earned fragments are given right away (retried when pieces or the save changed in between).
       for (let attempt = 0; attempt < 4; attempt++) {
         const { data: saveRow } = await db.from('player_saves').select('save, campaign, version').eq('player_id', uid).maybeSingle();
         if (!saveRow) break;
-        const c = puzzleClaimServer(saveRow.save, p.id, st.have, st.counters as never, st.claimed, seed(), now);
+        const c = puzzleClaimServer(saveRow.save, p.id, st.have, st.counters as never, st.claimed, seed(), now, st.stageBase);
         if (!c) break;
         const { data: res, error } = await db.rpc('puzzle_claim', {
           p_player: uid, p_puzzle: p.id, p_keys: c.keys, p_pieces: c.pieces, p_total: c.total, p_save: c.save, p_version: saveRow.version,
@@ -82,12 +104,14 @@ Deno.serve(async (req) => {
           gained[p.id] = [...(gained[p.id] ?? []), ...c.pieces];
           if (c.save) cloud = { save: c.save, campaign: saveRow.campaign, version: saveRow.version + 1 };
         }
-        st = await state(p.id, p.run.id);
+        // A stage may have been completed: the next one starts its tasks from here.
+        st = await ensureBase(p.id, await state(p.id, p.run.id));
         if (res === 'paid') continue; // more tasks may be done
       }
-      events.push({ ...puzzleView(p, st.have, st.completedAt, st.counters as never, st.claimed, now), gained: gained[p.id] ?? [] });
+      newCards.push(...await sendStageCards(p, st.have));
+      events.push({ ...puzzleView(p, st.have, st.completedAt, st.counters as never, st.claimed, now, st.stageBase), gained: gained[p.id] ?? [] });
     }
-    return json({ events, ...(cloud ?? {}) });
+    return json({ events, newCards, ...(cloud ?? {}) });
   }
 
   if (body.action === 'forge-fragment') {
@@ -106,10 +130,11 @@ Deno.serve(async (req) => {
       });
       if (error) return json({ error: 'database' }, 500);
       if (res === 'paid') {
-        const after = await state(p.id, p.run.id);
+        const after = await ensureBase(p.id, await state(p.id, p.run.id));
+        const newCards = await sendStageCards(p, after.have);
         return json({
-          ok: true, piece: r.piece, event: { ...puzzleView(p, after.have, after.completedAt, after.counters as never, after.claimed, new Date()), gained: [r.piece] },
-          save: r.save, campaign: saveRow.campaign, version: saveRow.version + 1,
+          ok: true, piece: r.piece, event: { ...puzzleView(p, after.have, after.completedAt, after.counters as never, after.claimed, new Date(), after.stageBase), gained: [r.piece] },
+          newCards, save: r.save, campaign: saveRow.campaign, version: saveRow.version + 1,
         });
       }
       if (res === 'already') {
