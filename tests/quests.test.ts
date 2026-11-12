@@ -156,18 +156,19 @@ describe('Erfolge: neue Zähler (v1.41)', () => {
 });
 
 describe('Erfolge: Raid-Quests nur bei laufendem Raid', () => {
+  const n = DEFAULT_QUESTS.perDay;
   const raidDay = ['2026-11-06', '2026-11-07', '2026-11-08', '2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13']
-    .find((d) => activeQuests(DEFAULT_QUESTS.daily, 3, d).some((q) => q.metric === 'raid_attacks'))!;
+    .find((d) => activeQuests(DEFAULT_QUESTS.daily, n, d).some((q) => q.metric === 'raid_attacks'))!;
   const now = at(`${raidDay}T10:00:00Z`);
   it('läuft ein Raid, bleibt die Auswahl wie bisher', () => {
     const b = questBoard(DEFAULT_QUESTS, emptyQuestState(now), { ...ctx, raidActive: true }, now);
-    expect(b.daily.map((i) => i.id)).toEqual(activeQuests(DEFAULT_QUESTS.daily, 3, raidDay).map((d) => d.id));
+    expect(b.daily.map((i) => i.id)).toEqual(activeQuests(DEFAULT_QUESTS.daily, n, raidDay).map((d) => d.id));
     expect(b.daily.some((i) => i.id === 'd-raid')).toBe(true);
   });
   it('ohne Raid rückt eine andere Quest nach, die übrigen bleiben', () => {
-    const before = activeQuests(DEFAULT_QUESTS.daily, 3, raidDay).map((d) => d.id).filter((id) => id !== 'd-raid');
+    const before = activeQuests(DEFAULT_QUESTS.daily, n, raidDay).map((d) => d.id).filter((id) => id !== 'd-raid');
     const b = questBoard(DEFAULT_QUESTS, emptyQuestState(now), { ...ctx, raidActive: false }, now);
-    expect(b.daily).toHaveLength(3);
+    expect(b.daily).toHaveLength(n);
     expect(b.daily.some((i) => i.id === 'd-raid')).toBe(false);
     for (const id of before) expect(b.daily.map((i) => i.id)).toContain(id);
   });

@@ -276,7 +276,7 @@ const q = (id: string, metric: QuestMetric, target: number, reward: QuestReward,
 
 /** The quests the game starts with (the admin can change them: content_docs quests/config). */
 export const DEFAULT_QUESTS: QuestConfig = {
-  perDay: 3,
+  perDay: 5,
   perWeek: 3,
   dailyBonus: coins(50),
   weeklyBonus: { type: 'pack', packId: 'helden', amount: 1 },
