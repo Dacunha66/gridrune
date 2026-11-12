@@ -10,7 +10,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   checkRaid, expiredDamage, loadContent, parseRaid, phaseIndex, prepareRaid, questDelta, questPeriod, raidDay, raidOpen, raidProblems,
   raidOwedServer, raidQuestEvent, raidSnapshot, shownAvatar,
-} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@89d5acf4eb988c37b2f5a658e47f8c8a53345476/public/server/engine-09e8e5e677cb.js';
+} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@3a9f3fb33a4ecd48a44a581a6a60c1ae354d9a32/public/server/engine-e02b2f711b9d.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
