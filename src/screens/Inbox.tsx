@@ -6,7 +6,7 @@ import { Header } from './Header';
 import { Card } from '../components/Card';
 import { GameIcon } from '../components/GameIcon';
 import { RevealItem, RewardReveal, revealOfGranted } from '../components/RewardReveal';
-import { RARITY_LABEL, getCard } from '../game/cards';
+import { RARITY_LABEL, RARITY_ORDER, getCard } from '../game/cards';
 import { CloudSave } from '../game/cloudSave';
 import { rewardText } from '../game/campaign';
 import type { GrantedReward } from '../game/campaignRewards';
@@ -94,7 +94,9 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
     // Coins and Runensteine first (big), then the packs to turn over; a single card comes with the big reveal.
     const isPack = (key: string) => before.find((i) => i.id === key)?.reward.type === 'pack';
     const fromPacks = results.filter((g) => isPack(g.key));
-    const packCards = fromPacks.flatMap((g) => [...g.cards.map((cardId) => ({ cardId, isNew: true })), ...g.duplicates.map((cardId) => ({ cardId, isNew: false }))]);
+    // Like in the shop: from the most common to the rarest, the best card is turned over last.
+    const packCards = fromPacks.flatMap((g) => [...g.cards.map((cardId) => ({ cardId, isNew: true })), ...g.duplicates.map((cardId) => ({ cardId, isNew: false }))])
+      .sort((x, y) => RARITY_ORDER[getCard(x.cardId).rarity] - RARITY_ORDER[getCard(y.cardId).rarity]);
     const rest = results.map((g) => (fromPacks.includes(g) ? { ...g, cards: [] } : g));
     const big = revealOfGranted(rest);
     setReveal(big.length ? big : null);

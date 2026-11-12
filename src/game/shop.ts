@@ -1,5 +1,5 @@
 // Card shop: booster packs and skins, paid with coins earned in duels.
-import { CARDS, Rarity, pickByRarity } from './cards';
+import { CARDS, RARITY_ORDER, Rarity, getCard, pickByRarity } from './cards';
 import { Rng } from './rng';
 import { SkinKind, getSkin, isSkinId } from './skins';
 import { SaveData } from './storage';
@@ -39,17 +39,30 @@ export interface PackCard {
 export type ShopResult<T = object> = ({ ok: true; save: SaveData } & T) | { ok: false; reason: string };
 
 /** Draws the pack's cards (all different within one pack). */
+/** At most this many legendary or mythic cards in one pack. */
+export const PACK_MAX_TOP = 1;
+const TOP: Rarity[] = ['legendary', 'mythic'];
+
+/**
+ * Draws the pack's cards (all different within one pack): at most one legendary or mythic card, and sorted from the most
+ * common to the rarest – the best card is always turned over last.
+ */
 export function rollPack(pack: PackDef, rng: Rng): string[] {
   // Reward-only cards are never in booster packs.
   const pool = CARDS.filter((c) => !c.rewardOnly);
   const out: string[] = [];
+  let top = 0;
+  // Once the pack has its legendary/mythic card, the other slots draw without those rarities.
+  const capped = (w: Partial<Record<Rarity, number>>) => (top >= PACK_MAX_TOP ? { ...w, legendary: 0, mythic: 0 } : w);
   for (let i = 0; i < pack.size; i++) {
     const last = i === pack.size - 1;
-    const card = (last && pack.guaranteed && pickByRarity(rng, pool, pack.guaranteed)) || pickByRarity(rng, pool, pack.weights)!;
+    const card = (last && pack.guaranteed && pickByRarity(rng, pool, capped(pack.guaranteed))) || pickByRarity(rng, pool, capped(pack.weights))
+      || pool.find((c) => !TOP.includes(c.rarity)) || pool[0];
     pool.splice(pool.indexOf(card), 1);
+    if (TOP.includes(card.rarity)) top++;
     out.push(card.id);
   }
-  return out;
+  return out.sort((x, y) => RARITY_ORDER[getCard(x).rarity] - RARITY_ORDER[getCard(y).rarity]);
 }
 
 export function buyPack(save: SaveData, packId: string, rng: Rng): ShopResult<{ cards: PackCard[] }> {

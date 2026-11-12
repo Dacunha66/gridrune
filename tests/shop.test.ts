@@ -133,3 +133,21 @@ describe('Booster-Preis aus dem Admin', () => {
     expect(parseShopDoc({ packs: { [PACKS[0].id]: { price: 'teuer' } } })[PACKS[0].id].price).toBeNull();
   });
 });
+
+describe('Packs: höchstens eine legendäre/mystische Karte, seltenste zuletzt', () => {
+  it('über viele Packs nie zwei Top-Karten, immer aufsteigend sortiert', () => {
+    for (const pack of PACKS) {
+      let tops = 0;
+      for (let seed = 1; seed <= 3000; seed++) {
+        const ids = rollPack(pack, createRng(seed));
+        const order = ids.map((id) => RARITY_ORDER[getCard(id).rarity]);
+        expect(order).toEqual([...order].sort((a, b) => a - b));
+        const top = ids.filter((id) => ['legendary', 'mythic'].includes(getCard(id).rarity)).length;
+        expect(top).toBeLessThanOrEqual(1);
+        tops += top;
+        expect(new Set(ids).size).toBe(ids.length);
+      }
+      expect(tops).toBeGreaterThan(0);
+    }
+  });
+});

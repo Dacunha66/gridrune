@@ -747,3 +747,10 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
   inbox_send, inbox_claim mit altem Spielstand → conflict, richtig → paid, nochmal → already.
 - Tests: tests/inbox.test.ts (3). Browser (iPhone-Größe, nachgebildeter Server): Briefumschlag mit Zahl, Postfach-Liste, Pack öffnen/aufdecken.
 - Server: raid v17, inbox v1 (starten, not_signed_in).
+
+## Packs: seltenste Karte zuletzt, höchstens 1 legendär/mystisch
+
+- rollPack: nach einer legendären oder mystischen Karte ziehen die übrigen Plätze ohne diese Seltenheiten; Karten aufsteigend nach Seltenheit
+  sortiert (beste zuletzt) – Shop, Kampagnen-/Erfolgs-Packs und Postfach. Postfach-Anzeige ebenfalls sortiert.
+- Test: je Pack 3000 Ziehungen – nie zwei Top-Karten, immer sortiert, keine doppelte Karte im Pack.
+- Server: Engine neu, Funktionen game, quests, inbox aktualisiert.
