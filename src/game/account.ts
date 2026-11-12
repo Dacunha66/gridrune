@@ -164,6 +164,26 @@ export function loginProblem(raw: string): string | null {
   return value.includes('@') ? emailProblem(value) : null;
 }
 
+/** Deletes the account with all its data on the server (typed confirmation "LÖSCHEN"), then signs out here. */
+export async function deleteAccount(confirm: string): Promise<void> {
+  const sb = (await client())!;
+  const uid = (await sb.auth.getSession()).data.session?.user.id ?? null;
+  const { data, error } = await sb.functions.invoke('account', { body: { action: 'delete', confirm } });
+  if (error) {
+    const res = (error as { context?: Response }).context;
+    const d = res && typeof res.json === 'function' ? await res.json().catch(() => null) : null;
+    throw new Error(typeof d?.reason === 'string' ? d.reason : 'Das Löschen hat nicht geklappt. Bitte versuche es noch einmal.');
+  }
+  if (!data?.ok) throw new Error('Das Löschen hat nicht geklappt. Bitte versuche es noch einmal.');
+  // The account's copy of the save on this device goes too (the guest save of the browser stays).
+  try {
+    if (uid) for (const k of Object.keys(localStorage)) if (k.includes(uid)) localStorage.removeItem(k);
+  } catch {
+    // Browser storage not available: nothing to clean up.
+  }
+  await sb.auth.signOut().catch(() => undefined);
+}
+
 export async function signOut(): Promise<void> {
   const sb = await client();
   await sb?.auth.signOut();

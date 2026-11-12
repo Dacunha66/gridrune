@@ -717,3 +717,13 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
   (fehlt etwas, steht dort rot „[noch nicht eingetragen]“). Link aus den Chat-Regeln.
 - Gäste sehen unter „Community“ einen Hinweis mit Anmelden statt einer leeren Seite.
 - Browser (iPhone-Größe): Seite mit 7 Abschnitten, keine Fehler.
+
+## Konto löschen + Schriften ohne Google
+
+- Mehr → Konto → „Konto löschen“: Bestätigung durch Eintippen von LÖSCHEN; Server-Funktion account übergibt erst die Clanführung
+  (bzw. löst den Clan auf) und löscht dann das Konto – alle Tabellen zum Spieler werden per ON DELETE CASCADE mitgelöscht (geprüft:
+  33 Fremdschlüssel auf auth.users, alle CASCADE). Admin-Konten werden nicht gelöscht. Danach Abmeldung, Kopie des Konto-Spielstands
+  auf dem Gerät gelöscht. Funktion startet (not_signed_in); echtes Löschen mit einem Testkonto steht noch aus.
+- Schriften (Grenze Gotisch, Cinzel, Alegreya Sans, Inter; SIL OFL) werden jetzt mit dem Spiel ausgeliefert (@fontsource, nur lateinische
+  Zeichen inkl. Umlaute). Browser-Test: keine Anfrage an fremde Server mehr, Schriften geladen.
+- Datenschutzseite: Absatz zu Google Fonts entfernt, Konto-Löschung im Spiel beschrieben.

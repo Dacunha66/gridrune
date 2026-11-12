@@ -1,6 +1,20 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+// Fonts are shipped with the game (no request to Google; SIL Open Font License), latin letters incl. ä ö ü ß.
+import '@fontsource/grenze-gotisch/latin-600.css';
+import '@fontsource/grenze-gotisch/latin-800.css';
+import '@fontsource/cinzel/latin-600.css';
+import '@fontsource/cinzel/latin-700.css';
+import '@fontsource/cinzel/latin-800.css';
+import '@fontsource/alegreya-sans/latin-500.css';
+import '@fontsource/alegreya-sans/latin-700.css';
+import '@fontsource/alegreya-sans/latin-800.css';
+import '@fontsource/inter/latin-500.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/inter/latin-700.css';
+import '@fontsource/inter/latin-800.css';
+import '@fontsource/inter/latin-900.css';
 import './styles.css';
 import { fixStandaloneHeight } from './fullHeight';
 import favicon from './assets/favicon.png';

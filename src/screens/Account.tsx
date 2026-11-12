@@ -11,7 +11,7 @@ import { loadProgress } from '../game/campaignProgress';
 import { ownedActiveIds } from '../game/cards';
 import {
   Account, NAME_MAX, PASSWORD_MIN, describeAuthError, emailProblem, loginProblem, nameProblem, passwordProblem, sendPasswordMail, setDisplayName,
-  setGuest, setNewPassword, signIn, signOut, signUp,
+  deleteAccount, setGuest, setNewPassword, signIn, signOut, signUp,
 } from '../game/account';
 
 type Mode = 'start' | 'login' | 'register' | 'forgot';
@@ -160,6 +160,7 @@ export function AccountPage({ account, onBack, onRenamed, avatar = null, onAvata
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [confirmText, setConfirmText] = useState('');
   async function act(action: () => Promise<string>) {
     setBusy(true);
     setError('');
@@ -213,6 +214,18 @@ export function AccountPage({ account, onBack, onRenamed, avatar = null, onAvata
           {error && <p className="admin-warning" role="alert">{error}</p>}
           <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => act(async () => { await signOut(); return ''; })}>Abmelden</button>
         </div>
+        <details className="account-delete">
+          <summary>Konto löschen</summary>
+          <p>Dein Konto und alle Daten dazu werden endgültig gelöscht: Spielstand, Karten, Münzen, Runensteine, Erfolge, Kampagne, Event-Fortschritt,
+            Clan-Mitgliedschaft und Chat-Nachrichten. Führst du einen Clan, übernimmt ein anderes Mitglied. Das lässt sich nicht rückgängig machen.</p>
+          <Field label="Zur Bestätigung LÖSCHEN eintippen">
+            <input className="admin-input" value={confirmText} autoCapitalize="characters" onChange={(e) => setConfirmText(e.target.value)} />
+          </Field>
+          <button type="button" className="btn btn-danger" disabled={busy || confirmText.trim().toUpperCase() !== 'LÖSCHEN'}
+            onClick={() => act(async () => { await deleteAccount('LÖSCHEN'); return 'Dein Konto ist gelöscht.'; })}>
+            Konto endgültig löschen
+          </button>
+        </details>
       </div>
     </main>
   );

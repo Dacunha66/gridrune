@@ -1,5 +1,5 @@
 // Datenschutz: what the game stores and why. The text describes the game as it is built (accounts and saves with
-// Supabase in the EU, website on Cloudflare, fonts from Google Fonts, browser storage, community); the operator's name,
+// Supabase in the EU, website on Cloudflare, fonts shipped with the game, browser storage, community); the operator's name,
 // address and e-mail come from the admin (settings document "privacy").
 import { ReactNode } from 'react';
 import { Header } from './Header';
@@ -38,6 +38,7 @@ export function Privacy({ onBack }: { onBack: () => void }) {
             <li>Ohne Konto bleibt dein Spielstand nur auf deinem Gerät.</li>
             <li>Mit Konto speichern wir, was für das Spiel nötig ist: E-Mail, Anzeigename, Spielstand und Spielergebnisse.</li>
             <li>Bezahlen mit Geld ist derzeit nicht möglich.</li>
+            <li>Schriftarten und Bilder liefern wir selbst aus – es werden keine Inhalte von Google oder anderen Drittanbietern nachgeladen.</li>
           </ul>
         </Section>
 
@@ -57,7 +58,8 @@ export function Privacy({ onBack }: { onBack: () => void }) {
           <p>Andere angemeldete Spieler sehen deinen Anzeigenamen und Avatar in Online-Duellen, Bestenlisten und in der Community.</p>
           <p>Rechtsgrundlage ist die Bereitstellung des Spiels, das du nutzen möchtest (Art. 6 Abs. 1 lit. b DSGVO); die Prüfung gegen Schummeln dient zusätzlich
             einem fairen Spiel für alle (Art. 6 Abs. 1 lit. f DSGVO). Die Daten bleiben gespeichert, solange dein Konto besteht.
-            Möchtest du dein Konto löschen, schreib uns an {mail} – wir löschen dann alle Daten zu deinem Konto.</p>
+            Du kannst dein Konto jederzeit selbst löschen (Mehr → Konto → Konto löschen) – dabei werden alle Daten zu deinem Konto sofort gelöscht.
+            Alternativ schreib uns an {mail}.</p>
         </Section>
 
         <Section title="Community: Clans und Chat">
@@ -91,8 +93,6 @@ export function Privacy({ onBack }: { onBack: () => void }) {
               Supabase verarbeitet die Daten in unserem Auftrag (Art. 28 DSGVO).</li>
             <li><b>Cloudflare</b> (Cloudflare, Inc.) liefert die Website aus. Dabei werden technisch nötige Verbindungsdaten wie die IP-Adresse verarbeitet; eine Übermittlung in die USA
               ist möglich. Cloudflare ist nach dem EU-US Data Privacy Framework zertifiziert.</li>
-            <li><b>Google Fonts</b> (Google Ireland Ltd.): Die Schriftarten des Spiels werden beim Laden von Servern von Google abgerufen. Dabei wird deine IP-Adresse an Google übertragen.
-              Rechtsgrundlage ist unser Interesse an einer einheitlichen Darstellung (Art. 6 Abs. 1 lit. f DSGVO).</li>
           </ul>
         </Section>
 

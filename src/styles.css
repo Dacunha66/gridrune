@@ -2670,3 +2670,7 @@ label.btn.disabled { opacity: .45; }
 .privacy-operator { white-space: pre-line; }
 .privacy-missing { color: #fca5a5; font-style: italic; }
 .privacy-text a { color: #7dd3fc; }
+.account-delete { margin-top: 18px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(248, 113, 113, 0.4); background: rgba(127, 29, 29, 0.15); }
+.account-delete summary { cursor: pointer; font-weight: 700; color: #fca5a5; }
+.account-delete p { font-size: 13px; line-height: 1.45; color: #f1e4e4; }
+.account-delete .btn { width: 100%; margin-top: 8px; }
