@@ -218,7 +218,8 @@ function PhaseEdit({ phase, index, onChange, onRemove }: { phase: RaidPhase; ind
         </select>
       </label>
       <div className="field"><span>KI-Stärke</span>
-        <div className="segmented">{AI_LEVELS.map((l: AiLevel) => (
+        {/* Albtraum is a level of the simple game (stronger cards); a raid boss brings its own deck. */}
+        <div className="segmented">{AI_LEVELS.filter((l) => l !== 'nightmare').map((l: AiLevel) => (
           <button key={l} type="button" className={`seg ${phase.level === l ? 'active' : ''}`} aria-pressed={phase.level === l} onClick={() => set({ level: l })}>{LEVEL_LABEL[l]}</button>
         ))}</div>
       </div>
