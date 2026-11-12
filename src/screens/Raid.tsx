@@ -68,6 +68,8 @@ interface Props {
   /** The rune taken into the raid (null = none). */
   rune: string | null;
   reducedMotion: boolean;
+  /** Opens the Postfach (raid rewards wait there). */
+  onInbox?: () => void;
   /** Rewards were paid into the account: load the save again. */
   onSaveChanged: () => void;
   onExit: () => void;
@@ -82,7 +84,7 @@ type View =
   | { k: 'leaderboard' }
   | { k: 'rewards' };
 
-export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExit }: Props) {
+export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExit, onInbox }: Props) {
   const [data, setData] = useState<RaidOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>({ k: 'overview' });
@@ -191,6 +193,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
           </ul>
           <HpBar current={r.currentHp} max={r.maxHp} />
           {r.granted.length > 0 && <p className="reward-line"><GameIcon name="gift" /> <CoinText text={grantedText(r.granted)} /></p>}
+          {(r.inboxed ?? 0) > 0 && <InboxNote n={r.inboxed!} onInbox={onInbox} />}
           <p className="muted small">Vom Server geprüft und gewertet.</p>
         </div>
         <div className="menu-buttons">
@@ -276,6 +279,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
               <p className="raid-open"><GameIcon name="hourglass" /> Du hast einen begonnenen Kampf – er zählt als Niederlage, wenn du ihn nicht bis {new Date(data.open.expiresAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr beendest.</p>
             )}
             {data.granted && data.granted.length > 0 && <p className="reward-line"><GameIcon name="gift" /> Gutgeschrieben: <CoinText text={grantedText(data.granted)} /></p>}
+            {(data.inboxed ?? 0) > 0 && <InboxNote n={data.inboxed!} onInbox={onInbox} />}
             {raid.status === 'defeated' && (() => {
               const final = raid.globalRewards.filter((g) => g.percent >= 100);
               const got = final.filter((g) => me.claimed.includes(`g:${g.percent}:${g.reward.type}`));
@@ -283,7 +287,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
                 <section className="raid-victory">
                   <b><GameIcon name="crown" /> Gemeinsam geschafft – der Boss ist besiegt!</b>
                   {final.length === 0 ? null : got.length > 0
-                    ? <span>Deine Belohnung fürs Besiegen ist gutgeschrieben: {final.map((g) => <RewardLine key={g.reward.type} reward={g.reward} />)} ✓</span>
+                    ? <span>Deine Belohnung fürs Besiegen: {final.map((g) => <RewardLine key={g.reward.type} reward={g.reward} />)} ✓ – zu finden im Postfach (Briefumschlag oben), falls noch nicht abgeholt.</span>
                     : me.attacks >= Math.max(1, raid.minAttacksForGlobal)
                       ? <span>Deine Belohnung wird gerade gutgeschrieben …</span>
                       : <span className="muted">Für die Gemeinschaftsbelohnung hättest du mindestens {Math.max(1, raid.minAttacksForGlobal)} Kampf abschließen müssen.</span>}
@@ -469,5 +473,15 @@ export function RaidTestFight({ config, phase, unlocked, deck, rune, reducedMoti
         if (!check.ok) setResult({ text: `Prüfung fehlgeschlagen (${check.error})`, damage: 0, fields: 0 });
         else setResult({ text: check.outcome === 'win' ? 'Sieg' : check.outcome === 'draw' ? 'Unentschieden' : 'Niederlage', damage: check.damage, fields: check.fields });
       }} />
+  );
+}
+
+/** Raid rewards now wait in the Postfach. */
+function InboxNote({ n, onInbox }: { n: number; onInbox?: () => void }) {
+  return (
+    <p className="reward-line inbox-note">
+      <GameIcon name="mail" /> {n === 1 ? 'Eine Belohnung liegt' : `${n} Belohnungen liegen`} jetzt in deinem Postfach.
+      {onInbox && <button type="button" className="btn btn-small btn-primary" onClick={onInbox}>Zum Postfach</button>}
+    </p>
   );
 }

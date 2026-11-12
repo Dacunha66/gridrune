@@ -66,6 +66,9 @@ interface Props {
   onEvents?: () => void;
   /** Community (clans and chat) – signed-in players only. */
   onCommunity?: () => void;
+  /** Postfach: open items (null = none for guests). */
+  inbox?: number | null;
+  onInbox?: () => void;
 }
 
 export interface NextStep {
@@ -103,11 +106,20 @@ export function MenuTabBar({ active, onTab, questsReady = 0, showQuests }: { act
 }
 
 /** Top line of the five areas of the bottom bar (Start, Karten, Shop, Erfolge, Mehr): logo, coins, account. */
-export function MenuTop({ coins, stones = null, account = null, avatar = null, onAccount }: { coins: number; stones?: number | null; account?: string | 'guest' | null; avatar?: string | null; onAccount?: () => void }) {
+export function MenuTop({ coins, stones = null, account = null, avatar = null, onAccount, inbox = null, onInbox }: {
+  coins: number; stones?: number | null; account?: string | 'guest' | null; avatar?: string | null; onAccount?: () => void;
+  /** Postfach: open items (null = no Postfach, e.g. guests). */
+  inbox?: number | null; onInbox?: () => void;
+}) {
   return (
     <header className="menu-top">
       <span className="menu-brand"><LogoMark className="menu-mark" /> <span>GridRune</span></span>
       <span className="menu-top-right">
+        {inbox !== null && onInbox && (
+          <button type="button" className={`menu-inbox ${inbox > 0 ? 'has' : ''}`} onClick={onInbox} aria-label={inbox > 0 ? `Postfach, ${inbox} neu` : 'Postfach'}>
+            <GameIcon name="mail" />{inbox > 0 && <b className="menu-tab-badge inbox-badge">{inbox}</b>}
+          </button>
+        )}
         {stones !== null && <span key={`s${stones}`} className="menu-coins menu-stones" aria-label={`${stones} Runensteine`}><Stone /> {stones}</span>}
         <span key={coins} className="menu-coins" aria-label={`${coins} Münzen`}><Coin /> {coins}</span>
         {account && (
@@ -120,7 +132,7 @@ export function MenuTop({ coins, stones = null, account = null, avatar = null, o
   );
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests, nextSteps = [], eventCard = null, onEvents, onCommunity, avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, onQuests, nextSteps = [], eventCard = null, onEvents, onCommunity, inbox = null, onInbox, avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
   const equipped = findRune(equippedRune);
   const [chooseLevel, setChooseLevel] = useState(false);
   // The open tab is kept by the app, so coming back from Shop or Erfolge opens the tab chosen in the bar.
@@ -181,7 +193,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
 
   return (
     <main className="screen menu menu-v2">
-      <MenuTop coins={save.coins} stones={account && account !== 'guest' ? save.stones : null} account={account} avatar={avatar} onAccount={onAccount} />
+      <MenuTop coins={save.coins} stones={account && account !== 'guest' ? save.stones : null} account={account} avatar={avatar} onAccount={onAccount} inbox={inbox} onInbox={onInbox} />
 
       {notice && (
         <button type="button" className="menu-notice" onClick={onNotice}><CoinText text={notice} /> <b>OK</b></button>

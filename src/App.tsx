@@ -25,6 +25,8 @@ import { setForgeConfig } from './game/forge';
 import { Forge } from './screens/Forge';
 import { Community } from './screens/Community';
 import { Privacy } from './screens/Privacy';
+import { Inbox } from './screens/Inbox';
+import { inboxList, openCount } from './game/inboxApi';
 import { PRIVACY_DOC, parsePrivacy, setPrivacyInfo } from './game/privacy';
 import { Header } from './screens/Header';
 import { equipEdition, setEditions, setPuzzles } from './game/puzzles';
@@ -63,7 +65,7 @@ import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' | 'privacy' }
+  | { name: 'menu' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' | 'privacy' | 'inbox' }
   /** focus = open this card's details right away. */
   | { name: 'collection'; focus?: string }
   /** Einfaches Spiel gegen Spieler: random = look for a random opponent right away. */
@@ -168,6 +170,18 @@ export function App() {
   const [questDaily, setQuestDaily] = useState<QuestItem | null>(null);
   /** Puzzle-Events for the start screen (the running one with the most to do), looked up when the menu opens. */
   const [eventCard, setEventCard] = useState<EventView | null>(null);
+  // Postfach: how many items wait (number on the envelope), looked up when the menu opens.
+  const [inboxCount, setInboxCount] = useState(0);
+  useEffect(() => {
+    if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
+    let alive = true;
+    inboxList().then((l) => {
+      if (alive && l) setInboxCount(openCount(l));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [screen.name, cloud.uid, cloud.phase]);
   useEffect(() => {
     if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
     let alive = true;
@@ -296,6 +310,7 @@ export function App() {
   const menuTop = (
     <MenuTop coins={save.coins} stones={account?.kind === 'signedIn' ? save.stones : null} account={account?.kind === 'signedIn' ? account.account.name : account?.kind === 'signedOut' ? 'guest' : null}
       avatar={account?.kind === 'signedIn' ? myAvatar : null}
+      inbox={cloud.uid ? inboxCount : null} onInbox={() => setScreen({ name: 'inbox' })}
       onAccount={() => (account?.kind === 'signedIn' ? setScreen({ name: 'account' }) : setGuestState(false))} />
   );
   /** The menu's bottom bar under Shop and Erfolge (same tabs as in the menu). */
@@ -448,6 +463,7 @@ export function App() {
           eventCard={eventCard}
           onEvents={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'events' }) : undefined}
           onCommunity={() => setScreen({ name: 'community' })}
+          inbox={cloud.uid ? inboxCount : null} onInbox={() => setScreen({ name: 'inbox' })}
           onNavigate={(name) => setScreen(name === 'campaign' ? { name } : name === 'collection' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}
@@ -480,6 +496,9 @@ export function App() {
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} runes={runesOn} />}
       {screen.name === 'privacy' && <Privacy onBack={toMenu} />}
+      {screen.name === 'inbox' && cloud.uid && (
+        <Inbox onBack={toMenu} onAdopt={cloud.adoptServer} onCount={setInboxCount} reducedMotion={reducedMotion} cardSkin={save.skins.card} />
+      )}
       {screen.name === 'shop' && (
         <div className="tabbed-screen">
           <Shop save={save} onChange={setSave} onBack={toMenu} server={cloud.accountMode ? { adopt: cloud.adoptServer } : null} top={menuTop}
@@ -539,7 +558,7 @@ export function App() {
       )}
       {screen.name === 'raid' && cloud.uid && (
         <Raid unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck} rune={duelRune('raid')} reducedMotion={reducedMotion}
-          onSaveChanged={cloud.retry} onExit={toMenu} />
+          onSaveChanged={cloud.retry} onExit={toMenu} onInbox={() => setScreen({ name: 'inbox' })} />
       )}
       {screen.name === 'raidTest' && (
         <RaidTestFight config={screen.config} phase={screen.phase} unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck}

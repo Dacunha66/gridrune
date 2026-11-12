@@ -55,6 +55,8 @@ export interface RaidOverview {
   me?: RaidMe;
   open?: OpenTicket | null;
   granted?: GrantedReward[];
+  /** Rewards just put into the Postfach. */
+  inboxed?: number;
   nextReset?: string;
 }
 
@@ -70,6 +72,8 @@ export interface RaidResult {
   attacksLeft: number;
   rank: number | null;
   granted: GrantedReward[];
+  /** Rewards just put into the Postfach. */
+  inboxed?: number;
 }
 
 export interface LeaderRow { rank: number; name: string; me: boolean; attacks: number; totalDamage: number; average: number; avatar?: string | null }

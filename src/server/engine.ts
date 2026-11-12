@@ -6,13 +6,13 @@ import { Arena, parseArena, setArenas } from '../game/arenas';
 import { GameMode, RuneDef, RUNES, availableRunes, parseRune, setRunes } from '../game/runes';
 import { GameSettings, SETTINGS, parseSettings, released, setGameSettings } from '../game/settings';
 import {
-  Mission, Opponent, World, mergeContent, parseMission, parseOpponent, parseWorld, setCampaign, CAMPAIGN, visibleWorlds, worldMissions,
+  Mission, Opponent, World, mergeContent, parseMission, parseReward as parseCampaignReward, Reward as CampaignReward, parseOpponent, parseWorld, setCampaign, CAMPAIGN, visibleWorlds, worldMissions,
 } from '../game/campaign';
 import { CampaignProgress, missionUnlocked, recordResult, runeUnlocked, sanitizeProgress, worldUnlocked } from '../game/campaignProgress';
 import { GrantedReward, grantRewards, isPayable, owedRewards, payRewards } from '../game/campaignRewards';
 import { RaidConfig, raidOwed } from '../game/raid';
 import { deriveRng } from '../game/league';
-import { PackCard, SHOP_DOC, buyPack, buySkin, parseShopDoc, setPackLooks } from '../game/shop';
+import { PACKS, PackCard, SHOP_DOC, buyPack, buySkin, parseShopDoc, setPackLooks } from '../game/shop';
 import { STONES_DOC, buyCoins, buyOffer, claimFreeCoins, parseStoneDoc, setStoneConfig } from '../game/stones';
 import { SaveData, sanitize } from '../game/storage';
 import {
@@ -475,6 +475,34 @@ export function payRaidRewards(saveRaw: unknown, config: RaidConfig, stats: { to
   if (owed.length === 0) return null;
   const r = grantRewards(sanitize(saveRaw), owed, deriveRng(seed, 'raid-rewards'));
   return { keys: owed.map((o) => o.key), granted: r.granted, save: r.save };
+}
+
+/** Raid rewards earned and not given yet – they go into the Postfach (collected later). */
+export function raidOwedServer(config: RaidConfig, stats: { totalDamage: number; attacks: number }, currentHp: number, claimed: string[]):
+  { key: string; title: string; reward: CampaignReward }[] {
+  return raidOwed(config, stats, currentHp, claimed).filter((o) => isPayable(o.reward)).map((o) => ({ key: o.key, title: o.source, reward: o.reward }));
+}
+
+// ---------- Postfach ----------
+
+/** Collects Postfach items: pays them into the save (packs opened with the seed); the result per item for the reveal. */
+export function inboxClaimServer(saveRaw: unknown, items: { id: string; title: string; reward: unknown }[], seed: string):
+  { save: SaveData; results: Record<string, GrantedReward> } {
+  const owed = items.flatMap((it) => {
+    const reward = parseCampaignReward(it.reward);
+    return reward && isPayable(reward) ? [{ key: it.id, reward, source: it.title }] : [];
+  });
+  const r = grantRewards(sanitize(saveRaw), owed, deriveRng(seed, 'inbox'));
+  return { save: r.save, results: Object.fromEntries(r.granted.map((g) => [g.key, g])) };
+}
+
+/** A gift from the admin: only rewards that exist in the game (coins, Runensteine, a known card, a known pack). */
+export function checkGift(raw: unknown): CampaignReward | null {
+  const r = parseCampaignReward(raw);
+  if (!r || !isPayable(r)) return null;
+  if (r.type === 'card' && !(r.cardId && CARDS.some((c) => c.id === r.cardId))) return null;
+  if (r.type === 'pack' && r.packId && !PACKS.some((p) => p.id === r.packId)) return null;
+  return r;
 }
 
 /** Checks the deck (20 different owned active cards) and the rune (any unlocked rune allowed in raids). */
