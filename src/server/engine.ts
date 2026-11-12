@@ -29,6 +29,7 @@ import { KRISTALL_CELLS, Outcome, Side } from '../game/battle';
 import { PlayedDuel } from '../game/verify';
 import { duelStats } from '../game/campaignGoals';
 import { RaidCheck } from '../game/raid';
+import { NIGHTMARE_DOC, nightmareTicket, parseNightmare, setNightmareConfig } from '../game/nightmare';
 import { LOGIN_DOC, LoginState, loginClaim, loginConfig, loginView, parseLoginConfig, parseLoginState, setLoginConfig } from '../game/loginCalendar';
 import {
   QUESTS_COLLECTION, QUESTS_DOC, QuestConfig, QuestEvent, QuestState, Titles, claimQuests, eventDelta, parseQuestConfig, parseQuestState, questBoard,
@@ -73,6 +74,9 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
   // Runenschmiede: prices set by the admin (settings/forge).
   const forgeRow = rows.find((r) => r.collection === 'settings' && r.id === FORGE_DOC);
   setForgeConfig(parseForgeDoc(forgeRow?.data));
+  // Albtraum: deck strength, thinking and coins set by the admin (settings/nightmare).
+  const nightmareRow = rows.find((r) => r.collection === 'settings' && r.id === NIGHTMARE_DOC);
+  setNightmareConfig(parseNightmare(nightmareRow?.data));
   // Login-Kalender: the 7 rewards and on/off set by the admin (settings/login).
   const loginRow = rows.find((r) => r.collection === 'settings' && r.id === LOGIN_DOC);
   setLoginConfig(parseLoginConfig(loginRow?.data));
@@ -246,7 +250,7 @@ export function prepareAdventure(saveRaw: unknown, campaignRaw: unknown, deck: u
   if (!validDeck(save, deck)) return { ok: false, error: 'deck' };
   if (!isAiLevel(level)) return { ok: false, error: 'level' };
   const playerRune = allowedRune(save, sanitizeProgress(campaignRaw), rune, 'adventure', isAdmin);
-  return { ok: true, ticket: { deck, owned: [...save.unlocked], playerRune, cpuRune: playerRune ? 'random' : null, level, cpuDeck: 'mirror' } };
+  return { ok: true, ticket: { deck, owned: [...save.unlocked], playerRune, cpuRune: playerRune ? 'random' : null, level, cpuDeck: 'mirror', ...(level === 'nightmare' ? { nightmare: nightmareTicket() } : {}) } };
 }
 
 /** Replays the run and the duel; on success returns the reward and the new save. */

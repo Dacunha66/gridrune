@@ -5,10 +5,10 @@ import { Card } from '../components/Card';
 import { Burst, Confetti, useCountUp } from '../components/Effects';
 import { Outcome } from '../game/battle';
 import { RARITY_LABEL, getCard } from '../game/cards';
-import { AI_COINS, Reward } from '../game/rewards';
+import { Reward, aiCoins } from '../game/rewards';
 import type { AiLevel } from '../game/ai';
 
-const LEVEL_NAME: Record<AiLevel, string> = { easy: 'Leicht', medium: 'Normal', hard: 'Schwer' };
+const LEVEL_NAME: Record<AiLevel, string> = { easy: 'Leicht', medium: 'Normal', hard: 'Schwer', nightmare: 'Albtraum' };
 
 interface Props {
   outcome: Outcome;
@@ -71,7 +71,7 @@ export function Result({ outcome, reward, score, coins, onAgain, onMenu, status,
         {reward.duplicateCard && (
           <p className="muted">{getCard(reward.duplicateCard).name} hattest du schon – dafür gibt es <Coin /> 50 extra.</p>
         )}
-        <p className="muted">Schwierigkeit: {LEVEL_NAME[level]} · Sieg <Coin /> {AI_COINS[level].win}{level !== 'hard' && <> – auf Schwer gibt es <Coin /> {AI_COINS.hard.win}</>}</p>
+        <p className="muted">Schwierigkeit: {LEVEL_NAME[level]} · Sieg <Coin /> {aiCoins(level).win}{(level === 'easy' || level === 'medium') && <> – auf Schwer gibt es <Coin /> {aiCoins('hard').win}</>}{level === 'hard' && <> – auf Albtraum gibt es <Coin /> {aiCoins('nightmare').win}</>}</p>
         <p className="muted">Neue Karten gibt es für einen Sieg in der Rangliste und im Shop.</p>
         <p className="muted">Münzen gesamt: <Coin /> {total} – ausgeben im Shop</p>
       </div>

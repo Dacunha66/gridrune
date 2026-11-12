@@ -28,6 +28,7 @@ import { EventsAdminView } from './AdminEvents';
 import { CommunityAdminView } from './AdminCommunity';
 import { InboxAdminView } from './AdminInbox';
 import { LoginAdminView } from './AdminLogin';
+import { NightmareAdminView } from './AdminNightmare';
 import { StatsAdminView } from './AdminStats';
 import { Design, DesignState } from '../game/designs';
 import { CardClass, CLASS_INFO, CLASSES, effectFitsClass, EffectId, effectPreview, EFFECTS, effectsForClass } from '../game/effects';
@@ -183,6 +184,7 @@ export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCa
           onOpen={open}
         />
       )}
+      {tab === 'balance' && db && <NightmareAdminView db={db} onToast={setToast} />}
       {tab === 'balance' && records && records.length > 0 && <BalanceView records={records} db={db!} onToast={setToast} onOpen={open} />}
       {tab === 'runner' && records && records.length > 0 && (
         settings ? (

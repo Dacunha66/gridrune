@@ -8,13 +8,19 @@ import { CARDS, pickByRarity } from './cards';
 import { deriveRng } from './league';
 import { SETTINGS } from './settings';
 import { SaveData } from './storage';
+import { DEFAULT_NIGHTMARE, nightmareConfig } from './nightmare';
 
 /** Coins in the simple game per difficulty (v1.42: Normal and Schwer raised – the computer's deck now follows the player's). */
 export const AI_COINS: Record<AiLevel, Record<Outcome, number>> = {
   easy: { win: 30, draw: 10, loss: 5 },
   medium: { win: 65, draw: 25, loss: 12 },
   hard: { win: 150, draw: 60, loss: 25 },
+  // Albtraum: the admin sets these (settings/nightmare); aiCoins() reads them, this is the default.
+  nightmare: DEFAULT_NIGHTMARE.coins,
 };
+
+/** Coins of a difficulty as paid now (Albtraum: the admin's values). */
+export const aiCoins = (level: AiLevel): Record<Outcome, number> => (level === 'nightmare' ? nightmareConfig().coins : AI_COINS[level]);
 /** Collection League: coins for a won match when every card is owned already. */
 export const LEAGUE_NO_CARD_COINS = 50;
 
@@ -26,11 +32,11 @@ export interface Reward {
   duplicateCard: string | null;
 }
 
-export const isAiLevel = (v: unknown): v is AiLevel => v === 'easy' || v === 'medium' || v === 'hard';
+export const isAiLevel = (v: unknown): v is AiLevel => v === 'easy' || v === 'medium' || v === 'hard' || v === 'nightmare';
 
 /** Simple game: coins by difficulty, never a card. */
 export function computeReward(result: Outcome, level: AiLevel = 'medium'): Reward {
-  return { coins: AI_COINS[isAiLevel(level) ? level : 'medium'][result], newCard: null, duplicateCard: null };
+  return { coins: aiCoins(isAiLevel(level) ? level : 'medium')[result], newCard: null, duplicateCard: null };
 }
 
 /**

@@ -86,4 +86,4 @@ export function unusedCards(cards: readonly StatsCard[]): { id: string; name: st
   return CARDS.filter((c) => !used.has(c.id)).map((c) => ({ id: c.id, name: c.name, rarity: c.rarity }));
 }
 
-export const LEVEL_LABEL: Record<string, string> = { easy: 'Leicht', medium: 'Normal', hard: 'Schwer' };
+export const LEVEL_LABEL: Record<string, string> = { easy: 'Leicht', medium: 'Normal', hard: 'Schwer', nightmare: 'Albtraum' };

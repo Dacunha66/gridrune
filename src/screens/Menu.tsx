@@ -9,7 +9,7 @@ import { CARDS, ownedActiveIds } from '../game/cards';
 import { SaveData } from '../game/storage';
 import { useState } from 'react';
 import type { AiLevel } from '../game/ai';
-import { AI_COINS } from '../game/rewards';
+import { aiCoins } from '../game/rewards';
 import type { EventView } from '../game/puzzleApi';
 import { timeLeftText } from '../game/puzzles';
 import { PuzzleBoard, activeStage, rewardPicture, stageEvent, stagesOf } from './Events';
@@ -18,6 +18,7 @@ const LEVELS: { level: AiLevel; label: string; icon: GameIconName; text: string 
   { level: 'easy', label: 'Leicht', icon: 'leaf', text: 'spielt oft zufällig' },
   { level: 'medium', label: 'Normal', icon: 'sword', text: 'der klassische Gegner' },
   { level: 'hard', label: 'Schwer', icon: 'flame', text: 'denkt deine Antwort voraus' },
+  { level: 'nightmare', label: 'Albtraum', icon: 'skull', text: 'stärkere Karten als deine' },
 ];
 
 interface Props {
@@ -164,7 +165,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
             {LEVELS.map((l) => (
               <button key={l.level} type="button" className={`btn level-btn level-${l.level}`} onClick={() => onPlay(l.level)}>
                 <span className="level-name"><GameIcon name={l.icon} /> {l.label}</span>
-                <span className="level-coins">Sieg <Coin /> {AI_COINS[l.level].win}</span>
+                <span className="level-coins">Sieg <Coin /> {aiCoins(l.level).win}</span>
                 <span className="level-text">{l.text}</span>
               </button>
             ))}

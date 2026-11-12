@@ -18,9 +18,12 @@ import { RuneUse, applyRune, echoCapturable, findRune, runeChoices, runeProblem,
  * - easy: often a random move, sometimes takes an obvious capture
  * - medium: the classic opponent (captures, values facing empty fields, effects, terrain)
  * - hard: also weighs the player's likely answer and open sides; checks every continuation in the last moves
+ * - nightmare (Albtraum): thinks like hard and uses its rune more readily; in the simple game it also gets stronger
+ *   cards (see simpleCpuDeck and nightmare.ts – both set by the admin). A deeper search was measured: it hardly
+ *   changes the results and takes seconds per move, so it is not used.
  */
-export type AiLevel = 'easy' | 'medium' | 'hard';
-export const AI_LEVELS: AiLevel[] = ['easy', 'medium', 'hard'];
+export type AiLevel = 'easy' | 'medium' | 'hard' | 'nightmare';
+export const AI_LEVELS: AiLevel[] = ['easy', 'medium', 'hard', 'nightmare'];
 
 export interface AiOptions {
   level?: AiLevel;
@@ -35,12 +38,13 @@ export function chooseCpuMove(state: BattleState, rng: Rng, options: AiOptions =
   if (level === 'easy') return easyMove(state, moves, rng);
   const side = state.turn;
   const prefer = new Set(options.prefer ?? []);
-  const view = level === 'hard' ? publicView(state, side) : state;
+  const thinks = level === 'hard' || level === 'nightmare';
+  const view = thinks ? publicView(state, side) : state;
   let best: Move = moves[0];
   let bestScore = -Infinity;
   for (const move of moves) {
     const card = state.hands[side][move.handIndex];
-    const s = level === 'hard' ? hardScore(view, move, prefer) + rng() : mediumScore(state, move) + rng() * 3 + preferBonus(card, prefer);
+    const s = thinks ? hardScore(view, move, prefer) + rng() : mediumScore(state, move) + rng() * 3 + preferBonus(card, prefer);
     if (s > bestScore) {
       bestScore = s;
       best = move;
@@ -250,7 +254,7 @@ export function chooseCpuRune(state: BattleState, rng: Rng, options: AiOptions =
   }
   if (!best) return null;
   const ownMovesLeft = cardsLeft(state, side);
-  const bar = ownMovesLeft <= 1 ? 1 : ownMovesLeft <= 3 ? 60 : level === 'hard' ? 140 : 110;
+  const bar = ownMovesLeft <= 1 ? 1 : ownMovesLeft <= 3 ? (level === 'nightmare' ? 40 : 60) : level === 'hard' ? 140 : level === 'nightmare' ? 90 : 110;
   return gain >= bar ? best : null;
 }
 
@@ -279,6 +283,7 @@ export const CPU_DECK_SHARE: Partial<Record<Rarity, number>> = { common: 100 };
 
 /** Rarity mix of the computer's deck for a difficulty of the simple game. */
 export function cpuDeckShare(level: AiLevel = 'medium'): Partial<Record<Rarity, number>> {
+  // (Albtraum normally mirrors the player's deck; without a deck it gets the common mix like Normal and Schwer.)
   return level === 'easy' ? CPU_SHARE : CPU_DECK_SHARE;
 }
 

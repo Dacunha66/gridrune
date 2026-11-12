@@ -3,6 +3,7 @@
 // records the player's lane changes and actions; the server replays everything with exactly this code and only
 // then pays the reward. The same functions run in the game (to play) and on the server (to check).
 import { ARENAS, Arena, pickArena } from './arenas';
+import { NightmareTicket, nightmareTicket, ticketNightmare } from './nightmare';
 import { AiLevel, AiOptions, CPU_DECK_SHARE, chooseCpuMove, chooseCpuRune, cpuDeckShare, drawCpuHand } from './ai';
 import { CARDS, DECK_SIZE, RARITY_ORDER, Rarity } from './cards';
 import { BattleState, HAND_SIZE, HandCard, Outcome, Side, coinToss, cpuChoosesFirst, createBattle, isGameOver, outcome, score, toHand } from './battle';
@@ -31,6 +32,8 @@ export interface AdventureTicket {
   level?: AiLevel;
   /** "mirror": the computer's deck follows the strength of the player's deck (Normal, Schwer); older tickets: commons. */
   cpuDeck?: 'mirror';
+  /** Albtraum: deck strength and thinking as set by the admin when the game started. */
+  nightmare?: NightmareTicket;
 }
 
 /** What a runner track is built from (adventure and campaign runs). */
@@ -82,7 +85,7 @@ export function adventureDuel(ticket: AdventureTicket, picks: Pick[], rngs = adv
   const cpuRune = ticket.cpuRune === 'random' && basic.length > 0 ? basic[Math.floor(rngs.cpuRune() * basic.length)] : null;
   const hand: HandCard[] = picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
   const cpuHand = ticket.cpuDeck === 'mirror'
-    ? simpleCpuDeck(rngs.cpuHand, ticket.level ?? 'medium', hand.map((c) => c.cardId))
+    ? simpleCpuDeck(rngs.cpuHand, ticket.level ?? 'medium', hand.map((c) => c.cardId), ticketNightmare(ticket.nightmare))
     : drawCpuHand(rngs.cpuHand, DECK_SIZE, cpuDeckShare(ticket.level ?? 'medium'));
   const start = createBattle(hand, cpuHand, 'player', [], arena.cells, { player: ticket.playerRune, cpu: cpuRune }, rngs.deal);
   return { arena, start };
@@ -224,11 +227,12 @@ const RARITY_BY_ORDER = Object.fromEntries(Object.entries(RARITY_ORDER).map(([r,
  * same rarity – or `down` rarities lower (never below common). No card of the player's deck, no card twice.
  */
 export function mirrorCpuDeck(rng: Rng, playerDeck: readonly string[], down = 0, nearest = true): HandCard[] {
+  // (A negative `down` gives the computer stronger cards than the player's – Albtraum.)
   const used = new Set(playerDeck);
   const out: string[] = [];
   for (const id of playerDeck) {
     const own = CARDS.find((c) => c.id === id)?.rarity;
-    const target = own ? Math.max(0, RARITY_ORDER[own] - down) : 0;
+    const target = own ? Math.min(5, Math.max(0, RARITY_ORDER[own] - down)) : 0;
     // Not enough other cards of that rarity: the next lower rarity (then higher), then any unused card, then (tiny
     // catalogs) any card not yet in the CPU deck.
     // (The league keeps its first rule: same rarity only, else any unused card – its matches replay unchanged.)
@@ -252,9 +256,11 @@ export function mirrorCpuDeck(rng: Rng, playerDeck: readonly string[], down = 0,
  * The computer's deck in the simple game (BALANCING.md, v1.42): "Leicht" keeps its fixed mix; "Normal" mirrors the
  * player's deck one rarity lower, "Schwer" mirrors it at the same rarity – a strong deck meets a strong opponent.
  */
-export function simpleCpuDeck(rng: Rng, level: AiLevel, playerDeck: readonly string[]): HandCard[] {
+export function simpleCpuDeck(rng: Rng, level: AiLevel, playerDeck: readonly string[], nightmare: NightmareTicket = nightmareTicket()): HandCard[] {
   if (level === 'easy' || !playerDeck.length) return drawCpuHand(rng, DECK_SIZE, cpuDeckShare(level));
-  return mirrorCpuDeck(rng, playerDeck, level === 'hard' ? 0 : 1);
+  if (level !== 'nightmare') return mirrorCpuDeck(rng, playerDeck, level === 'hard' ? 0 : 1);
+  // Albtraum: stronger cards than the player's, and the value bonus on each of them (shown on the cards).
+  return mirrorCpuDeck(rng, playerDeck, -nightmare.deckBoost).map((c) => ({ ...c, mod: nightmare.valueBonus }));
 }
 
 /** The computer's basic rune for a match (only when runes are in play for the player). */

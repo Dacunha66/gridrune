@@ -391,7 +391,7 @@ export function cellBreakdown(board: readonly (BoardCell | null)[], terrain: rea
   if (!card) throw new Error('Empty cell');
   const parts: Part[] = [];
   const rot = card.rot ?? 0;
-  if (card.mod !== 0) parts.push({ source: 'Stolperstein', d: [card.mod, card.mod, card.mod, card.mod], kind: 'stone' });
+  if (card.mod !== 0) parts.push({ source: card.mod > 0 ? 'Albtraum-Bonus' : 'Stolperstein', d: [card.mod, card.mod, card.mod, card.mod], kind: 'stone' });
   for (const ch of card.changes ?? []) parts.push({ source: ch.source, d: rotateValues(ch.d, rot), kind: 'play' });
   const auras = auraParts(board, terrain, cell);
   parts.push(...auras);

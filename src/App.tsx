@@ -30,6 +30,7 @@ import { inboxList, openCount } from './game/inboxApi';
 import { LoginCalendar } from './components/LoginCalendar';
 import type { LoginView } from './game/loginCalendar';
 import { PRIVACY_DOC, parsePrivacy, setPrivacyInfo } from './game/privacy';
+import { NIGHTMARE_DOC, parseNightmare, setNightmareConfig } from './game/nightmare';
 import { Header } from './screens/Header';
 import { equipEdition, setEditions, setPuzzles } from './game/puzzles';
 import { EventView, fetchEvents, loadEditions, loadPuzzles } from './game/puzzleApi';
@@ -257,6 +258,8 @@ export function App() {
       if (alive && forgeCfg) setForgeConfig(forgeCfg);
       // Datenschutz: the operator's details entered by the admin.
       db?.collection('settings').doc(PRIVACY_DOC).get().then((d) => { if (alive && d.exists) setPrivacyInfo(parsePrivacy(d.data())); }).catch(() => undefined);
+      // Albtraum: deck strength, thinking and coins set by the admin (also for games without an account).
+      db?.collection('settings').doc(NIGHTMARE_DOC).get().then((d) => { if (alive && d.exists) setNightmareConfig(parseNightmare(d.data())); }).catch(() => undefined);
       // Events: the forge offers editions of events that have ended.
       if (alive && savedPuzzles) setPuzzles(savedPuzzles);
       if (alive && stoneCfg) setStoneConfig(stoneCfg);

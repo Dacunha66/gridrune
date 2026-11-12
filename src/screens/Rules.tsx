@@ -3,7 +3,7 @@ import { AbilityMedallion, ClassShield } from '../components/cardIcons';
 import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { Coin } from '../components/Coin';
 import { Header } from './Header';
-import { AI_COINS, LEAGUE_NO_CARD_COINS } from '../game/rewards';
+import { LEAGUE_NO_CARD_COINS, aiCoins } from '../game/rewards';
 import { DRAW_HAND_SIZE } from '../game/battle';
 import { DECK_SIZE } from '../game/cards';
 import { SETTINGS } from '../game/settings';
@@ -73,8 +73,8 @@ export function Rules({ onBack, runes = false }: { onBack: () => void; runes?: b
         <h2>3 · Belohnung</h2>
         <p><b>Einfaches Spiel</b> – du wählst die Schwierigkeit des Computers und bekommst Münzen:</p>
         <ul>
-          {(['easy', 'medium', 'hard'] as const).map((l) => (
-            <li key={l}><b>{{ easy: 'Leicht', medium: 'Normal', hard: 'Schwer' }[l]}</b>: Sieg <Coin /> {AI_COINS[l].win} · Unentschieden <Coin /> {AI_COINS[l].draw} · Niederlage <Coin /> {AI_COINS[l].loss}</li>
+          {(['easy', 'medium', 'hard', 'nightmare'] as const).map((l) => (
+            <li key={l}><b>{{ easy: 'Leicht', medium: 'Normal', hard: 'Schwer', nightmare: 'Albtraum' }[l]}</b>: Sieg <Coin /> {aiCoins(l).win} · Unentschieden <Coin /> {aiCoins(l).draw} · Niederlage <Coin /> {aiCoins(l).loss}</li>
           ))}
         </ul>
         <p><b>Einfaches Spiel gegen Spieler</b> (mit Konto) – per Einladungscode gegen Freunde oder gegen einen zufälligen Gegner. Ein Sieg bringt <Coin /> {PVP_WIN_COINS}.</p>
