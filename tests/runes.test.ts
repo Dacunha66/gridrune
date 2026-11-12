@@ -54,6 +54,19 @@ describe('Runen: Grundregeln', () => {
     expect(a.runes.cpu!.used).toBe(false);
     expect(a.log[a.log.length - 1].text).toMatch(/Verdrehung/);
   });
+  it('Verdrehung: 90° nach links, nach rechts oder 180° – andere Werte werden abgelehnt', () => {
+    const s = setup({ 5: at('t9', 'player') }, 'rn01');
+    const before = vals(s, 5);
+    const half = applyRune(s, { rune: true, cell: 5, dir: 2 });
+    expect(half.board[5]!.rot).toBe(2);
+    // A half turn: top ↔ bottom, right ↔ left.
+    expect(vals(half, 5)).toEqual([before[2], before[3], before[0], before[1]]);
+    expect(half.log[half.log.length - 1].text).toMatch(/180°/);
+    expect(applyRune(s, { rune: true, cell: 5, dir: -1 }).board[5]!.rot).toBe(3);
+    expect(applyRune(s, { rune: true, cell: 5, dir: 1 }).board[5]!.rot).toBe(1);
+    expect(runeProblem(s, { rune: true, cell: 5, dir: 3 as never })).toMatch(/180°/);
+    expect(runeProblem(s, { rune: true, cell: 5 })).toMatch(/180°/);
+  });
   it('nicht nach Spielende und nicht ohne Rune', () => {
     const s = setup({ 5: at('t9', 'player') }, 'rn01');
     expect(runeProblem({ ...s, moveCount: 16 }, { rune: true, cell: 5, dir: 1 })).toMatch(/vorbei/);
@@ -74,7 +87,7 @@ describe('Rune der Verdrehung', () => {
   it('nur eigene Karten; Richtung muss gewählt sein', () => {
     const s = setup({ 5: at('t9', 'player'), 6: at('k5', 'cpu') }, 'rn01');
     expect(runeProblem(s, { rune: true, cell: 6, dir: 1 })).not.toBeNull();
-    expect(runeProblem(s, { rune: true, cell: 5 })).toMatch(/links oder rechts/);
+    expect(runeProblem(s, { rune: true, cell: 5 })).toMatch(/links, rechts oder 180°/);
   });
   it('bestehende Boni drehen mit und werden nicht verdoppelt (Kampfgeist)', () => {
     // Kampfgeist gives +1 on the highest local value (top, ties top first).

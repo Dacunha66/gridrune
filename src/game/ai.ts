@@ -10,7 +10,7 @@ import {
 import { CARDS, DECK_SIZE, Rarity, getCard, pickByRarity, virtualCard } from './cards';
 import { CardClass } from './effects';
 import { Rng } from './rng';
-import { RuneUse, applyRune, echoCapturable, findRune, runeChoices, runeProblem, runeRules } from './runes';
+import { RuneUse, TWIST_DIRS, applyRune, echoCapturable, findRune, runeChoices, runeProblem, runeRules } from './runes';
 
 /**
  * Strength of the computer opponent (campaign). Every level plays by the same rules and values –
@@ -213,7 +213,7 @@ export function runeOptions(state: BattleState): RuneUse[] {
     return out;
   };
   const uses: RuneUse[] = [];
-  if (r.effect === 'twist') for (const c of cells) for (const dir of [1, -1] as const) uses.push({ rune: true, cell: c, dir });
+  if (r.effect === 'twist') for (const c of cells) for (const dir of TWIST_DIRS) uses.push({ rune: true, cell: c, dir });
   if (r.effect === 'echo') {
     for (const c of cells) {
       const can = echoCapturable(state, c);

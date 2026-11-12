@@ -13,7 +13,7 @@ import { ContentStatus, CONTENT_STATUSES, ImageRef, parseImage } from './campaig
 export type RuneEffect = 'twist' | 'echo' | 'empower' | 'curse' | 'mulligan';
 export const RUNE_EFFECTS: RuneEffect[] = ['twist', 'echo', 'empower', 'curse', 'mulligan'];
 export const RUNE_EFFECT_LABEL: Record<RuneEffect, string> = {
-  twist: 'Drehen (eigene Karte um 90°)',
+  twist: 'Drehen (eigene Karte um 90° oder 180°)',
   echo: 'Erneut angreifen (ohne Kette)',
   empower: 'Stärken (eigene Karten einer Klasse)',
   curse: 'Schwächen (Gegnerkarten einer gewählten Klasse)',
@@ -71,7 +71,7 @@ function rune(id: string, name: string, effect: RuneEffect, glyph: string, descr
  * and level 10 of each world: Flüsterwald 5 Wald, 10 Nachhall; Glutgebirge 5 Glut, 10 Fluch.
  */
 export const BUILTIN_RUNES: readonly RuneDef[] = [
-  rune('rn01', 'Rune der Verdrehung', 'twist', 'ᛃ', 'Drehe die Werte einer eigenen gelegten Karte einmal um 90° nach links oder rechts. Es wird dabei nicht neu gekämpft.', { unlock: { kind: 'start' } }),
+  rune('rn01', 'Rune der Verdrehung', 'twist', 'ᛃ', 'Drehe die Werte einer eigenen gelegten Karte einmal um 90° nach links oder rechts oder um 180°. Es wird dabei nicht neu gekämpft.', { unlock: { kind: 'start' } }),
   rune('rn02', 'Rune des Nachhalls', 'echo', 'ᛇ', 'Eine eigene gelegte Karte greift ihre angrenzenden Gegnerkarten erneut an – normale Regeln, höchstens eine Übernahme (bei mehreren wählst du), keine Kettenreaktion. Einsetzbar ab der Spielmitte (8 Karten auf dem Feld).', { minPlaced: 8, unlock: { kind: 'mission', missionId: 'm010' } }),
   rune('rn03', 'Rune der Glut', 'empower', 'ᚲ', 'Bis zu zwei eigene Feuerkarten auf dem Spielfeld erhalten +1 auf alle vier Werte bis Duellende. Später gelegte Karten nicht.', { cls: 'feuer', maxTargets: 2, unlock: { kind: 'mission', missionId: 'm015' } }),
   rune('rn04', 'Rune des Fluchs', 'curse', 'ᚦ', 'Wähle eine gegnerische Klasse: Bis zu zwei Gegnerkarten dieser Klasse auf dem Spielfeld erhalten −1 auf alle vier Werte bis Duellende.', { maxTargets: 2, unlock: { kind: 'mission', missionId: 'm020' } }),
@@ -117,12 +117,16 @@ export function availableRunes(mode: GameMode, owned: readonly string[]): RuneDe
 // ---------- Using a rune ----------
 
 /** A rune activation as recorded in the duel (replayable like a move). */
+/** Rune der Verdrehung: quarter turns to the left (−1), to the right (1) or a half turn (2). */
+export type TwistDir = -1 | 1 | 2;
+export const TWIST_DIRS: readonly TwistDir[] = [1, -1, 2];
+
 export interface RuneUse {
   rune: true;
   /** twist/echo: the own card. */
   cell?: number;
-  /** twist: −1 = left, 1 = right. */
-  dir?: -1 | 1;
+  /** twist: −1 = 90° left, 1 = 90° right, 2 = 180°. */
+  dir?: TwistDir;
   /** echo: the enemy cards to take when more could be captured than allowed. */
   capture?: number[];
   /** empower/curse: the chosen cards. */
@@ -209,7 +213,7 @@ export function runeProblem(state: BattleState, use: RuneUse): string | null {
       return null;
     case 'twist':
       if (!okCell(use.cell)) return 'Wähle eine eigene Karte auf dem Spielfeld.';
-      if (use.dir !== 1 && use.dir !== -1) return 'Wähle links oder rechts.';
+      if (use.dir !== 1 && use.dir !== -1 && use.dir !== 2) return 'Wähle links, rechts oder 180°.';
       return null;
     case 'echo': {
       if (!okCell(use.cell)) return 'Wähle eine eigene Karte mit einer Gegnerkarte daneben.';
@@ -266,8 +270,8 @@ export function applyRune(state: BattleState, use: RuneUse): BattleState {
     case 'twist': {
       const c = board[use.cell!]!;
       board[use.cell!] = { ...c, rot: (((c.rot ?? 0) + use.dir!) % 4 + 4) % 4 };
-      events.push({ cell: use.cell!, text: use.dir === 1 ? '↻ 90°' : '↺ 90°', kind: 'buff' });
-      text = `${getCard(c.cardId).name} auf ${cellName(use.cell!)} um 90° nach ${use.dir === 1 ? 'rechts' : 'links'} gedreht`;
+      events.push({ cell: use.cell!, text: use.dir === 2 ? '⟲ 180°' : use.dir === 1 ? '↻ 90°' : '↺ 90°', kind: 'buff' });
+      text = `${getCard(c.cardId).name} auf ${cellName(use.cell!)} ${use.dir === 2 ? 'um 180° gedreht' : `um 90° nach ${use.dir === 1 ? 'rechts' : 'links'} gedreht`}`;
       break;
     }
     case 'echo': {

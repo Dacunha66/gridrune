@@ -24,7 +24,7 @@ import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
 import { AdventureTicket, adventureDuel, adventureRngs, simpleCpuDeck } from '../game/verify';
 import type { GuideBubble } from '../game/tutorial';
-import { Action, RuneDef, RuneUse, applyRune, basicRunes, echoCapturable, findRune, placedCount, runeChoices, runeOpen, runeProblem, runeRules, runeUsable } from '../game/runes';
+import { Action, RuneDef, RuneUse, TwistDir, applyRune, basicRunes, echoCapturable, findRune, placedCount, runeChoices, runeOpen, runeProblem, runeRules, runeUsable } from '../game/runes';
 import { RuneBadge } from '../components/RuneBadge';
 import { CardClass } from '../game/effects';
 import { CARD_STYLE_LABEL, cycleCardStyle, useCardStyle, useDevTools } from '../game/cardStyle';
@@ -194,7 +194,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   /** Wirbelwind: card shown on the field, waiting for the orientation and the confirmation. */
   const [placing, setPlacing] = useState<{ hand: number; cell: number; rot: number; target?: number } | null>(null);
   /** Rune activation in progress: chosen cards, class (Fluch) and direction (Verdrehung). */
-  const [runeMode, setRuneMode] = useState<{ cells: number[]; cls?: CardClass; dir?: 1 | -1; capture?: number[] } | null>(null);
+  const [runeMode, setRuneMode] = useState<{ cells: number[]; cls?: CardClass; dir?: TwistDir; capture?: number[] } | null>(null);
   /** Rune details sheet (own or the opponent's). */
   const [runeSheet, setRuneSheet] = useState<Side | null>(null);
   const [showLog, setShowLog] = useState(false);
@@ -644,6 +644,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
               <>
                 <button type="button" className={`btn turn-btn ${runeMode.dir === -1 ? 'active' : ''}`} aria-label="Nach links drehen" onClick={() => setRuneMode({ ...runeMode, dir: -1 })}>↺</button>
                 <button type="button" className={`btn turn-btn ${runeMode.dir === 1 ? 'active' : ''}`} aria-label="Nach rechts drehen" onClick={() => setRuneMode({ ...runeMode, dir: 1 })}>↻</button>
+                <button type="button" className={`btn turn-btn turn-180 ${runeMode.dir === 2 ? 'active' : ''}`} aria-label="Um 180 Grad drehen" onClick={() => setRuneMode({ ...runeMode, dir: 2 })}>180°</button>
               </>
             )}
             <button type="button" className="btn btn-primary" disabled={!runeReady} onClick={confirmRune}>✓ Einsetzen</button>
@@ -776,10 +777,10 @@ function CoinToss({ reducedMotion, rng, onDecide }: { reducedMotion: boolean; rn
   );
 }
 
-function runeHint(r: RuneDef, mode: { cells: number[]; cls?: CardClass; dir?: 1 | -1; capture?: number[] }, mustPick = false): string {
+function runeHint(r: RuneDef, mode: { cells: number[]; cls?: CardClass; dir?: TwistDir; capture?: number[] }, mustPick = false): string {
   switch (r.effect) {
     case 'twist':
-      return mode.cells.length === 0 ? 'ᚱ Eigene Karte zum Drehen antippen' : mode.dir ? 'ᚱ ✓ bestätigt die Drehung' : 'ᚱ Richtung: ↺ links oder ↻ rechts';
+      return mode.cells.length === 0 ? 'ᚱ Eigene Karte zum Drehen antippen' : mode.dir ? 'ᚱ ✓ bestätigt die Drehung' : 'ᚱ Richtung: ↺ links, ↻ rechts oder 180°';
     case 'echo':
       if (mode.cells.length === 0) return 'ᚱ Eigene Karte antippen, die erneut angreift';
       if (mustPick && !(mode.capture?.length)) return r.maxTargets === 1 ? 'ᚱ Welche Gegnerkarte übernehmen? Antippen' : `ᚱ Bis zu ${r.maxTargets} Gegnerkarten zum Übernehmen antippen`;
