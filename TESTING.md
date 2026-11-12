@@ -754,3 +754,7 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
   sortiert (beste zuletzt) – Shop, Kampagnen-/Erfolgs-Packs und Postfach. Postfach-Anzeige ebenfalls sortiert.
 - Test: je Pack 3000 Ziehungen – nie zwei Top-Karten, immer sortiert, keine doppelte Karte im Pack.
 - Server: Engine neu, Funktionen game, quests, inbox aktualisiert.
+
+## Startbild 3 Sekunden
+
+- Das Logo beim Start bleibt mindestens 3 Sekunden ab Seitenaufruf stehen und blendet dann in 0,45 s aus; das Spiel lädt dahinter. Gemessen: Ausblenden beginnt nach 3000 ms.

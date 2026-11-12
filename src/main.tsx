@@ -30,6 +30,17 @@ for (const [rel, href] of [['icon', favicon], ['apple-touch-icon', touchIcon]]) 
 
 fixStandaloneHeight();
 
+// Start picture: shown for at least 3 seconds from opening the page, then it fades out. The game loads behind it.
+const splash = document.querySelector<HTMLElement>('#root .splash');
+if (splash) {
+  document.body.appendChild(splash);
+  const hold = Math.max(0, 3000 - performance.now());
+  setTimeout(() => {
+    splash.classList.add('splash-gone');
+    setTimeout(() => splash.remove(), 500);
+  }, hold);
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
