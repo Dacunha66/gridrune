@@ -2810,3 +2810,6 @@ label.btn.disabled { opacity: .45; }
 .tutorial-card > svg { width: 44px; height: 44px; color: var(--gold-light); }
 .tutorial-card h1 { margin: 0; font-family: var(--f-display); }
 .tutorial-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.action-bar .turn-btn.turn-180 { font-size: 17px; padding: 0 8px; min-width: 0; }
+.action-bar:has(.turn-180) .turn-btn { min-width: 44px; padding: 0 6px; }
+.action-bar:has(.turn-180) .btn-primary { padding-left: 12px; padding-right: 12px; }
