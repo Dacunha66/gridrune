@@ -194,3 +194,24 @@ man auch auf Schwer vorn, weil der Computer keine Karte des Spielers bekommt und
 Normal Sieg/Unentschieden/Niederlage 50/20/10 → 65/25/12, Schwer 100/40/15 → 150/60/25, Leicht unverändert 30/10/5.
 Erwartete Münzen pro Duell (Simulation oben): Startdeck Schwer ≈ 65 vorher → ≈ 72 jetzt; Deck des Admins Schwer
 ≈ 99 → ≈ 77; Startdeck Normal ≈ 34 → ≈ 46.
+
+## Albtraum (v1.43)
+
+Neue Stufe im einfachen Spiel. Die KI denkt wie „Schwer“ (sieht die Handkarten des Spielers nie) und setzt ihre Rune
+eher ein; schwerer wird sie über ihre Karten. Beides stellt der Admin unter Balancing ein (settings/nightmare), ebenso
+die Münzen (Vorschlag 250/100/40). Eine Partie behält die Werte vom Spielstart (Ticket).
+
+Gemessen: die KI „Schwer“ spielt die Seite des Spielers, 60 Duelle je Zeile, starkes Deck (l05, e01, …) / Startdeck.
+
+| KI-Gegner | Kartenstärke | Wertebonus | Spieler gewinnt (stark / Start) | KI-Zug Ø / max |
+|---|---|---|---|---|
+| Schwer | – | – | 50 % / 50 % | 8 ms / 143 ms |
+| Albtraum | gleich | +1 | 13 % / 13 % | 9 ms / 137 ms |
+| Albtraum (Vorschlag) | +1 Seltenheit | 0 | 18 % / 15 % | 9 ms / 152 ms |
+| Albtraum | +1 Seltenheit | +1 | 3 % / 1 % | 11 ms / 150 ms |
+| Albtraum | +2 Seltenheiten | 0 | 2 % / 1 % | 9 ms / 139 ms |
+
+Weiter vorausrechnen (vollständige Suche schon 6–8 Züge vor Schluss) wurde ebenfalls gemessen: bis 7 Züge kein
+Unterschied zu Schwer, bei 8 Zügen kaum stärker, aber bis 3 Sekunden pro KI-Zug – zu langsam für Handy und Server,
+deshalb nicht eingebaut. Echte Spieler gewinnen laut Admin-Statistik 86 % gegen Schwer, sind also deutlich stärker als
+die KI auf der Spielerseite dieser Messung.
