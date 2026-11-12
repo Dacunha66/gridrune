@@ -2702,3 +2702,6 @@ label.btn.disabled { opacity: .45; }
 .menu-top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .menu-top-row .menu-top-right { gap: 6px; }
 @media (max-width: 400px) { .menu-brand span { font-size: 22px; } }
+/* Second line centred as one group: avatar, Runensteine, coins, Postfach side by side. */
+.menu-top-row { justify-content: center; gap: 8px; }
+.menu-top-row > span:empty { display: none; }
