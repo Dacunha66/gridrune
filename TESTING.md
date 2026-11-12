@@ -727,3 +727,12 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 - Schriften (Grenze Gotisch, Cinzel, Alegreya Sans, Inter; SIL OFL) werden jetzt mit dem Spiel ausgeliefert (@fontsource, nur lateinische
   Zeichen inkl. Umlaute). Browser-Test: keine Anfrage an fremde Server mehr, Schriften geladen.
 - Datenschutzseite: Absatz zu Google Fonts entfernt, Konto-Löschung im Spiel beschrieben.
+
+## Raid: Belohnung sichtbar machen
+
+- Befund (Datenbank): Raid „Erwachen des Waldwächters“ am 10.11. 22:48 besiegt; Admin-Konto erhielt um 22:51 „Boss besiegt“ (Helden-Pack:
+  c103, c161 neu, u11 doppelt) – beide Karten sind im Spielstand. Angezeigt wurde das nur als kleine Textzeile.
+- Neu: frisch gutgeschriebene Raid-Belohnungen erscheinen groß (wie in der Kampagne: Münzen, jede neue Karte einzeln), nach einem Kampf
+  und beim Öffnen der Raid-Übersicht. Ist der Boss besiegt, zeigt die Übersicht einen Kasten „Gemeinsam geschafft“ mit der Belohnung (✓).
+- Hochzählen der Münzen in der Belohnungsanzeige repariert (blieb im Entwicklungsmodus bei +0).
+- Browser (iPhone-Größe, nachgebildeter Server): Anzeige +15 Münzen und neue Karten, Kasten erscheint, keine Fehler.

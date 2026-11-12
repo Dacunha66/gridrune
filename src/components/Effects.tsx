@@ -75,13 +75,14 @@ export function Confetti({ count = 60 }: { count?: number }) {
 /** Animates a number from its previous value to `target`. */
 export function useCountUp(target: number, duration = 700, from?: number): number {
   const [value, setValue] = useState(from ?? target);
-  const prev = useRef(from ?? target);
+  // The number shown right now: a new count starts from it (also when an earlier count was cut short).
+  const shown = useRef(from ?? target);
   useEffect(() => {
-    const start = prev.current;
-    prev.current = target;
+    const start = shown.current;
     if (start === target) return;
     const reduced = document.documentElement.classList.contains('reduced-motion');
     if (reduced) {
+      shown.current = target;
       setValue(target);
       return;
     }
@@ -90,7 +91,9 @@ export function useCountUp(target: number, duration = 700, from?: number): numbe
     const tick = (now: number) => {
       const k = Math.min(1, (now - t0) / duration);
       const eased = 1 - Math.pow(1 - k, 3);
-      setValue(Math.round(start + (target - start) * eased));
+      const v = Math.round(start + (target - start) * eased);
+      shown.current = v;
+      setValue(v);
       if (k < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

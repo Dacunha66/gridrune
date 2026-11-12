@@ -119,3 +119,14 @@ export function RewardReveal({ items, reducedMotion, guest = false, onClose }: {
     </div>
   );
 }
+
+/** The big reveal for rewards the server credited (coins, Runensteine, new cards) – e.g. raid milestones and community goals. */
+export function revealOfGranted(granted: readonly { source: string; coins: number; stones?: number; cards: string[] }[]): RevealItem[] {
+  const coins = granted.filter((g) => g.coins > 0);
+  const stones = granted.filter((g) => (g.stones ?? 0) > 0);
+  return [
+    ...(coins.length ? [{ kind: 'coins', amount: coins.reduce((n, g) => n + g.coins, 0), sources: coins.map((g) => `${g.source}: 🪙 ${g.coins}`) } as RevealItem] : []),
+    ...(stones.length ? [{ kind: 'stones', amount: stones.reduce((n, g) => n + (g.stones ?? 0), 0), sources: stones.map((g) => `${g.source}: ${g.stones} Runensteine`) } as RevealItem] : []),
+    ...granted.flatMap((g) => g.cards.map((cardId): RevealItem => ({ kind: 'card', cardId, source: g.source }))),
+  ];
+}

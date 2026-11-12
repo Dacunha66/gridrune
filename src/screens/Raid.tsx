@@ -19,6 +19,7 @@ import { CLASS_INFO } from '../game/effects';
 import { imageUrl, repairDeck } from '../game/catalog';
 import { LEVEL_LABEL, REWARD_ICON, Reward, rewardText } from '../game/campaign';
 import { grantedText } from '../game/campaignRewards';
+import { RevealItem, RewardReveal, revealOfGranted } from '../components/RewardReveal';
 import { findRune } from '../game/runes';
 import { Pick } from '../game/runner';
 import { RaidConfig, checkRaid, raidAi, raidRngs, raidSnapshot, resumeRaid } from '../game/raid';
@@ -86,6 +87,8 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>({ k: 'overview' });
   const [busy, setBusy] = useState(false);
+  // Rewards just credited (milestones, community goals, boss defeated): shown big, like in the campaign.
+  const [reveal, setReveal] = useState<RevealItem[] | null>(null);
   const hand = useMemo(() => savedHand(ownedActiveIds(unlocked), deck), [unlocked, deck]);
 
   const sendResult = useCallback(async (ticket: OpenTicket, record: { first: 'player' | 'cpu'; moves: DuelRecord['moves'] }, bossName: string) => {
@@ -97,7 +100,10 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
       return;
     }
     writeFight(ticket.id, null);
-    if (r.granted.length) onSaveChanged();
+    if (r.granted.length) {
+      onSaveChanged();
+      setReveal(revealOfGranted(r.granted));
+    }
     setView({ k: 'result', result: r, bossName });
   }, [onSaveChanged]);
 
@@ -108,7 +114,10 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
       return;
     }
     setData(r);
-    if (r.granted?.length) onSaveChanged();
+    if (r.granted?.length) {
+      onSaveChanged();
+      setReveal(revealOfGranted(r.granted));
+    }
     // A finished fight that could not be sent yet: send it now.
     if (r.open) {
       const stored = readFight(r.open.id);
@@ -168,6 +177,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
     return (
       <main className={`screen result raid-result result-${r.outcome === 'expired' ? 'loss' : r.outcome}`}>
         {r.outcome === 'win' && !reducedMotion && <Confetti count={60} />}
+        {reveal && reveal.length > 0 && <RewardReveal items={reveal} reducedMotion={reducedMotion} onClose={() => setReveal(null)} />}
         <div className="scroll result-body">
           <ResultIcon outcome={r.outcome} />
           <h1>{title}</h1>
@@ -221,6 +231,7 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
   // ---------- Overview ----------
   return (
     <main className="screen raid">
+      {reveal && reveal.length > 0 && <RewardReveal items={reveal} reducedMotion={reducedMotion} onClose={() => setReveal(null)} />}
       <Header title="Raid" onBack={onExit} />
       <div className="scroll raid-body">
         {!data && !error && <p className="muted center">Lade den Raid …</p>}
@@ -265,6 +276,21 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
               <p className="raid-open"><GameIcon name="hourglass" /> Du hast einen begonnenen Kampf – er zählt als Niederlage, wenn du ihn nicht bis {new Date(data.open.expiresAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr beendest.</p>
             )}
             {data.granted && data.granted.length > 0 && <p className="reward-line"><GameIcon name="gift" /> Gutgeschrieben: <CoinText text={grantedText(data.granted)} /></p>}
+            {raid.status === 'defeated' && (() => {
+              const final = raid.globalRewards.filter((g) => g.percent >= 100);
+              const got = final.filter((g) => me.claimed.includes(`g:${g.percent}:${g.reward.type}`));
+              return (
+                <section className="raid-victory">
+                  <b><GameIcon name="crown" /> Gemeinsam geschafft – der Boss ist besiegt!</b>
+                  {final.length === 0 ? null : got.length > 0
+                    ? <span>Deine Belohnung fürs Besiegen ist gutgeschrieben: {final.map((g) => <RewardLine key={g.reward.type} reward={g.reward} />)} ✓</span>
+                    : me.attacks >= Math.max(1, raid.minAttacksForGlobal)
+                      ? <span>Deine Belohnung wird gerade gutgeschrieben …</span>
+                      : <span className="muted">Für die Gemeinschaftsbelohnung hättest du mindestens {Math.max(1, raid.minAttacksForGlobal)} Kampf abschließen müssen.</span>}
+                  <button type="button" className="link-btn" onClick={() => setView({ k: 'rewards' })}>Alle Belohnungen ansehen</button>
+                </section>
+              );
+            })()}
           </>
         )}
       </div>
