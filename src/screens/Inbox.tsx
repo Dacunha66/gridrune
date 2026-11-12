@@ -6,7 +6,8 @@ import { Header } from './Header';
 import { Card } from '../components/Card';
 import { GameIcon } from '../components/GameIcon';
 import { RevealItem, RewardReveal, revealOfGranted } from '../components/RewardReveal';
-import { RARITY_LABEL, RARITY_ORDER, getCard } from '../game/cards';
+import { RARITY_LABEL, RARITY_ORDER, getCard, isCardId } from '../game/cards';
+import { findEdition } from '../game/puzzles';
 import { CloudSave } from '../game/cloudSave';
 import { rewardText } from '../game/campaign';
 import type { GrantedReward } from '../game/campaignRewards';
@@ -16,12 +17,16 @@ import { PACKS, packView } from '../game/shop';
 import type { Reward } from '../game/campaign';
 
 /** "1 × Helden-Pack" instead of "1 Kartenpack". */
-function giftText(r: Reward): string {
+function giftText(r: Reward | { type: 'edition'; editionId: string }): string {
+  if (r.type === 'edition') {
+    const e = findEdition((r as { editionId: string }).editionId);
+    return e && isCardId(e.cardId) ? `Karte ${getCard(e.cardId).name} – Edition „${e.name}“` : 'Karten-Edition';
+  }
   const pack = r.type === 'pack' ? PACKS.find((p) => p.id === r.packId) ?? PACKS[0] : null;
   return pack ? `${r.amount ?? 1} × ${packView(pack).name}` : rewardText(r);
 }
 
-const SENDER: Record<InboxItem['sender'], string> = { raid: 'Raid', admin: 'GridRune-Team' };
+const SENDER: Record<InboxItem['sender'], string> = { raid: 'Raid', admin: 'GridRune-Team', event: 'Puzzle-Event' };
 const day = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 const daysLeft = (iso: string) => Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / 86400_000));
 
@@ -98,7 +103,12 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
     const packCards = fromPacks.flatMap((g) => [...g.cards.map((cardId) => ({ cardId, isNew: true })), ...g.duplicates.map((cardId) => ({ cardId, isNew: false }))])
       .sort((x, y) => RARITY_ORDER[getCard(x.cardId).rarity] - RARITY_ORDER[getCard(y.cardId).rarity]);
     const rest = results.map((g) => (fromPacks.includes(g) ? { ...g, cards: [] } : g));
-    const big = revealOfGranted(rest);
+    // Card editions from Puzzle-Events: shown big, in their special look.
+    const editions: RevealItem[] = results.flatMap((g) => (g.editions ?? []).flatMap((id) => {
+      const e = findEdition(id);
+      return e && isCardId(e.cardId) ? [{ kind: 'edition', cardId: e.cardId, editionId: e.id, name: e.name, source: g.source } as RevealItem] : [];
+    }));
+    const big = [...editions, ...revealOfGranted(rest)];
     setReveal(big.length ? big : null);
     setPack(packCards.length ? packCards : null);
   }
@@ -119,7 +129,7 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
             <ul className="inbox-list">
               {open.map((i) => (
                 <li key={i.id} className="inbox-item">
-                  <span className={`inbox-icon sender-${i.sender}`} aria-hidden="true"><GameIcon name={i.sender === 'raid' ? 'raid' : 'gift'} /></span>
+                  <span className={`inbox-icon sender-${i.sender}`} aria-hidden="true"><GameIcon name={i.sender === 'raid' ? 'raid' : i.sender === 'event' ? 'crown' : 'gift'} /></span>
                   <span className="inbox-text">
                     <small>{SENDER[i.sender]} · {day(i.createdAt)} · noch {daysLeft(i.expiresAt)} {daysLeft(i.expiresAt) === 1 ? 'Tag' : 'Tage'}</small>
                     <b>{i.title}</b>

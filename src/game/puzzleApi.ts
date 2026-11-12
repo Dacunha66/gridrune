@@ -60,14 +60,24 @@ async function call(body: Record<string, unknown>): Promise<{ status: number; da
 }
 
 /** The events (earned fragments are given on the way); `cloud` = new save when a puzzle was completed. */
-export async function fetchEvents(): Promise<{ events: EventView[]; cloud: CloudSave | null } | 'offline'> {
+/** The card of a completed stage, just sent to the Postfach (shown once with an animation). */
+export interface NewCard {
+  puzzleId: string;
+  puzzleName: string;
+  stage: number;
+  cardId: string;
+  editionId: string;
+  editionName: string;
+}
+
+export async function fetchEvents(): Promise<{ events: EventView[]; cloud: CloudSave | null; newCards: NewCard[] } | 'offline'> {
   const r = await call({ action: 'overview' });
   if (!r || !r.data || r.status >= 500 || !Array.isArray(r.data.events)) return 'offline';
   const d = r.data;
   const cloud = typeof d.version === 'number' && d.save
     ? { version: d.version, save: sanitize(d.save), campaign: sanitizeProgress(d.campaign as CampaignProgress) }
     : null;
-  return { events: d.events as EventView[], cloud };
+  return { events: d.events as EventView[], cloud, newCards: Array.isArray(d.newCards) ? (d.newCards as NewCard[]) : [] };
 }
 
 export interface EventStats {

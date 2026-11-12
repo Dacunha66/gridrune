@@ -28,6 +28,8 @@ export interface GrantedReward {
   cards: string[];
   /** Cards already owned – put into the melting pot of the Runenschmiede. */
   duplicates: string[];
+  /** Card editions received (Puzzle-Events via the Postfach). */
+  editions?: string[];
 }
 
 const PAYABLE = new Set<Reward['type']>(['coins', 'stones', 'card', 'pack']);

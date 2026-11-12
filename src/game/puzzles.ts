@@ -308,11 +308,70 @@ export interface PuzzleCounters {
 
 /**
  * Claim key of a task (step) in the current period (unique per player and puzzle in the database – never paid twice).
- * The first target keeps the original key; further steps get "~2", "~3", …
+ * The first target keeps the original key; further steps get "~2", "~3", … Every further stage of the event starts the
+ * tasks again: its keys get "s2:", "s3:", … (the first stage keeps the original keys).
  */
-export function taskKey(p: PuzzleDef, t: PuzzleTask, now: Date = new Date(), step = 0): string {
+export function taskKey(p: PuzzleDef, t: PuzzleTask, now: Date = new Date(), step = 0, stage = 0): string {
   const period = t.period === 'daily' ? `d:${questDay(now)}` : t.period === 'weekly' ? `w:${questWeek(now)}` : 'o';
-  return `${p.run.id}:${period}:${t.id}${step > 0 ? `~${step + 1}` : ''}`;
+  return `${p.run.id}:${stage > 0 ? `s${stage + 1}:` : ''}${period}:${t.id}${step > 0 ? `~${step + 1}` : ''}`;
+}
+
+/**
+ * The counters when the player reached a further stage: the tasks of that stage count only what came after
+ * (stored per player on the server; for the first stage there is none).
+ */
+export interface StageBase {
+  stage: number;
+  day: string;
+  week: string;
+  daily: Record<string, number>;
+  weekly: Record<string, number>;
+  total: Record<string, number>;
+}
+
+export function parseStageBase(raw: unknown): StageBase | null {
+  const r = raw && typeof raw === 'object' ? raw as Record<string, unknown> : null;
+  if (!r || !Number.isInteger(r.stage)) return null;
+  const obj = (v: unknown) => (v && typeof v === 'object' ? v as Record<string, number> : {});
+  return { stage: r.stage as number, day: String(r.day ?? ''), week: String(r.week ?? ''), daily: obj(r.daily), weekly: obj(r.weekly), total: obj(r.total) };
+}
+
+/** A new starting point for `stage` from the counters now. */
+export function stageBaseNow(stage: number, counters: PuzzleCounters | null, now: Date = new Date()): StageBase {
+  return {
+    stage,
+    day: questDay(now),
+    week: questWeek(now),
+    daily: counters && counters.day === questDay(now) ? { ...counters.daily } : {},
+    weekly: counters && counters.week === questWeek(now) ? { ...counters.weekly } : {},
+    total: counters ? { ...counters.total } : {},
+  };
+}
+
+/** The counters of the stage being collected: what came after its starting point. */
+export function stageCounters(counters: PuzzleCounters | null, base: StageBase | null): PuzzleCounters | null {
+  if (!counters || !base) return counters;
+  const minus = (a: Record<string, number>, b: Record<string, number>) =>
+    Object.fromEntries(Object.entries(a).map(([k, v]) => [k, Math.max(0, (Number(v) || 0) - (Number(b[k]) || 0))]));
+  return {
+    ...counters,
+    daily: counters.day === base.day ? minus(counters.daily, base.daily) : counters.daily,
+    weekly: counters.week === base.week ? minus(counters.weekly, base.weekly) : counters.weekly,
+    total: minus(counters.total, base.total),
+  };
+}
+
+/** Index of the stage being collected (the last one when everything is complete). */
+export function stageIndex(p: PuzzleDef, have: readonly number[]): number {
+  return currentStage(p, have)?.index ?? puzzleStages(p).length - 1;
+}
+
+/** Counters and stage the tasks work with right now (the base only counts when it belongs to this stage). */
+function stageContext(p: PuzzleDef, have: readonly number[], counters: PuzzleCounters | null, base: StageBase | null, now: Date) {
+  const stage = stageIndex(p, have);
+  if (stage === 0) return { stage, counters };
+  // Without a stored starting point for this stage it counts from now (nothing done before pays again).
+  return { stage, counters: stageCounters(counters, base && base.stage === stage ? base : stageBaseNow(stage, counters, now)) };
 }
 
 export interface TaskView {
@@ -337,23 +396,25 @@ function taskValue(t: PuzzleTask, counters: PuzzleCounters | null, now: Date): n
 }
 
 /** Every step of every task: reached, and its claim key. */
-export function taskSteps(p: PuzzleDef, counters: PuzzleCounters | null, now: Date = new Date()): { task: PuzzleTask; step: number; target: number; reached: boolean; key: string }[] {
+export function taskSteps(p: PuzzleDef, counters: PuzzleCounters | null, now: Date = new Date(), stage = 0): { task: PuzzleTask; step: number; target: number; reached: boolean; key: string }[] {
   return p.tasks.flatMap((t) => {
     const value = taskValue(t, counters, now);
-    return taskTargets(t).map((target, i) => ({ task: t, step: i, target, reached: value >= target, key: taskKey(p, t, now, i) }));
+    return taskTargets(t).map((target, i) => ({ task: t, step: i, target, reached: value >= target, key: taskKey(p, t, now, i, stage) }));
   });
 }
 
-export function taskViews(p: PuzzleDef, counters: PuzzleCounters | null, claimed: readonly string[], now: Date = new Date()): TaskView[] {
+/** The tasks as the player sees them – for the stage being collected (`have`), counted from its starting point (`base`). */
+export function taskViews(p: PuzzleDef, countersRaw: PuzzleCounters | null, claimed: readonly string[], now: Date = new Date(), have: readonly number[] = [], base: StageBase | null = null): TaskView[] {
+  const { stage, counters } = stageContext(p, have, countersRaw, base, now);
   return p.tasks.map((t) => {
     const value = taskValue(t, counters, now);
     const targets = taskTargets(t);
     // The first step not rewarded yet; when all are rewarded, the last one (shown as finished).
-    const open = targets.findIndex((_, i) => !claimed.includes(taskKey(p, t, now, i)));
+    const open = targets.findIndex((_, i) => !claimed.includes(taskKey(p, t, now, i, stage)));
     const i = open < 0 ? targets.length - 1 : open;
     const target = targets[i];
     return {
-      task: t, title: taskTitle(t, target), value: Math.min(value, target), target, done: value >= target, claimed: open < 0, key: taskKey(p, t, now, i),
+      task: t, title: taskTitle(t, target), value: Math.min(value, target), target, done: value >= target, claimed: open < 0, key: taskKey(p, t, now, i, stage),
       step: i + 1, steps: targets.length,
     };
   });
@@ -378,8 +439,10 @@ export interface PuzzleClaim {
  * Each finished task of the current period gives its fragments once; pieces are picked among the missing ones
  * (random order from `seed`, never twice). Tasks finished when everything is collected are not claimed.
  */
-export function earnedClaim(p: PuzzleDef, have: readonly number[], counters: PuzzleCounters | null, claimed: readonly string[], seed: string, now: Date = new Date()): PuzzleClaim | null {
+export function earnedClaim(p: PuzzleDef, have: readonly number[], countersRaw: PuzzleCounters | null, claimed: readonly string[], seed: string, now: Date = new Date(), base: StageBase | null = null): PuzzleClaim | null {
   if (puzzlePhase(p, now) !== 'active') return null;
+  // Each stage starts its tasks again (its own keys, counted from where the stage began).
+  const { stage, counters } = stageContext(p, have, countersRaw, base, now);
   const stages = puzzleStages(p);
   const own = new Set(have);
   if (missingPieces(p, have).length === 0) return null;
@@ -394,7 +457,7 @@ export function earnedClaim(p: PuzzleDef, have: readonly number[], counters: Puz
     }
     return null;
   };
-  for (const v of taskSteps(p, counters, now)) {
+  for (const v of taskSteps(p, counters, now, stage)) {
     if (!v.reached || claimed.includes(v.key)) continue;
     let given = 0;
     for (let i = 0; i < v.task.fragments; i++) {

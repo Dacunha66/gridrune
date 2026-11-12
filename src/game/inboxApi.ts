@@ -8,7 +8,7 @@ import type { GrantedReward } from './campaignRewards';
 
 export interface InboxItem {
   id: string;
-  sender: 'raid' | 'admin';
+  sender: 'raid' | 'admin' | 'event';
   title: string;
   message: string;
   reward: Reward;

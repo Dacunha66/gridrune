@@ -35,9 +35,9 @@ import { PRIVACY_DOC, parsePrivacy, setPrivacyInfo } from './game/privacy';
 import { NIGHTMARE_DOC, parseNightmare, setNightmareConfig } from './game/nightmare';
 import { Header } from './screens/Header';
 import { equipEdition, setEditions, setPuzzles } from './game/puzzles';
-import { EventView, fetchEvents, loadEditions, loadPuzzles } from './game/puzzleApi';
+import { EventView, NewCard, fetchEvents, loadEditions, loadPuzzles } from './game/puzzleApi';
 import { setEquippedEditions, setEquippedFrame } from './game/editionArt';
-import { Events } from './screens/Events';
+import { Events, NewCardNotice } from './screens/Events';
 import { setPackLooks } from './game/shop';
 import { ACTIVE, Design, DesignState, setActiveDesigns } from './game/designs';
 import { PageArt } from './components/DesignArt';
@@ -215,6 +215,8 @@ export function App() {
       alive = false;
     };
   }, [screen.name, cloud.uid, cloud.phase]);
+  // Puzzle-Events: cards of completed stages just sent to the Postfach (shown once with an animation).
+  const [newCards, setNewCards] = useState<NewCard[]>([]);
   // Postfach: how many items wait (number on the envelope), looked up when the menu opens.
   const [inboxCount, setInboxCount] = useState(0);
   useEffect(() => {
@@ -235,6 +237,11 @@ export function App() {
       if (r.cloud) cloud.adoptServer(r.cloud);
       const active = r.events.filter((e) => e.phase === 'active');
       setEventCard(active.find((e) => !e.completedAt) ?? active[0] ?? null);
+      // A puzzle card was finished (its fragments came in the background): show it and where it is.
+      if (r.newCards.length) {
+        setNewCards((c) => [...c, ...r.newCards]);
+        inboxList().then((l) => { if (alive && l) setInboxCount(openCount(l)); });
+      }
     });
     return () => {
       alive = false;
@@ -477,7 +484,11 @@ export function App() {
     <PageArt design={pageDesign} />
     <SymbolTips />
     <div className={`app ${screen.name === 'admin' ? 'app-wide' : ''} ${pageDesign ? 'has-page-art' : ''}`} style={skinStyle(getSkin(save.skins.card).colors)}>
-      {showTutorialOffer && (
+      {newCards.length > 0 && (screen.name === 'menu' || screen.name === 'events') && (
+        <NewCardNotice cards={newCards} reducedMotion={reducedMotion}
+          onInbox={() => { setNewCards([]); setScreen({ name: 'inbox' }); }} onClose={() => setNewCards([])} />
+      )}
+      {showTutorialOffer && !newCards.length && (
         <TutorialOffer onStart={() => { setTutorialOffer(false); setScreen({ name: 'tutorial' }); }}
           onSkip={() => { setTutorialState('skipped'); setTutorialOffer(false); }} />
       )}
@@ -544,7 +555,8 @@ export function App() {
       )}
       {screen.name === 'events' && cloud.uid && (
         <Events reducedMotion={reducedMotion} onAdopt={cloud.adoptServer} onBack={toMenu}
-          onCard={(cardId) => setScreen({ name: 'collection', focus: cardId })} onCollection={() => setScreen({ name: 'collection' })} />
+          onCard={(cardId) => setScreen({ name: 'collection', focus: cardId })} onCollection={() => setScreen({ name: 'collection' })}
+          onInbox={() => setScreen({ name: 'inbox' })} onNewCards={(c) => setNewCards((x) => [...x, ...c])} />
       )}
       {screen.name === 'deck' && (
         <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={toMenu}

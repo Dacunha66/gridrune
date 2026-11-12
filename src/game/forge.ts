@@ -6,7 +6,7 @@
 import { CARDS, RARITIES, Rarity, getCard, isCardId } from './cards';
 import { deriveRng } from './league';
 import {
-  EditionDef, PuzzleDef, StageInfo, allEditions, allPuzzles, currentStage, grantPuzzleReward, puzzlePhase, puzzleStages, stageDone, totalPieces,
+  EditionDef, PuzzleDef, StageInfo, allEditions, allPuzzles, currentStage, puzzlePhase, puzzleStages, totalPieces,
 } from './puzzles';
 import { SaveData } from './storage';
 import { FORGE_FRAMES, FrameDef, ForgeState, MAX_COPIES, MAX_ESSENCE, emptyForge } from './forgeState';
@@ -209,7 +209,7 @@ export function forgeFragment(save: SaveData, p: PuzzleDef, have: readonly numbe
   if (!free.length) return { ok: false, reason: 'Diese Stufe ist schon vollständig.' };
   const piece = free[Math.floor(deriveRng(seed, `forge:${p.id}`)() * free.length)];
   const used = c.fragment.perStage - left;
-  let s = pay(save, r, cost);
-  if (stageDone(stage, [...have, piece])) s = grantPuzzleReward(s, p, [...have, piece]);
+  // A stage completed this way: its card comes into the Postfach (server function "events"), like any other stage.
+  const s = pay(save, r, cost);
   return { ok: true, key: fragmentKey(p, stage.index, used + 1), piece, total: totalPieces(p), save: s };
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BUILTIN_EDITIONS, PuzzleCounters, currentStage, earnedClaim, newlyDone, puzzleStages, stageDone, totalPieces, equipEdition, grantPuzzleReward, missingPieces, parseEdition, parsePuzzle, puzzlePhase,
-  puzzleProblems, setEditions, taskKey, taskTitle, taskViews,
+  puzzleProblems, setEditions, stageBaseNow, stageCounters, taskKey, taskTitle, taskViews,
 } from '../src/game/puzzles';
 import { defaultSave, sanitize } from '../src/game/storage';
 import { questDay, questWeek } from '../src/game/quests';
@@ -151,5 +151,40 @@ describe('Puzzle-Events: gestaffelte Aufgaben', () => {
     const all = [0, 1, 2].map((i) => taskKey(staged, staged.tasks[0], now, i));
     expect(taskViews(staged, c(60), all, now)[0]).toMatchObject({ claimed: true, step: 3, target: 50 });
     expect(earnedClaim(staged, [], c(60), all, 'v', now)).toBeNull();
+  });
+});
+
+describe('Puzzle-Events: jede Stufe startet die Aufgaben neu', () => {
+  const staged = parsePuzzle('pz01', {
+    ...raw,
+    tasks: [{ id: 'tonce', metric: 'big_wins', target: 1, fragments: 1, period: 'once' }, { id: 'tday', metric: 'wins', target: 2, fragments: 1, period: 'daily' }],
+    stages: [{ editionId: 'ed02', pieces: 9 }],
+  })!;
+  const stage1 = Array.from({ length: 9 }, (_, i) => i);
+  it('Stufe 2 hat eigene Schlüssel – was in Stufe 1 belohnt wurde, gilt dort nicht', () => {
+    expect(taskKey(staged, staged.tasks[0], now, 0, 1)).toBe('r1:s2:o:tonce');
+    expect(taskKey(staged, staged.tasks[0], now, 0, 0)).toBe('r1:o:tonce');
+  });
+  it('ohne Startpunkt zählt Stufe 2 erst ab jetzt (nichts Altes wird doppelt belohnt)', () => {
+    const c = counters(4, 3);
+    expect(earnedClaim(staged, stage1, c, ['r1:o:tonce', `r1:d:${questDay(now)}:tday`], 's', now)).toBeNull();
+    const views = taskViews(staged, c, [], now, stage1);
+    expect(views.map((v) => [v.value, v.done, v.claimed])).toEqual([[0, false, false], [0, false, false]]);
+  });
+  it('mit Startpunkt: nur was danach kam zählt, und es gibt wieder Teile', () => {
+    const base = stageBaseNow(1, counters(2, 1), now);
+    const later = counters(4, 2);
+    const c = earnedClaim(staged, stage1, later, ['r1:o:tonce', `r1:d:${questDay(now)}:tday`], 's', now, base)!;
+    expect(c.keys.sort()).toEqual(['r1:s2:d:' + questDay(now) + ':tday', 'r1:s2:o:tonce'].sort());
+    expect(c.pieces.every((i) => i >= 9)).toBe(true);
+    const views = taskViews(staged, later, [], now, stage1, base);
+    expect(views.map((v) => v.value)).toEqual([1, 2]);
+  });
+  it('ein neuer Tag: die Tagesaufgabe zählt wieder voll, der Startpunkt gilt nur für seinen Tag', () => {
+    const base = stageBaseNow(1, counters(5, 0), now);
+    const tomorrow = new Date('2026-11-13T10:00:00Z');
+    const c: PuzzleCounters = { day: questDay(tomorrow), week: questWeek(tomorrow), daily: { wins: 2 }, weekly: { wins: 7 }, total: { wins: 7 } };
+    expect(stageCounters(c, base)!.daily.wins).toBe(2);
+    expect(stageCounters(c, base)!.total.wins).toBe(2);
   });
 });

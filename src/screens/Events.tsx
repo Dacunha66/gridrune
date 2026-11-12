@@ -8,7 +8,7 @@ import { Burst } from '../components/Effects';
 import { RARITY_LABEL, Rarity, getCard, isCardId } from '../game/cards';
 import { imageUrl } from '../game/catalog';
 import { CloudSave } from '../game/cloudSave';
-import { EventView, StageView, fetchEvents } from '../game/puzzleApi';
+import { EventView, NewCard, StageView, fetchEvents } from '../game/puzzleApi';
 import { EditionDef, PERIOD_LABEL, PHASE_LABEL, findEdition, timeLeftText } from '../game/puzzles';
 import { editionImage } from '../game/editionArt';
 import { RARITY_COLORS } from './Result';
@@ -74,8 +74,10 @@ export function PuzzleBoard({ picture, cols, rows, pieces, have, fresh = [], big
 }
 
 /** "Karte freigeschaltet!": the pieces come together, the card appears with a glow in its rarity's colour. */
-export function UnlockReveal({ ev, reducedMotion, onCard, onCollection, onClose }: {
-  ev: Pick<EventView, 'reward' | 'image' | 'cols' | 'rows' | 'pieces'>; reducedMotion: boolean; onCard: () => void; onCollection: () => void; onClose: () => void;
+export function UnlockReveal({ ev, reducedMotion, onCard, onInbox, onClose }: {
+  ev: Pick<EventView, 'reward' | 'image' | 'cols' | 'rows' | 'pieces'>; reducedMotion: boolean; onCard: () => void;
+  /** The card waits in the Postfach (players); without it (admin test) "Karte ansehen". */
+  onInbox?: () => void; onClose: () => void;
 }) {
   const [stage, setStage] = useState<'pieces' | 'card'>(reducedMotion ? 'card' : 'pieces');
   useEffect(() => {
@@ -98,8 +100,10 @@ export function UnlockReveal({ ev, reducedMotion, onCard, onCollection, onClose 
             <p className="unlock-title">Karte freigeschaltet!</p>
             {ev.reward && <p className="unlock-name">{isCardId(ev.reward.cardId) ? getCard(ev.reward.cardId).name : ''} – {ev.reward.name}</p>}
             <div className="unlock-actions">
-              <button type="button" className="btn btn-primary" onClick={onCard}>Karte ansehen</button>
-              <button type="button" className="btn" onClick={onCollection}>Zur Sammlung</button>
+              {onInbox
+                ? <><p className="unlock-inbox"><GameIcon name="mail" /> Die Karte liegt in deinem Postfach – hol sie dort ab.</p>
+                  <button type="button" className="btn btn-primary" onClick={onInbox}><GameIcon name="mail" /> Zum Postfach</button></>
+                : <button type="button" className="btn btn-primary" onClick={onCard}>Karte ansehen</button>}
               <button type="button" className="btn" onClick={onClose}>Zurück zum Event</button>
             </div>
           </>
@@ -135,8 +139,8 @@ function EventTile({ ev: full, onOpen }: { ev: EventView; onOpen: () => void }) 
   );
 }
 
-export function EventDetail({ ev: full, reducedMotion, onBack, onCard, onCollection, test = false }: {
-  ev: EventView; reducedMotion: boolean; onBack: () => void; onCard: (cardId: string, editionId: string) => void; onCollection: () => void; test?: boolean;
+export function EventDetail({ ev: full, reducedMotion, onBack, onCard, onInbox, test = false }: {
+  ev: EventView; reducedMotion: boolean; onBack: () => void; onCard: (cardId: string, editionId: string) => void; onCollection?: () => void; onInbox?: () => void; test?: boolean;
 }) {
   const stages = stagesOf(full);
   // Stages completed with this visit (newest first): their unlock is shown once each.
@@ -158,7 +162,7 @@ export function EventDetail({ ev: full, reducedMotion, onBack, onCard, onCollect
       {revealStage?.reward && (
         <UnlockReveal key={revealStage.index} ev={stageEvent(full, revealStage)} reducedMotion={reducedMotion}
           onCard={() => { setReveals([]); onCard(revealStage.reward!.cardId, revealStage.reward!.editionId); }}
-          onCollection={() => { setReveals([]); onCollection(); }} onClose={closeReveal} />
+          onInbox={onInbox && !test ? () => { setReveals([]); onInbox(); } : undefined} onClose={closeReveal} />
       )}
       <div className="scroll event-detail">
         {stages.length > 1 && (
@@ -226,8 +230,11 @@ export function EventDetail({ ev: full, reducedMotion, onBack, onCard, onCollect
   );
 }
 
-export function Events({ reducedMotion, onAdopt, onBack, onCard, onCollection }: {
+export function Events({ reducedMotion, onAdopt, onBack, onCard, onCollection, onInbox, onNewCards }: {
   reducedMotion: boolean; onAdopt: (c: CloudSave) => void; onBack: () => void; onCard: (cardId: string, editionId: string) => void; onCollection: () => void;
+  onInbox: () => void;
+  /** Cards just sent to the Postfach that this screen does not show itself (the App shows them). */
+  onNewCards?: (cards: NewCard[]) => void;
 }) {
   const [data, setData] = useState<EventView[] | null | 'offline'>(null);
   const [tab, setTab] = useState<'active' | 'archive'>('active');
@@ -242,6 +249,10 @@ export function Events({ reducedMotion, onAdopt, onBack, onCard, onCollection }:
       // A puzzle just completed: open it so the unlock is shown.
       const fresh = r.events.find((e) => stagesOf(e).some((st) => st.done && stageHave(st, e.gained).length > 0));
       if (fresh) setOpen(fresh.id);
+      // Cards sent now without a stage completed on this visit (e.g. completed earlier): shown by the App.
+      const shown = new Set(r.events.flatMap((e) => stagesOf(e).filter((st) => st.done && stageHave(st, e.gained).length > 0).map((st) => `${e.id}:${st.index}`)));
+      const other = r.newCards.filter((c) => !shown.has(`${c.puzzleId}:${c.stage}`));
+      if (other.length) onNewCards?.(other);
     });
     return () => {
       alive = false;
@@ -249,7 +260,7 @@ export function Events({ reducedMotion, onAdopt, onBack, onCard, onCollection }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const ev = Array.isArray(data) ? data.find((e) => e.id === open) : null;
-  if (ev) return <EventDetail ev={ev} reducedMotion={reducedMotion} onBack={() => setOpen(null)} onCard={onCard} onCollection={onCollection} />;
+  if (ev) return <EventDetail ev={ev} reducedMotion={reducedMotion} onBack={() => setOpen(null)} onCard={onCard} onCollection={onCollection} onInbox={onInbox} />;
   const list = Array.isArray(data) ? data.filter((e) => (tab === 'active' ? e.phase === 'active' : e.phase !== 'active')) : [];
   return (
     <main className="screen events">
@@ -267,5 +278,30 @@ export function Events({ reducedMotion, onAdopt, onBack, onCard, onCollection }:
         <div className="event-list">{list.map((e) => <EventTile key={e.id} ev={e} onOpen={() => setOpen(e.id)} />)}</div>
       </div>
     </main>
+  );
+}
+
+/** Cards of completed stages that just went into the Postfach (one after another): the card, and where it is. */
+export function NewCardNotice({ cards, reducedMotion, onInbox, onClose }: { cards: NewCard[]; reducedMotion: boolean; onInbox: () => void; onClose: () => void }) {
+  const [i, setI] = useState(0);
+  const c = cards[i];
+  if (!c) return null;
+  const rarity = isCardId(c.cardId) ? getCard(c.cardId).rarity : 'rare';
+  const last = i >= cards.length - 1;
+  return (
+    <div className={`unlock-overlay rarity-${rarity}`} role="dialog" aria-modal="true" aria-label="Puzzle-Karte fertig">
+      <div className="unlock-stage" key={i}>
+        <div className="unlock-rays" aria-hidden="true" />
+        {!reducedMotion && <Burst x="50%" y="38%" colors={RARITY_COLORS[rarity]} count={34} spread={170} />}
+        <div className="unlock-card"><Card id={c.cardId} size="lg" edition={c.editionId} /></div>
+        <p className="unlock-title">Puzzle-Karte fertig!</p>
+        <p className="unlock-name">{c.puzzleName} · Stufe {c.stage + 1}: {isCardId(c.cardId) ? getCard(c.cardId).name : ''} – {c.editionName}</p>
+        <div className="unlock-actions">
+          <p className="unlock-inbox"><GameIcon name="mail" /> Die Karte liegt in deinem Postfach – hol sie dort ab.</p>
+          <button type="button" className="btn btn-primary" onClick={onInbox}><GameIcon name="mail" /> Zum Postfach</button>
+          <button type="button" className="btn" onClick={() => (last ? onClose() : setI(i + 1))}>{last ? 'Später' : 'Nächste Karte'}</button>
+        </div>
+      </div>
+    </div>
   );
 }

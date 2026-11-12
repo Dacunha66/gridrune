@@ -1,7 +1,7 @@
 // Game rules for the server functions (bundled into supabase/functions/adventure/engine.js with esbuild).
 // It loads the same content as the game and uses the same code to check runs and compute rewards.
 import { CardRecord, buildCatalog, parseCardRecord } from '../game/catalog';
-import { CARDS, DECK_SIZE, setCardCatalog } from '../game/cards';
+import { CARDS, DECK_SIZE, getCard, isCardId, setCardCatalog } from '../game/cards';
 import { Arena, parseArena, setArenas } from '../game/arenas';
 import { GameMode, RuneDef, RUNES, availableRunes, parseRune, setRunes } from '../game/runes';
 import { GameSettings, SETTINGS, parseSettings, released, setGameSettings } from '../game/settings';
@@ -37,8 +37,8 @@ import {
 } from '../game/quests';
 import { EffectId } from '../game/effects';
 import {
-  EDITIONS_COLLECTION, EditionDef, PUZZLES_COLLECTION, PuzzleCounters, PuzzleDef, allPuzzles, earnedClaim, findEdition, grantPuzzleReward, parseEdition,
-  parsePuzzle, puzzlePhase, setEditions, setPuzzles, taskViews, puzzleStages, totalPieces, newlyDone, stageDone,
+  EDITIONS_COLLECTION, EditionDef, PUZZLES_COLLECTION, PuzzleCounters, PuzzleDef, allPuzzles, earnedClaim, findEdition, parseEdition,
+  parsePuzzle, puzzlePhase, setEditions, setPuzzles, taskViews, puzzleStages, totalPieces, stageDone, StageBase, currentStage, parseStageBase, stageBaseNow, stageIndex,
 } from '../game/puzzles';
 
 export interface ContentRow {
@@ -104,19 +104,46 @@ export function visiblePuzzles(now: Date = new Date()): PuzzleDef[] {
  * Fragments earned and not received yet for one puzzle; with the save holding the reward when the claim completes the
  * puzzle. null = nothing to give.
  */
-export function puzzleClaimServer(saveRaw: unknown, puzzleId: string, have: number[], counters: PuzzleCounters | null, claimed: string[], seed: string, now: Date = new Date()):
+export function puzzleClaimServer(_saveRaw: unknown, puzzleId: string, have: number[], counters: PuzzleCounters | null, claimed: string[], seed: string, now: Date = new Date(), baseRaw: unknown = null):
   { keys: string[]; pieces: number[]; complete: boolean; total: number; save: SaveData | null } | null {
   const p = allPuzzles().find((x) => x.id === puzzleId);
   if (!p) return null;
-  const c = earnedClaim(p, have, counters, claimed, seed, now);
+  const c = earnedClaim(p, have, counters, claimed, seed, now, parseStageBase(baseRaw));
   if (!c) return null;
-  // A stage completed with this claim: its edition goes into the save in the same step.
-  const done = newlyDone(p, have, c.pieces);
-  return { ...c, total: totalPieces(p), save: done.length || c.complete ? grantPuzzleReward(sanitize(saveRaw), p, [...have, ...c.pieces]) : null };
+  // The card of a completed stage is not put into the save here: it goes into the Postfach (puzzleStageRewards).
+  return { ...c, total: totalPieces(p), save: null };
+}
+
+/**
+ * A further stage needs its starting point (the tasks begin again there): the counters now, or null when the stored one
+ * belongs to this stage already (or the first stage is being collected).
+ */
+export function puzzleStageBase(puzzleId: string, have: number[], counters: PuzzleCounters | null, baseRaw: unknown, now: Date = new Date()): StageBase | null {
+  const p = allPuzzles().find((x) => x.id === puzzleId);
+  if (!p) return null;
+  const stage = stageIndex(p, have);
+  if (stage === 0 || !currentStage(p, have)) return null;
+  const base = parseStageBase(baseRaw);
+  return base && base.stage === stage ? null : stageBaseNow(stage, counters, now);
+}
+
+/** The card of every complete stage, as a Postfach gift (sent once per player and stage: key "stage:<n>"). */
+export function puzzleStageRewards(puzzleId: string, have: number[]): { key: string; title: string; message: string; reward: { type: 'edition'; editionId: string }; cardId: string; editionName: string; stage: number }[] {
+  const p = allPuzzles().find((x) => x.id === puzzleId);
+  if (!p) return [];
+  return puzzleStages(p).filter((st) => stageDone(st, have)).flatMap((st) => {
+    const e = findEdition(st.editionId);
+    if (!e) return [];
+    const card = isCardId(e.cardId) ? getCard(e.cardId).name : 'Karte';
+    return [{
+      key: `stage:${st.index + 1}`, title: `${p.name}: Stufe ${st.index + 1} geschafft`.slice(0, 80), message: `Glückwunsch! Deine neue Karte ${card} wartet auf dich.`.slice(0, 200),
+      reward: { type: 'edition' as const, editionId: e.id }, cardId: e.cardId, editionName: e.name, stage: st.index,
+    }];
+  });
 }
 
 /** What the player sees of an event (public parts of the definition, own pieces and task progress). */
-export function puzzleView(p: PuzzleDef, have: number[], completedAt: string | null, counters: PuzzleCounters | null, claimed: string[], now: Date = new Date()) {
+export function puzzleView(p: PuzzleDef, have: number[], completedAt: string | null, counters: PuzzleCounters | null, claimed: string[], now: Date = new Date(), baseRaw: unknown = null) {
   const e = findEdition(p.reward.editionId);
   return {
     id: p.id, name: p.name, description: p.description, image: p.image, pieces: p.pieces, cols: p.cols, rows: p.rows,
@@ -133,7 +160,9 @@ export function puzzleView(p: PuzzleDef, have: number[], completedAt: string | n
     total: totalPieces(p),
     forge: (({ stage, left }) => ({ stage: stage?.index ?? null, left }))(fragmentsLeft(p, have, claimed, now)),
     have, completedAt,
-    tasks: taskViews(p, counters, claimed, now).map((v) => ({
+    // The tasks of the stage being collected (each stage starts them again).
+    stage: stageIndex(p, have),
+    tasks: taskViews(p, counters, claimed, now, have, parseStageBase(baseRaw)).map((v) => ({
       id: v.task.id, title: v.title, description: v.task.description, period: v.task.period, fragments: v.task.fragments,
       value: v.value, target: v.target, done: v.done, claimed: v.claimed, step: v.step, steps: v.steps,
     })),
@@ -528,7 +557,18 @@ export function inboxClaimServer(saveRaw: unknown, items: { id: string; title: s
     return reward && isPayable(reward) ? [{ key: it.id, reward, source: it.title }] : [];
   });
   const r = grantRewards(sanitize(saveRaw), owed, deriveRng(seed, 'inbox'));
-  return { save: r.save, results: Object.fromEntries(r.granted.map((g) => [g.key, g])) };
+  // Puzzle-Events: the card edition of a completed stage (already owned = nothing new, the gift is still collected).
+  let save = r.save;
+  const results: Record<string, GrantedReward> = Object.fromEntries(r.granted.map((g) => [g.key, g]));
+  for (const it of items) {
+    const raw = it.reward as { type?: unknown; editionId?: unknown } | null;
+    if (!raw || raw.type !== 'edition' || typeof raw.editionId !== 'string') continue;
+    const e = findEdition(raw.editionId);
+    if (!e) continue;
+    if (!save.editions.owned.includes(e.id)) save = { ...save, editions: { ...save.editions, owned: [...save.editions.owned, e.id] } };
+    results[it.id] = { key: it.id, source: it.title, coins: 0, cards: [], duplicates: [], editions: [e.id] };
+  }
+  return { save, results };
 }
 
 /** A gift from the admin: only rewards that exist in the game (coins, Runensteine, a known card, a known pack). */

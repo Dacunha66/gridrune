@@ -40,3 +40,14 @@ describe('Postfach', () => {
     expect(raidOwedServer(c, { totalDamage: 500, attacks: 2 }, 0, ['p:100:coins', 'g:100:pack'])).toEqual([]);
   });
 });
+
+describe('Postfach: Karten-Editionen aus Puzzle-Events', () => {
+  it('beim Abholen kommt die Edition in die Sammlung; schon vorhandene bleibt einfach', () => {
+    const r = inboxClaimServer(defaultSave(), [{ id: 'e1', title: 'Mondfinsternis: Stufe 1 geschafft', reward: { type: 'edition', editionId: 'ed01' } }], 'seed');
+    expect(r.save.editions.owned).toEqual(['ed01']);
+    expect(r.results.e1.editions).toEqual(['ed01']);
+    const again = inboxClaimServer(r.save, [{ id: 'e2', title: 'x', reward: { type: 'edition', editionId: 'ed01' } }], 'seed');
+    expect(again.save.editions.owned).toEqual(['ed01']);
+    expect(inboxClaimServer(defaultSave(), [{ id: 'e3', title: 'x', reward: { type: 'edition', editionId: 'ed999' } }], 'seed').results.e3).toBeUndefined();
+  });
+});

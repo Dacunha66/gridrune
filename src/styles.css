@@ -2813,3 +2813,5 @@ label.btn.disabled { opacity: .45; }
 .action-bar .turn-btn.turn-180 { font-size: 17px; padding: 0 8px; min-width: 0; }
 .action-bar:has(.turn-180) .turn-btn { min-width: 44px; padding: 0 6px; }
 .action-bar:has(.turn-180) .btn-primary { padding-left: 12px; padding-right: 12px; }
+.unlock-inbox { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 2px; color: var(--gold-light); font-size: 0.92rem; text-align: center; }
+.unlock-inbox svg { width: 18px; height: 18px; flex: none; }

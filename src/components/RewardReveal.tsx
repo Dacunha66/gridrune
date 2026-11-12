@@ -16,6 +16,8 @@ export type RevealItem =
   | { kind: 'coins'; amount: number; sources: string[] }
   | { kind: 'stones'; amount: number; sources: string[] }
   | { kind: 'card'; cardId: string; source: string }
+  /** A card edition (Puzzle-Events): the card in its special look. */
+  | { kind: 'edition'; cardId: string; editionId: string; name: string; source: string }
   /** A reward type that does not exist in the game yet (or a guest's preview). */
   | { kind: 'preview'; reward: Reward; source: string };
 
@@ -52,8 +54,8 @@ export function RewardReveal({ items, reducedMotion, guest = false, onClose }: {
   }, [onClose]);
   if (!item) return null;
   const last = i === items.length - 1;
-  const rarity = item.kind === 'rune' ? item.rune.rarity : item.kind === 'card' ? getCard(item.cardId).rarity : 'rare';
-  const title = item.kind === 'rune' ? 'Neue Rune freigespielt!' : item.kind === 'card' ? 'Neue Karte!' : item.kind === 'coins' ? 'Münzen erhalten!' : item.kind === 'stones' ? 'Runensteine erhalten!' : 'Belohnung freigeschaltet!';
+  const rarity = item.kind === 'rune' ? item.rune.rarity : item.kind === 'card' || item.kind === 'edition' ? getCard(item.cardId).rarity : 'rare';
+  const title = item.kind === 'rune' ? 'Neue Rune freigespielt!' : item.kind === 'card' ? 'Neue Karte!' : item.kind === 'edition' ? 'Neue Karten-Edition!' : item.kind === 'coins' ? 'Münzen erhalten!' : item.kind === 'stones' ? 'Runensteine erhalten!' : 'Belohnung freigeschaltet!';
   return (
     <div className={`reveal-overlay ${reducedMotion ? 'still' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
       <div key={i} className={`reveal-stage rarity-${rarity}`}>
@@ -76,6 +78,14 @@ export function RewardReveal({ items, reducedMotion, guest = false, onClose }: {
           </>
         )}
 
+        {item.kind === 'edition' && (
+          <>
+            <div className="reveal-item reveal-card"><Card id={item.cardId} size="lg" edition={item.editionId} /></div>
+            <h2 className="reveal-name">{getCard(item.cardId).name}</h2>
+            <span className={`reveal-rarity rarity-${rarity}`}>Edition „{item.name}“</span>
+            <p className="reveal-hint">{item.source} · jetzt in deiner Sammlung (bei der Karte auswählbar)</p>
+          </>
+        )}
         {item.kind === 'card' && (
           <>
             <div className="reveal-item reveal-card"><Card id={item.cardId} size="lg" /></div>

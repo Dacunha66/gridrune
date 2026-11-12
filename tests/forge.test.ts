@@ -131,10 +131,10 @@ describe('Runenschmiede: Puzzle-Fragmente', () => {
     expect(forgeFragment(b.save, p, [a.piece, b.piece], [a.key, b.key], 's3', now).ok).toBe(false);
   });
 
-  it('das letzte Teil einer Stufe bringt die Edition; beendete Events nicht', () => {
+  it('das letzte Teil einer Stufe: die Edition kommt über das Postfach (nicht direkt); beendete Events nicht', () => {
     const r = forgeFragment(rich, p, [0, 1, 2], [], 's', now);
     expect(r.ok && r.piece).toBe(3);
-    expect(r.ok && r.save.editions.owned).toContain('ed01');
+    expect(r.ok && r.save.editions.owned).not.toContain('ed01');
     expect(r.ok && r.total).toBe(totalPieces(p));
     expect(forgeFragment(rich, p, [], [], 's', new Date('2026-11-25T00:00:00Z')).ok).toBe(false);
     expect(forgeFragment(defaultSave(), p, [], [], 's', now).ok).toBe(false);

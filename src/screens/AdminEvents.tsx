@@ -236,7 +236,7 @@ export function EventsAdminView({ db, assets, onToast }: { db: Db; assets: Asset
             ))}
           </div>
         </div>
-        {anim && <UnlockReveal ev={view} reducedMotion={false} onCard={() => setAnim(false)} onCollection={() => setAnim(false)} onClose={() => setAnim(false)} />}
+        {anim && <UnlockReveal ev={view} reducedMotion={false} onCard={() => setAnim(false)} onClose={() => setAnim(false)} />}
         <EventDetail key={test.have.join(',')} ev={{ ...view, gained: anim ? [] : view.gained }} reducedMotion={false} test
           onBack={() => setTest(null)} onCard={() => undefined} onCollection={() => undefined} />
       </div>
