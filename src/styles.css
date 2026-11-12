@@ -2705,3 +2705,10 @@ label.btn.disabled { opacity: .45; }
 /* Second line centred as one group: avatar, Runensteine, coins, Postfach side by side. */
 .menu-top-row { justify-content: center; gap: 8px; }
 .menu-top-row > span:empty { display: none; }
+
+/* Card picture cropper (admin): the 3:4 frame, the picture moved and zoomed inside it. */
+.card-cropper { max-width: 360px; }
+.crop-frame { position: relative; width: min(78vw, 280px); aspect-ratio: 3 / 4; margin: 8px auto 12px; overflow: hidden; border-radius: 12px; border: 2px solid var(--gold-line); background: #0b1120; touch-action: none; cursor: grab; }
+.crop-frame:active { cursor: grabbing; }
+.crop-frame img { position: absolute; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.card-cropper .modal-actions { flex-wrap: wrap; }

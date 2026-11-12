@@ -387,7 +387,7 @@ export function describeError(e: unknown): string {
  * Scales and crops a photo to a 3:4 portrait JPEG (max. 720×960) before upload,
  * so pictures from the iPhone camera stay small and fit the card frame.
  */
-export async function prepareCardImage(file: Blob, width = 720, height = 960): Promise<Blob> {
+export async function prepareCardImage(file: Blob, width = 720, height = 960, crop?: CardCrop): Promise<Blob> {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -396,7 +396,9 @@ export async function prepareCardImage(file: Blob, width = 720, height = 960): P
       el.onerror = () => reject(new Error('image_decode'));
       el.src = url;
     });
-    const { sx, sy, sw, sh, outW, outH } = cropToPortrait(img.naturalWidth, img.naturalHeight, width, height);
+    const { sx, sy, sw, sh, outW, outH } = crop
+      ? cardCrop(img.naturalWidth, img.naturalHeight, crop, width, height)
+      : cropToPortrait(img.naturalWidth, img.naturalHeight, width, height);
     const canvas = document.createElement('canvas');
     canvas.width = outW;
     canvas.height = outH;
@@ -407,6 +409,27 @@ export async function prepareCardImage(file: Blob, width = 720, height = 960): P
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** The part of a picture chosen in the card cropper: zoom (1 = the largest 3:4 part) and its centre (0–1 of the picture). */
+export interface CardCrop {
+  zoom: number;
+  cx: number;
+  cy: number;
+}
+export const CARD_ZOOM_MAX = 4;
+
+/** The 3:4 part of a w×h picture for a crop; the centre is moved so the part never leaves the picture. */
+export function cardCrop(w: number, h: number, crop: CardCrop, maxW = 720, maxH = 960) {
+  const full = cropToPortrait(w, h, maxW, maxH);
+  const zoom = Math.min(CARD_ZOOM_MAX, Math.max(1, Number.isFinite(crop.zoom) ? crop.zoom : 1));
+  const sw = full.sw / zoom;
+  const sh = full.sh / zoom;
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  const sx = clamp((Number.isFinite(crop.cx) ? crop.cx : 0.5) * w - sw / 2, 0, w - sw);
+  const sy = clamp((Number.isFinite(crop.cy) ? crop.cy : 0.5) * h - sh / 2, 0, h - sh);
+  const scale = Math.min(1, maxW / sw, maxH / sh);
+  return { sx, sy, sw, sh, outW: Math.max(1, Math.round(sw * scale)), outH: Math.max(1, Math.round(sh * scale)) };
 }
 
 /** Centre crop of a w×h picture to the 3:4 card format, scaled down to at most maxW×maxH. */

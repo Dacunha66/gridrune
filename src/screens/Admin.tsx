@@ -1,14 +1,15 @@
 import { CampaignContent } from '../game/campaign';
 import { ChangeEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
+import { CardCropper } from '../components/CardCropper';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { BUILTIN_CARDS, RARITIES, RARITY_LABEL, RARITY_ORDER, Rarity } from '../game/cards';
 import {
   CardRecord, CardStatus, DESCRIPTION_MAX, MIN_ACTIVE_CARDS, NAME_MAX, STATUSES, STATUS_LABEL, VALUE_KEYS, ValueKey,
-  balanceReport, builtinRecords, cardSum, duplicateRecord, newRecord, nextCardId, powerHint, recordToCard,
+  balanceReport, builtinRecords, cardSum, duplicateRecord, imageUrl, newRecord, nextCardId, powerHint, recordToCard,
 } from '../game/catalog';
 import {
-  Assets, CARDS_COLLECTION, Db, deleteCardRecord, describeError, getAssets, getDb, isAdmin, loadGameSettings, parseDocs, prepareCardImage,
+  Assets, CARDS_COLLECTION, CardCrop, Db, deleteCardRecord, describeError, getAssets, getDb, isAdmin, loadGameSettings, parseDocs, prepareCardImage,
   saveCardRecord,
 } from '../game/cardStore';
 import { GameSettings, defaultSettings } from '../game/settings';
@@ -420,14 +421,34 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
     if (!inUse) await assets.delete(imageId).catch(() => undefined);
   }
 
-  async function onPickImage(e: ChangeEvent<HTMLInputElement>) {
+  // A picked photo first goes into the cropper; only the chosen 3:4 part is uploaded.
+  const [cropFile, setCropFile] = useState<Blob | null>(null);
+  function onPickImage(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file || !assets) return;
+    if (file && assets) setCropFile(file);
+  }
+
+  /** The uploaded picture again, to choose a new part of it (it can only get closer, not wider). */
+  async function recrop() {
+    const url = imageUrl(draft.imageId);
+    if (!url) return;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('load');
+      setCropFile(await res.blob());
+    } catch {
+      onToast('Das Bild konnte nicht geladen werden.');
+    }
+  }
+
+  async function uploadCropped(file: Blob, crop: CardCrop) {
+    setCropFile(null);
+    if (!assets) return;
     setBusy('uploading');
     try {
       // Full picture for the large view, small copy for hand, board and lists (loads much faster).
-      const [blob, small] = await Promise.all([prepareCardImage(file), prepareCardImage(file, 360, 480)]);
+      const [blob, small] = await Promise.all([prepareCardImage(file, 720, 960, crop), prepareCardImage(file, 360, 480, crop)]);
       const res = await assets.upload(blob, { type: 'image/jpeg' });
       const thumb = await assets.upload(small, { type: 'image/jpeg' });
       uploaded.current.push(res.id, thumb.id);
@@ -529,9 +550,11 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
                     <input id="card-image" type="file" accept="image/*" hidden disabled={busy === 'uploading'} onChange={onPickImage} />
                   </label>
                 ) : <small className="muted">Bild-Upload ist in dieser Ansicht nicht verfügbar.</small>}
+                {draft.imageId && assets && <button type="button" className="btn btn-small" disabled={busy === 'uploading'} onClick={recrop}>✂️ Ausschnitt ändern</button>}
                 {draft.imageId && <button type="button" className="btn btn-small" onClick={() => setDraft((d) => ({ ...d, imageId: null, thumbId: null }))}>Bild entfernen</button>}
               </div>
-              <small className="muted">Foto aus der Mediathek oder Kamera. Es wird automatisch auf das Kartenformat 3:4 zugeschnitten.</small>
+              <small className="muted">Foto aus der Mediathek oder Kamera. Danach wählst du den Ausschnitt im Kartenformat 3:4: 1 Finger verschieben, 2 Finger zoomen.</small>
+              {cropFile && <CardCropper file={cropFile} onCancel={() => setCropFile(null)} onDone={(c) => uploadCropped(cropFile, c)} />}
             </div>
 
             <div className="field-row">
