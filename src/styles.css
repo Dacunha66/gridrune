@@ -2881,3 +2881,7 @@ label.btn.disabled { opacity: .45; }
 .admin-ladder-league { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--gold-faint); border-radius: 8px; }
 .admin-ladder-league summary { cursor: pointer; }
 .admin-ladder-rewards { display: grid; gap: 6px; margin-bottom: 8px; }
+
+/* Admin: the header and the tab bar never shrink – long tabs scroll below them. */
+.admin > .admin-tabs, .admin > header { flex-shrink: 0; }
+.admin-balance-tab > .scroll { overflow: visible; flex: none; }

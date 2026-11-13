@@ -85,7 +85,7 @@ export function CommunityAdminView({ db, onToast }: { db: Db; onToast: (m: strin
   }
 
   return (
-    <div className="admin-community">
+    <div className="scroll admin-community">
       <section className="admin-card">
         <h3>Gemeldete Nachrichten {reports && <small className="muted">{reports.length} offen</small>}</h3>
         {reports === null ? <p className="muted">Lädt …</p> : reports.length === 0 ? <p className="muted">Keine offenen Meldungen.</p> : reports.map((r) => (

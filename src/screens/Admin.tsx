@@ -185,9 +185,14 @@ export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCa
           onOpen={open}
         />
       )}
-      {tab === 'balance' && db && <NightmareAdminView db={db} onToast={setToast} />}
-      {tab === 'balance' && db && <LadderAdminView db={db} onToast={setToast} />}
-      {tab === 'balance' && records && records.length > 0 && <BalanceView records={records} db={db!} onToast={setToast} onOpen={open} />}
+      {tab === 'balance' && (
+        // One scroll area for the whole tab (Albtraum, Ligen, card balance) – the tab bar stays visible.
+        <div className="scroll admin-balance-tab">
+          {db && <NightmareAdminView db={db} onToast={setToast} />}
+          {db && <LadderAdminView db={db} onToast={setToast} />}
+          {records && records.length > 0 && <BalanceView records={records} db={db!} onToast={setToast} onOpen={open} />}
+        </div>
+      )}
       {tab === 'runner' && records && records.length > 0 && (
         settings ? (
           <RunnerSettingsView

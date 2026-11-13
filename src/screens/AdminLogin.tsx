@@ -47,7 +47,7 @@ export function LoginAdminView({ db, onToast }: { db: Db; onToast: (m: string) =
   }
 
   return (
-    <div className="admin-login">
+    <div className="scroll admin-login">
       <section className="admin-card">
         <h3>Login-Kalender</h3>
         <p className="muted small">Angemeldete Spieler holen jeden Tag ein Feld ab (Tageswechsel um Mitternacht deutscher Zeit). Verpasste Tage setzen nichts zurück; nach Tag 7 geht es wieder bei Tag 1 los. Packs werden beim Abholen geöffnet.</p>
