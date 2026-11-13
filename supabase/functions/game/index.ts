@@ -2,7 +2,7 @@
 // "mission-start": checks mission, deck, hand and rune against the stored save and hands out a ticket (seed).
 // "mission-finish": replays the duel (and run) with the game's own rules, stores the stars and pays every reward
 // owed. "league-start" / "league-finish": Collection League match against the computer (ranked), replayed here; a won
-// match unlocks the rarest new discovery of the run. "claim": pays rewards earned earlier (once).
+// match unlocks the rarest new discovery of the run and moves the player on the ladder ("ladder-status": the state). "claim": pays rewards earned earlier (once).
 // "buy-pack" / "buy-skin": coins are taken and the cards drawn
 // here. "free-coins" / "buy-coins" / "buy-offer": Runensteine shop (free coins, coins for Runensteine, card offers).
 // "login-status" / "login-claim": Login-Kalender (one field per day). "tutorial-finish": tutorial reward (once).
@@ -11,7 +11,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, checkTutorial, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod,
+  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, checkTutorial, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, ladderApplyServer, ladderSettingsServer, ladderStatusServer, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@3a9f3fb33a4ecd48a44a581a6a60c1ae354d9a32/public/server/engine-e02b2f711b9d.js';
 
 const CORS = {
@@ -126,8 +126,69 @@ Deno.serve(async (req) => {
     return json({ error: 'busy' }, 503);
   }
 
+  // ---------- Ranglisten-Ligen ----------
+  const ladderRead = async () => {
+    const { data } = await db.from('ladder').select('state, version').eq('player_id', uid).maybeSingle();
+    return { state: (data?.state ?? null) as unknown, version: (data?.version ?? 0) as number };
+  };
+  /** The state in the current season; a new month writes the old season's reward and the new start first. */
+  async function ladderNow() {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const cur = await ladderRead();
+      const r = ladderStatusServer(cur.state);
+      if (!r.ended) return r.state;
+      const { data, error } = await db.rpc('ladder_write', {
+        p_player: uid, p_ref: `season:${r.ended.season}`, p_version: cur.version, p_state: r.state, p_gifts: r.gifts, p_result: { ended: r.ended },
+      });
+      if (error) throw new Error('database');
+      if (data === 'ok') return r.state;
+    }
+    throw new Error('busy');
+  }
+  /** Applies one checked ranked result exactly once (ref = the ticket); returns what changed for the result screen. */
+  async function ladderApply(ref: string, result: 'win' | 'loss' | 'draw') {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const cur = await ladderRead();
+      const a = ladderApplyServer(cur.state, result);
+      const out = { before: a.step.before, state: a.step.state, move: a.step.move, promoted: a.step.promoted, ended: a.ended, gifts: a.gifts.length };
+      const { data, error } = await db.rpc('ladder_write', {
+        p_player: uid, p_ref: ref, p_version: cur.version, p_state: a.step.state, p_gifts: a.gifts, p_result: out,
+      });
+      if (error) return null;
+      if (data === 'ok') return out;
+      if (data === 'already') {
+        const { data: done } = await db.from('ladder_refs').select('result').eq('player_id', uid).eq('ref', ref).maybeSingle();
+        return done?.result ?? null;
+      }
+    }
+    return null;
+  }
+
+  if (body.action === 'ladder-status') {
+    try {
+      const state = await ladderNow();
+      return json({ ok: true, ladder: state, config: ladderSettingsServer() });
+    } catch {
+      return json({ error: 'database' }, 500);
+    }
+  }
+
+  // What a ranked online match changed for this player (written by the server function "pvp").
+  if (body.action === 'ladder-ref') {
+    const ref = typeof body.ref === 'string' && /^pvp:[0-9a-f-]{36}$/.test(body.ref) ? body.ref : '';
+    if (!ref) return json({ error: 'bad_request' }, 400);
+    const { data } = await db.from('ladder_refs').select('result').eq('player_id', uid).eq('ref', ref).maybeSingle();
+    return json({ ok: true, change: data?.result ?? null });
+  }
+
   if (body.action === 'league-start') {
-    const prep = prepareLeague(saveRow.save, saveRow.campaign, body.deck, body.rune ?? null, isAdmin, seed());
+    let step: number;
+    try {
+      step = (await ladderNow()).step;
+    } catch {
+      return json({ error: 'database' }, 500);
+    }
+    const prep = prepareLeague(saveRow.save, saveRow.campaign, body.deck, body.rune ?? null, isAdmin, seed(), step);
     if (!prep.ok) return json({ error: prep.error }, 422);
     const { data, error } = await db.from('game_tickets').insert({ player_id: uid, kind: 'league', ticket: prep.ticket }).select('id').single();
     if (error) return json({ error: 'database' }, 500);
@@ -149,13 +210,17 @@ Deno.serve(async (req) => {
       });
       if (error) return json({ error: 'database' }, 500);
       if (paid === 'conflict') continue;
+      // Ranglisten-Liga: the checked result moves the player on the ladder (once per ticket, also when repeated).
+      const ranked = typeof t.ticket?.step === 'number';
       if (paid === 'already') {
         const { data: done } = await db.from('game_tickets').select('result').eq('id', t.id).single();
-        return json({ ...(done?.result ?? {}), repeated: true, ...(await readSave()) });
+        const ladder = ranked && done?.result?.ok ? await ladderApply(`league:${t.id}`, done.result.won ? 'win' : 'loss') : null;
+        return json({ ...(done?.result ?? {}), ladder, repeated: true, ...(await readSave()) });
       }
       if (!res.ok) return json({ ...result, ...cur }, 422);
       await addQuest(db, uid, res.quest);
-      return json({ ...result, save: res.save, campaign: cur.campaign, version: cur.version + 1 });
+      const ladder = ranked ? await ladderApply(`league:${t.id}`, res.won ? 'win' : 'loss') : null;
+      return json({ ...result, ladder, save: res.save, campaign: cur.campaign, version: cur.version + 1 });
     }
     return json({ error: 'busy' }, 503);
   }

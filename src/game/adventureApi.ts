@@ -1,6 +1,7 @@
 // Phase 4: the game's side of checked adventures. A signed-in player gets a ticket before the run and sends
 // the recorded run and duel afterwards; the server replays both and pays out. Results that could not be sent
 // (no connection) wait on the device and are sent later – a ticket stays valid for 24 hours.
+import { LadderConfig, LadderMove, LadderState, parseLadderConfig, parseLadderState, seasonOf } from './ladder';
 import { webBackend } from './cardStore';
 import { AdventureLog, AdventureTicket, DuelLog, LeagueLog, LeagueTicket, MissionLog, MissionTicket } from './verify';
 import type { GrantedReward } from './campaignRewards';
@@ -134,7 +135,7 @@ export async function buyOfferRemote(cardId: string): Promise<ShopReply<{ cardId
 // ---------- Collection League against the computer (server function "game") ----------
 
 export type LeagueFinish =
-  | { kind: 'paid'; won: boolean; reward: Reward; cloud: CloudSave }
+  | { kind: 'paid'; won: boolean; reward: Reward; cloud: CloudSave; ladder?: LadderChange | null }
   | { kind: 'rejected'; error: string; cloud: CloudSave | null }
   | { kind: 'offline' };
 
@@ -150,8 +151,33 @@ export async function finishLeagueRemote(ticketId: string, log: LeagueLog): Prom
   if (!r || !r.data || r.status >= 500) return { kind: 'offline' };
   const d = r.data;
   const cloud = cloudOf(d);
-  if (d.ok === true && cloud) return { kind: 'paid', won: !!d.won, reward: d.reward as Reward, cloud };
+  if (d.ok === true && cloud) return { kind: 'paid', won: !!d.won, reward: d.reward as Reward, cloud, ladder: (d.ladder as LadderChange | null) ?? null };
   return { kind: 'rejected', error: String(d.error ?? 'unknown'), cloud };
+}
+
+// ---------- Ranglisten-Ligen ----------
+
+/** What a ranked result changed (sent back by the server). */
+export interface LadderChange {
+  before: LadderState;
+  state: LadderState;
+  move: LadderMove;
+  promoted: number | null;
+  ended: { season: string; league: number } | null;
+  gifts: number;
+}
+
+/** What a ranked online match changed (null = not applied yet / nothing changed). */
+export async function ladderRefRemote(matchId: string): Promise<LadderChange | null> {
+  const r = await call({ action: 'ladder-ref', ref: `pvp:${matchId}` }, 'game');
+  return r?.data?.ok === true ? ((r.data.change as LadderChange | null) ?? null) : null;
+}
+
+export async function ladderStatusRemote(): Promise<{ ladder: LadderState; config: LadderConfig } | null> {
+  const r = await call({ action: 'ladder-status' }, 'game');
+  if (r?.data?.ok !== true) return null;
+  const now = seasonOf();
+  return { ladder: parseLadderState(r.data.ladder, now), config: parseLadderConfig(r.data.config) };
 }
 
 // ---------- Results waiting for a connection (per account, on this device) ----------

@@ -14,7 +14,6 @@ export function LoginAdminView({ db, onToast }: { db: Db; onToast: (m: string) =
   const [config, setConfig] = useState<LoginConfig | null>(null);
   const [saved, setSaved] = useState<LoginConfig | null>(null);
   const [busy, setBusy] = useState(false);
-  const cards = useMemo(() => [...CARDS].sort((a, b) => a.name.localeCompare(b.name, 'de')), []);
 
   useEffect(() => {
     db.collection('settings').doc(LOGIN_DOC).get()
@@ -29,7 +28,6 @@ export function LoginAdminView({ db, onToast }: { db: Db; onToast: (m: string) =
   if (!config) return <p className="muted center">Lädt …</p>;
 
   const setDay = (i: number, r: Reward) => setConfig({ ...config, rewards: config.rewards.map((x, k) => (k === i ? r : x)) });
-  const setKind = (i: number, kind: Kind) => setDay(i, kind === 'coins' || kind === 'stones' ? { type: kind, amount: 50 } : kind === 'pack' ? { type: 'pack', packId: PACKS[0]?.id, amount: 1 } : { type: 'card', cardId: cards[0]?.id });
   const dirty = JSON.stringify(config) !== JSON.stringify(saved);
 
   async function save() {
@@ -58,31 +56,10 @@ export function LoginAdminView({ db, onToast }: { db: Db; onToast: (m: string) =
           <span>Kalender eingeschaltet</span>
         </label>
         {config.rewards.map((r, i) => {
-          const kind = r.type as Kind;
           return (
             <div key={i} className="admin-login-day">
               <b>Tag {i + 1}</b>
-              <span className="segmented">
-                {(Object.keys(KIND_LABEL) as Kind[]).map((k) => <button key={k} type="button" className={`seg ${kind === k ? 'active' : ''}`} onClick={() => kind !== k && setKind(i, k)}>{KIND_LABEL[k]}</button>)}
-              </span>
-              {(kind === 'coins' || kind === 'stones') && (
-                <input className="admin-input num" type="number" min={1} max={100000} value={r.amount ?? 1} aria-label={`Tag ${i + 1}: Anzahl`}
-                  onChange={(e) => setDay(i, { ...r, amount: Math.max(1, Math.round(Number(e.target.value) || 1)) })} />
-              )}
-              {kind === 'pack' && (
-                <>
-                  <select className="admin-input" value={r.packId ?? ''} aria-label={`Tag ${i + 1}: Pack`} onChange={(e) => setDay(i, { ...r, packId: e.target.value })}>
-                    {PACKS.map((p) => <option key={p.id} value={p.id}>{packView(p).name}</option>)}
-                  </select>
-                  <input className="admin-input num" type="number" min={1} max={10} value={r.amount ?? 1} aria-label={`Tag ${i + 1}: Anzahl Packs`}
-                    onChange={(e) => setDay(i, { ...r, amount: Math.min(10, Math.max(1, Math.round(Number(e.target.value) || 1))) })} />
-                </>
-              )}
-              {kind === 'card' && (
-                <select className="admin-input" value={r.cardId ?? ''} aria-label={`Tag ${i + 1}: Karte`} onChange={(e) => setDay(i, { ...r, cardId: e.target.value })}>
-                  {cards.map((c) => <option key={c.id} value={c.id}>{c.name} ({RARITY_LABEL[c.rarity]})</option>)}
-                </select>
-              )}
+              <RewardPicker reward={r} label={`Tag ${i + 1}`} onChange={(x) => setDay(i, x)} />
             </div>
           );
         })}
@@ -92,5 +69,37 @@ export function LoginAdminView({ db, onToast }: { db: Db; onToast: (m: string) =
         </div>
       </section>
     </div>
+  );
+}
+
+/** One reward: coins, Runensteine, a pack (1–10) or a card (also used by the Ranglisten-Ligen). */
+export function RewardPicker({ reward: r, label, onChange }: { reward: Reward; label: string; onChange: (r: Reward) => void }) {
+  const cards = useMemo(() => [...CARDS].sort((a, b) => a.name.localeCompare(b.name, 'de')), []);
+  const kind = r.type as Kind;
+  const setKind = (k: Kind) => onChange(k === 'coins' || k === 'stones' ? { type: k, amount: 50 } : k === 'pack' ? { type: 'pack', packId: PACKS[0]?.id, amount: 1 } : { type: 'card', cardId: cards[0]?.id });
+  return (
+    <>
+              <span className="segmented">
+                {(Object.keys(KIND_LABEL) as Kind[]).map((k) => <button key={k} type="button" className={`seg ${kind === k ? 'active' : ''}`} onClick={() => kind !== k && setKind(k)}>{KIND_LABEL[k]}</button>)}
+              </span>
+              {(kind === 'coins' || kind === 'stones') && (
+                <input className="admin-input num" type="number" min={1} max={100000} value={r.amount ?? 1} aria-label={`${label}: Anzahl`}
+                  onChange={(e) => onChange({ ...r, amount: Math.max(1, Math.round(Number(e.target.value) || 1)) })} />
+              )}
+              {kind === 'pack' && (
+                <>
+                  <select className="admin-input" value={r.packId ?? ''} aria-label={`${label}: Pack`} onChange={(e) => onChange({ ...r, packId: e.target.value })}>
+                    {PACKS.map((p) => <option key={p.id} value={p.id}>{packView(p).name}</option>)}
+                  </select>
+                  <input className="admin-input num" type="number" min={1} max={10} value={r.amount ?? 1} aria-label={`${label}: Anzahl Packs`}
+                    onChange={(e) => onChange({ ...r, amount: Math.min(10, Math.max(1, Math.round(Number(e.target.value) || 1))) })} />
+                </>
+              )}
+              {kind === 'card' && (
+                <select className="admin-input" value={r.cardId ?? ''} aria-label={`${label}: Karte`} onChange={(e) => onChange({ ...r, cardId: e.target.value })}>
+                  {cards.map((c) => <option key={c.id} value={c.id}>{c.name} ({RARITY_LABEL[c.rarity]})</option>)}
+                </select>
+              )}
+    </>
   );
 }

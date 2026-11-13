@@ -27,7 +27,7 @@ function giftText(r: Reward | { type: 'edition'; editionId: string }): string {
   return pack ? `${r.amount ?? 1} × ${packView(pack).name}` : rewardText(r);
 }
 
-const SENDER: Record<InboxItem['sender'], string> = { raid: 'Raid', admin: 'GridRune-Team', event: 'Puzzle-Event' };
+const SENDER: Record<InboxItem['sender'], string> = { raid: 'Raid', admin: 'GridRune-Team', event: 'Puzzle-Event', ladder: 'Rangliste' };
 const day = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 const daysLeft = (iso: string) => Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / 86400_000));
 
@@ -192,7 +192,7 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
             <ul className="inbox-list">
               {open.map((i) => (
                 <li key={i.id} className="inbox-item">
-                  <span className={`inbox-icon sender-${i.sender}`} aria-hidden="true"><GameIcon name={i.sender === 'raid' ? 'raid' : i.sender === 'event' ? 'crown' : 'gift'} /></span>
+                  <span className={`inbox-icon sender-${i.sender}`} aria-hidden="true"><GameIcon name={i.sender === 'raid' ? 'raid' : i.sender === 'event' ? 'crown' : i.sender === 'ladder' ? 'trophy' : 'gift'} /></span>
                   <span className="inbox-text">
                     <small>{SENDER[i.sender]} · {day(i.createdAt)} · noch {daysLeft(i.expiresAt)} {daysLeft(i.expiresAt) === 1 ? 'Tag' : 'Tage'}</small>
                     <b>{i.title}</b>

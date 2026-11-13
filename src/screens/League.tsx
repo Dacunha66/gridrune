@@ -1,6 +1,6 @@
 // Collection League ("Rangliste") against the computer. Same rules the online league will use:
 // deck limits, seeded fair runner, rock cells, two rounds with swapped start and a decider. Signed in, the server hands out the match and checks it; a won match unlocks the rarest new discovery.
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { GameIcon } from '../components/GameIcon';
 import { ResultIcon } from '../components/ResultIcon';
 import { Card } from '../components/Card';
@@ -13,9 +13,15 @@ import { Pick } from '../game/runner';
 import { SaveData } from '../game/storage';
 import { Header } from './Header';
 import { Battle } from './Battle';
+import { Online } from './Online';
 import { RuneMatchup } from '../components/RuneBadge';
 import { findRune } from '../game/runes';
-import { DuelLog, LEAGUE_AI, LeagueTicket, handPicks, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
+import { DuelLog, LeagueTicket, handPicks, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
+import { LadderChange, ladderStatusRemote } from '../game/adventureApi';
+import { LadderConfig, LadderState, ladderLevel } from '../game/ladder';
+import { LadderPanel, LadderResult } from '../components/Ladder';
+import { nightmareTicket } from '../game/nightmare';
+import { LEVEL_LABEL } from '../game/stats';
 import { Reward } from '../game/rewards';
 import { CloudSave } from '../game/cloudSave';
 import { finishLeagueRemote, readPending, startLeague, writePending } from '../game/adventureApi';
@@ -34,19 +40,34 @@ interface Props {
   onExit: () => void;
   /** Signed in: the server hands out the match and checks it; a won match unlocks a card. null = guest (no reward). */
   account?: { uid: string; adopt: (c: CloudSave) => void } | null;
+  /** Online ranked matches (accounts): reload the save after a duel (coins). null = only against the computer. */
+  online?: { onFinished: () => void } | null;
 }
 
-type Payout = { status: 'checking' | 'paid' | 'pending' | 'rejected' | 'guest' | 'lost'; reward?: Reward };
+type Payout = { status: 'checking' | 'paid' | 'pending' | 'rejected' | 'guest' | 'lost'; reward?: Reward; ladder?: LadderChange | null };
 
 /** Offline test: every owned card counts as two copies (online, real copies will count). */
 function ownedCounts(save: SaveData): OwnedCounts {
   return Object.fromEntries(ownedActiveIds(save.unlocked).map((id) => [id, RULES.deck.maxCopies]));
 }
 
-export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, account = null }: Props) {
+export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, account = null, online = null }: Props) {
   const owned = useMemo(() => ownedCounts(save), [save]);
   const savedDeck = save.leagueDeck.length ? save.leagueDeck : autoDeck(RULES.deck, owned);
-  const [stage, setStage] = useState<'deck' | 'intro' | 'run' | 'match' | 'done'>('deck');
+  const [stage, setStage] = useState<'ladder' | 'deck' | 'online' | 'intro' | 'run' | 'match' | 'done'>('ladder');
+  // Ranglisten-Ligen (accounts): the player's step; null while loading, 'offline' without a connection.
+  const [ladder, setLadder] = useState<{ ladder: LadderState; config: LadderConfig } | null | 'offline'>(null);
+  const [ladderLoads, setLadderLoads] = useState(0);
+  useEffect(() => {
+    if (!account) return;
+    let alive = true;
+    void ladderStatusRemote().then((r) => { if (alive) setLadder((cur) => r ?? (cur && cur !== 'offline' ? cur : 'offline')); });
+    return () => { alive = false; };
+  }, [account?.uid, ladderLoads]);
+  const toLadder = () => {
+    setStage('ladder');
+    setLadderLoads((n) => n + 1);
+  };
   const [deck, setDeck] = useState<string[]>(savedDeck);
   const [seed, setSeed] = useState('');
   const [picks, setPicks] = useState<Pick[]>([]);
@@ -61,7 +82,11 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
 
   // The computer mirrors the league deck the match was started with (same rarities, other cards); signed in: the ticket's deck.
   const matchDeck = ticket?.deck ?? deck;
-  const cpuHand = useMemo(() => (seed ? leagueCpuHand(seed, matchDeck) : []), [seed, matchDeck]);
+  // The computer's strength: from the ticket (the player's league); a guest plays like Bronze.
+  const level = ticket?.level ?? ladderLevel(0);
+  const guestNightmare = useMemo(() => nightmareTicket(), []);
+  const nightmare = ticket ? ticket.nightmare : guestNightmare;
+  const cpuHand = useMemo(() => (seed ? leagueCpuHand(seed, matchDeck, ticket ? ticket.level : level, nightmare) : []), [seed, matchDeck, ticket, level, nightmare]);
   // The computer's rune: one basic rune per match, fixed by the match seed (same in every round); signed in: from the server.
   const cpuRune = ticket ? ticket.cpuRune : seed ? leagueCpuRune(seed, !!runes) : null;
   const playerRune = ticket ? ticket.playerRune : runes?.player ?? null;
@@ -117,7 +142,8 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
     const r = await finishLeagueRemote(ticket.id, log);
     if (r.kind === 'paid') {
       account.adopt(r.cloud);
-      setPayout({ status: r.won ? 'paid' : 'lost', reward: r.reward });
+      setPayout({ status: r.won ? 'paid' : 'lost', reward: r.reward, ladder: r.ladder ?? null });
+      if (r.ladder) setLadder((l) => (l && l !== 'offline' ? { ...l, ladder: r.ladder!.state } : l));
       if (r.won) setRevealOpen(true);
     } else if (r.kind === 'offline') {
       writePending(account.uid, [...readPending(account.uid), { kind: 'league', ticketId: ticket.id, log, at: new Date().toISOString() }]);
@@ -143,10 +169,42 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
     else setBetween(after.decider ? `Stand ${wins(next, 'player')}:${wins(next, 'cpu')} – Entscheidungsduell! Ein neuer Münzwurf entscheidet, wer beginnt.` : `Stand ${wins(next, 'player')}:${wins(next, 'cpu')} – in Runde 2 beginnt ${after.first === 'player' ? 'du' : 'der Gegner'}.`);
   }
 
+  if (stage === 'ladder') {
+    const l = ladder && ladder !== 'offline' ? ladder : null;
+    return (
+      <main className="screen league">
+        <Header title="Rangliste" onBack={onExit} />
+        <div className="scroll">
+          {account && !ladder && <p className="muted center">Liga wird geladen …</p>}
+          {account && ladder === 'offline' && <p className="hint center">Keine Verbindung – für die Rangliste brauchst du kurz Internet.</p>}
+          {l && <LadderPanel state={l.ladder} config={l.config} />}
+          {!account && (
+            <section className="runner-info">
+              <h2>Ligen</h2>
+              <p>Mit einem Konto steigst du von <b>Bronze</b> bis zum <b>Runenmeister</b> auf: 5 Siege = nächste Stufe, Safepoints schützen vor dem Abstieg, jeden Monat eine neue Saison mit Belohnungen.</p>
+              <p className="muted small">Als Gast spielst du gegen den Computer auf „{LEVEL_LABEL[ladderLevel(0)]}“ – ohne Liga und Belohnung.</p>
+            </section>
+          )}
+        </div>
+        <footer className="bottombar">
+          <button type="button" className="btn btn-primary btn-wide" disabled={!!account && !l} onClick={() => setStage('deck')}><GameIcon name="swords" /> Spielen</button>
+        </footer>
+      </main>
+    );
+  }
+
+  // Online first: a player of a similar step; nobody there → the computer of the league.
+  if (stage === 'online' && account && online) {
+    return (
+      <Online uid={account.uid} deck={deck} rune={runes?.player ?? null} reducedMotion={reducedMotion} onFinished={online.onFinished} onExit={onExit}
+        ranked={{ onNoOpponent: () => { setStage('deck'); void startMatch(); }, onNext: toLadder }} />
+    );
+  }
+
   if (stage === 'deck') {
     return (
-      <LeagueDeckEditor deck={deck} owned={owned} onChange={setDeck} onBack={onExit} busy={starting === '…'} notice={starting && starting !== '…' ? starting : null}
-        onPlay={() => { onSaveDeck(deck); void startMatch(); }} />
+      <LeagueDeckEditor deck={deck} owned={owned} onChange={setDeck} onBack={() => setStage('ladder')} busy={starting === '…'} notice={starting && starting !== '…' ? starting : null}
+        onPlay={() => { onSaveDeck(deck); if (account && online) setStage('online'); else void startMatch(); }} />
     );
   }
 
@@ -160,7 +218,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
             <ul className="plain-list">
               <li><GameIcon name="cards" /> Du spielst mit deinem <b>Ranglisten-Deck</b>: Es wird gemischt, <b>5 Karten</b> hast du auf der Hand, vor jedem Zug ziehst du nach.</li>
               <li><GameIcon name="swords" /> <b>2 Runden</b> mit demselben Deck (jede Runde neu gemischt), der Start wird getauscht. 2:0 gewinnt, bei 1:1 folgt ein <b>Entscheidungsduell</b>.</li>
-              <li><GameIcon name="swords" /> Der Computer spielt auf <b>Schwer</b> mit einem <b>Spiegel-Deck</b>: genauso viele Karten jeder Seltenheit wie dein Deck, aber andere Karten.</li>
+              <li><GameIcon name="bot" /> Der Computer spielt auf <b>{LEVEL_LABEL[level] ?? level}</b>{ticket?.step !== undefined ? <> – passend zu deiner Liga</> : null}. {level === 'easy' ? 'Sein Deck ist eine feste, eher schwache Mischung.' : level === 'medium' ? 'Sein Deck folgt deinem, aber eine Seltenheit schwächer.' : level === 'hard' ? <>Er spielt mit einem <b>Spiegel-Deck</b>: genauso viele Karten jeder Seltenheit wie dein Deck, aber andere Karten.</> : 'Seine Karten sind stärker als deine.'}</li>
               <li><GameIcon name="lock" /> In jedem Duell blockiert ein <b>Fels</b> ein Feld: 15 Felder, kein Unentschieden, kein Startvorteil.</li>
             </ul>
             {runes && <RuneMatchup player={playerRune} cpu={cpuRune} note={runeNote} />}
@@ -204,7 +262,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
           deal: () => deriveRng(seed, `deal:${stepRound}`),
           finishLabel: 'Weiter',
           runes: { player: playerRune, cpu: cpuRune },
-          ai: LEAGUE_AI,
+          ai: { level },
         }}
         onEnd={(result, sc, started, record) => onRoundEnd(started, result, sc, record ? { first: record.start.turn, moves: record.moves } : undefined)}
         onQuit={onExit}
@@ -233,6 +291,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
       <p className="result-score"><span className="blue">{wins(match, 'player')}</span> : <span className="red">{wins(match, 'cpu')}</span></p>
       <div className="reward-box">
         <ul className="plain-list">{roundScores.map((r) => <li key={r}>{r}</li>)}</ul>
+        {payout?.ladder && <LadderResult {...payout.ladder} />}
         {statusText && <p className={`result-status status-${payout?.status}`} role="status">{statusText.replace('🪙', '')}{payout?.status === 'paid' && !reward?.newCard && <> <Coin /></>}</p>}
         {reveal.length > 0 && payout?.status === 'paid' && !revealOpen && <button type="button" className="btn" onClick={() => setRevealOpen(true)}>🎁 Belohnung ansehen</button>}
         <p className="muted small">Match {matchCode(seed)}</p>
@@ -241,6 +300,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
       <div className="menu-buttons">
         <button type="button" className="btn btn-primary btn-big" disabled={payout?.status === 'checking' || starting === '…'} onClick={() => void startMatch()}>▶ Neues Match</button>
         <button type="button" className="btn" onClick={() => setStage('deck')}>Deck ändern</button>
+        <button type="button" className="btn" onClick={toLadder}>Liga ansehen</button>
         <button type="button" className="btn" onClick={onExit}>Menü</button>
       </div>
     </main>

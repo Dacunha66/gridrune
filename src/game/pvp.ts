@@ -125,7 +125,9 @@ export interface PvpView {
   matchId: string;
   status: 'waiting' | 'drafting' | 'playing' | 'finished' | 'cancelled';
   seat: Seat;
-  kind: 'invite' | 'random';
+  kind: 'invite' | 'random' | 'ranked';
+  /** Ranglisten-Liga online. */
+  ranked?: boolean;
   mode: 'duel' | 'draft';
   /** Draft League: the shared pool, the own deck and track, and how far both players are. */
   draft: null | {

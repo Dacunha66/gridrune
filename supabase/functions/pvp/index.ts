@@ -3,13 +3,14 @@
 // after 90 seconds) and absences (whoever is still there after 20 seconds without a sign of life from the other
 // one wins). The full duel stays in pvp_matches; each player gets only their own view in pvp_views (live).
 // Draft League ("draft"): both get the same pool of 30 cards, build a secret deck of 20 and duel with it.
+// Ranglisten-Liga ("ranked"): two players of similar steps with their league decks; the result moves both on the ladder.
 // Every duel: the deck is shuffled, 5 cards on the hand, the rest drawn before each own move.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
   DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS, PVP_ABSENT_SECONDS, PVP_DAILY_PAID_WINS, PVP_MIN_MOVES_FOR_COINS, PVP_TURN_SECONDS, PVP_WIN_COINS,
   completeDraftDeck, draftLayout, draftPool, inviteCode, isGameOver, loadContent, normalizeCode, otherSeat, picksToHand, preparePvp, pvpAction,
-  onlineQuestEvent, pvpScore, pvpWinner, questDelta, questPeriod, replayDraftRun, seatSide, shownAvatar, startPvp, timeoutMove, validDraftDeck, viewState,
+  RANKED_RANGE, ladderApplyServer, ladderStatusServer, onlineQuestEvent, prepareRanked, pvpScore, pvpWinner, questDelta, questPeriod, replayDraftRun, seatSide, shownAvatar, startPvp, timeoutMove, validDraftDeck, viewState,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@3a9f3fb33a4ecd48a44a581a6a60c1ae354d9a32/public/server/engine-e02b2f711b9d.js';
 
 const CORS = {
@@ -62,7 +63,7 @@ function viewOf(m: Match, seat: Seat) {
     }
     : null;
   return {
-    matchId: m.id, status: m.status, seat, kind: m.kind, code: m.code, mode: m.mode ?? 'duel', draft,
+    matchId: m.id, status: m.status, seat, kind: m.kind, ranked: m.kind === 'ranked', code: m.code, mode: m.mode ?? 'duel', draft,
     opponentName: m[`name_${opp}`] ?? null,
     opponentTitle: m[`title_${opp}`] ?? null,
     opponentAvatar: m[`avatar_${opp}`] ?? null,
@@ -111,6 +112,45 @@ Deno.serve(async (req) => {
     return data && seatOf(data) ? data : null;
   }
 
+  // ---------- Ranglisten-Ligen ----------
+  async function ladderRead(player: string) {
+    const { data } = await db.from('ladder').select('state, version').eq('player_id', player).maybeSingle();
+    return { state: (data?.state ?? null) as unknown, version: (data?.version ?? 0) as number };
+  }
+  /** The player's step in the current season (only read – a new month is written by the next result). */
+  async function ladderStep(player: string): Promise<number> {
+    return ladderStatusServer((await ladderRead(player)).state).state.step;
+  }
+  /** Applies the result of a ranked match for one player exactly once (ref = the match). */
+  async function ladderApply(player: string, ref: string, result: 'win' | 'loss' | 'draw') {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const cur = await ladderRead(player);
+      const a = ladderApplyServer(cur.state, result);
+      const out = { before: a.step.before, state: a.step.state, move: a.step.move, promoted: a.step.promoted, ended: a.ended, gifts: a.gifts.length };
+      const { data, error } = await db.rpc('ladder_write', { p_player: player, p_ref: ref, p_version: cur.version, p_state: a.step.state, p_gifts: a.gifts, p_result: out });
+      if (error || data === 'ok' || data === 'already') return;
+    }
+  }
+  /**
+   * A finished ranked match moves both players: a played duel counts for both; a match given up right at the start
+   * counts as a loss only for the one who left (nothing for the other – no free points).
+   */
+  async function ladderFinish(m: Match, winner: Seat | 'draw', reason: 'normal' | 'absent' | 'left', moves: number) {
+    if (m.kind !== 'ranked') return;
+    const played = reason === 'normal' || moves >= PVP_MIN_MOVES_FOR_COINS;
+    for (const s of ['a', 'b'] as Seat[]) {
+      const player = m[`player_${s}`];
+      if (!player) continue;
+      const result = winner === 'draw' ? 'draw' : winner === s ? 'win' : 'loss';
+      if (!played && !(reason === 'left' && result === 'loss')) continue;
+      try {
+        await ladderApply(player, `pvp:${m.id}`, result);
+      } catch {
+        // The ladder must never break the end of a duel.
+      }
+    }
+  }
+
   /** Ends the match (once): coins for the winner unless the daily limit against this opponent is reached. */
   async function finish(m: Match, state: unknown, winner: Seat | 'draw', reason: 'normal' | 'absent' | 'left') {
     let coins = 0;
@@ -134,6 +174,7 @@ Deno.serve(async (req) => {
     if (done && (reason === 'normal' || moves >= PVP_MIN_MOVES_FOR_COINS)) {
       for (const s of ['a', 'b'] as Seat[]) if (m[`player_${s}`]) await addQuest(db, m[`player_${s}`], onlineQuestEvent(winner === s));
     }
+    if (done) await ladderFinish(m, winner, reason, moves);
     const { data: fresh } = await db.from('pvp_matches').select('*').eq('id', m.id).single();
     if (done || fresh) await writeViews(fresh);
     return fresh as Match;
@@ -170,10 +211,10 @@ Deno.serve(async (req) => {
   }
 
   /** Second player takes a waiting match: the duel starts (a draft starts with the preparation). */
-  async function claim(m: Match, hand: string[] | null, rune: string | null): Promise<Match | null> {
+  async function claim(m: Match, hand: string[] | null, rune: string | null, step: number | null = null): Promise<Match | null> {
     const now = new Date().toISOString();
     const badge = await myBadge();
-    const common = { player_b: uid, name_b: await myName(), title_b: badge.title, avatar_b: badge.avatar, rune_b: rune, seen_b: now, seen_a: now, updated_at: now };
+    const common = { step_b: step, player_b: uid, name_b: await myName(), title_b: badge.title, avatar_b: badge.avatar, rune_b: rune, seen_b: now, seen_a: now, updated_at: now };
     const patch = m.mode === 'draft'
       ? { ...common, status: 'drafting', pool: draftPool(m.seed), prepare_deadline: new Date(Date.now() + DRAFT_PREPARE_SECONDS * 1000).toISOString() }
       : (() => {
@@ -209,12 +250,12 @@ Deno.serve(async (req) => {
     for (const m of old ?? []) await writeViews(m);
   }
 
-  async function create(kind: 'invite' | 'random', mode: 'duel' | 'draft', hand: string[] | null, rune: string | null): Promise<Match | null> {
+  async function create(kind: 'invite' | 'random' | 'ranked', mode: 'duel' | 'draft', hand: string[] | null, rune: string | null, step: number | null = null): Promise<Match | null> {
     const name = await myName();
     const { title, avatar } = await myBadge();
     for (let i = 0; i < 5; i++) {
       const { data, error } = await db.from('pvp_matches').insert({
-        kind, mode, code: kind === 'invite' ? inviteCode(cryptoRandom) : null, player_a: uid, name_a: name, title_a: title, avatar_a: avatar, seed: seed(), hand_a: hand, rune_a: rune,
+        kind, mode, code: kind === 'invite' ? inviteCode(cryptoRandom) : null, player_a: uid, name_a: name, title_a: title, avatar_a: avatar, seed: seed(), hand_a: hand, rune_a: rune, step_a: step,
       }).select('*').single();
       if (!error) {
         await writeViews(data);
@@ -226,6 +267,25 @@ Deno.serve(async (req) => {
   }
 
   const action = body.action;
+
+  // Ranglisten-Liga online: a player of a similar step (at most RANKED_RANGE apart) who is searching right now, else wait.
+  if (action === 'ranked') {
+    const { isAdmin, saveRow } = await needSave();
+    if (!saveRow) return json({ error: 'no_save' }, 409);
+    const prep = prepareRanked(saveRow.save, saveRow.campaign, body.deck, body.rune ?? null, isAdmin);
+    if (!prep.ok) return json({ error: prep.error }, 422);
+    const step = await ladderStep(uid);
+    await cancelWaiting();
+    const fresh = new Date(Date.now() - PVP_ABSENT_SECONDS * 1000).toISOString();
+    const { data: waiting } = await db.from('pvp_matches').select('*').eq('kind', 'ranked').eq('mode', 'duel').eq('status', 'waiting')
+      .neq('player_a', uid).gte('seen_a', fresh).gte('step_a', step - RANKED_RANGE).lte('step_a', step + RANKED_RANGE).order('created_at').limit(5);
+    for (const w of waiting ?? []) {
+      const started = await claim(w, prep.hand, prep.rune, step);
+      if (started) return json({ view: viewOf(started, 'b') });
+    }
+    const m = await create('ranked', 'duel', prep.hand, prep.rune, step);
+    return m ? json({ view: viewOf(m, 'a') }) : json({ error: 'database' }, 500);
+  }
 
   if (action === 'invite' || action === 'join' || action === 'queue') {
     const { isAdmin, saveRow } = await needSave();

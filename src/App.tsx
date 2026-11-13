@@ -33,6 +33,7 @@ import { Tutorial, TutorialOffer } from './screens/Tutorial';
 import { TUTORIAL_REWARD_TEXT, pendingTutorialLog, setPendingTutorialLog, setTutorialState, tutorialState } from './game/tutorial';
 import type { LoginView } from './game/loginCalendar';
 import { PRIVACY_DOC, parsePrivacy, setPrivacyInfo } from './game/privacy';
+import { LADDER_DOC, parseLadderConfig, setLadderConfig } from './game/ladder';
 import { NIGHTMARE_DOC, parseNightmare, setNightmareConfig } from './game/nightmare';
 import { Header } from './screens/Header';
 import { equipEdition, setEditions, setPuzzles } from './game/puzzles';
@@ -287,6 +288,7 @@ export function App() {
       db?.collection('settings').doc(PRIVACY_DOC).get().then((d) => { if (alive && d.exists) setPrivacyInfo(parsePrivacy(d.data())); }).catch(() => undefined);
       // Albtraum: deck strength, thinking and coins set by the admin (also for games without an account).
       db?.collection('settings').doc(NIGHTMARE_DOC).get().then((d) => { if (alive && d.exists) setNightmareConfig(parseNightmare(d.data())); }).catch(() => undefined);
+      db?.collection('settings').doc(LADDER_DOC).get().then((d) => { if (alive && d.exists) setLadderConfig(parseLadderConfig(d.data())); }).catch(() => undefined);
       // Events: the forge offers editions of events that have ended.
       if (alive && savedPuzzles) setPuzzles(savedPuzzles);
       if (alive && stoneCfg) setStoneConfig(stoneCfg);
@@ -649,6 +651,7 @@ export function App() {
           runes={runesOn ? { player: duelRune('league'), equipped: equippedRune } : null}
           onSaveDeck={(leagueDeck) => setSave((s) => ({ ...s, leagueDeck }))}
           account={cloud.uid && cloud.phase === 'ready' ? { uid: cloud.uid, adopt: cloud.adoptServer } : null}
+          online={cloud.uid && cloud.phase === 'ready' ? { onFinished: cloud.retry } : null}
           onExit={toMenu}
         />
       )}

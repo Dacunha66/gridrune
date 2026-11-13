@@ -34,6 +34,8 @@ export const pvpQueue = (mode: PvpMode, hand: string[] | null, rune: string | nu
 export const pvpDeck = (matchId: string, deck: string[]) => call({ action: 'deck', matchId, deck });
 /** Draft: the recorded run (the server replays it and takes the 8 collected cards). */
 export const pvpRun = (matchId: string, run: { inputs: RunInput[]; skippedAt: number | null }) => call({ action: 'run', matchId, run });
+/** Ranglisten-Liga online: search an opponent of a similar step with the league deck. */
+export const pvpRanked = (deck: string[], rune: string | null) => call({ action: 'ranked', deck, rune });
 export const pvpLeave = (matchId: string) => call({ action: 'leave', matchId });
 export const pvpMove = (matchId: string, move: Action, n: number) => call({ action: 'move', matchId, move, n });
 /** Sign of life while playing; the server also checks time-outs and an absent opponent. */

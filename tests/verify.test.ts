@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { simpleCpuDeck,
-  AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, adventureDuel, adventureRngs, checkAdventure, handPicks, checkLeague, LEAGUE_AI, leagueCpuHand, leagueCpuRune, leagueRound,
+  AdventureLog, AdventureTicket, LeagueLog, LeagueTicket, adventureDuel, adventureRngs, checkAdventure, handPicks, checkLeague, leagueAi, leagueCpuHand, leagueCpuRune, leagueRound,
 } from '../src/game/verify';
 import { emptyMatch, nextStep, recordRound } from '../src/game/match';
 import { createBattle } from '../src/game/battle';
@@ -56,7 +56,7 @@ function playLeague(t: LeagueTicket, choices: number): { log: LeagueLog; winner:
     const step = nextStep(match);
     if (step.kind === 'done') return { log: { rounds }, winner: step.winner };
     const r = leagueRound(t.seed, step.round);
-    let state = createBattle(hand, leagueCpuHand(t.seed, t.deck), 'player', r.rocks, r.arena.cells, { player: t.playerRune, cpu: t.cpuRune }, r.deal);
+    let state = createBattle(hand, leagueCpuHand(t.seed, t.deck, t.level, t.nightmare), 'player', r.rocks, r.arena.cells, { player: t.playerRune, cpu: t.cpuRune }, r.deal);
     let first = step.first;
     if (!first) {
       const w = coinToss(r.toss);
@@ -66,7 +66,7 @@ function playLeague(t: LeagueTicket, choices: number): { log: LeagueLog; winner:
     const moves: Action[] = [];
     while (!isGameOver(state)) {
       if (state.turn === 'cpu') {
-        const a: Action = chooseCpuRune(state, r.ai, LEAGUE_AI) ?? chooseCpuMove(state, r.ai, LEAGUE_AI);
+        const a: Action = chooseCpuRune(state, r.ai, leagueAi(t)) ?? chooseCpuMove(state, r.ai, leagueAi(t));
         moves.push(a);
         state = applyAction(state, a);
       } else {
@@ -159,6 +159,19 @@ describe('Rangliste vom Server geprüft', () => {
       }
     }
     expect(playerWins).toBeLessThan(10);
+  });
+
+  it('Ranglisten-Ligen: der Computer spielt auf der Stufe des Tickets (auch Albtraum mit Bonus)', () => {
+    for (const level of ['easy', 'medium', 'nightmare'] as const) {
+      const t: LeagueTicket = { ...lt(`ladder-${level}`), level, step: 0, ...(level === 'nightmare' ? { nightmare: { deckBoost: 1, valueBonus: 1 } } : {}) };
+      const { log, winner } = playLeague(t, 7);
+      const check = checkLeague(t, log);
+      expect(check.ok, `${level}: ${JSON.stringify(check).slice(0, 200)}`).toBe(true);
+      if (check.ok) expect(check.winner).toBe(winner);
+      // The same moves against another strength do not fit.
+      expect(checkLeague({ ...t, level: 'hard' }, log).ok).toBe(false);
+    }
+    expect(leagueCpuHand('x', deck, 'nightmare', { deckBoost: 0, valueBonus: 2 }).every((c) => c.mod === 2)).toBe(true);
   });
 
   it('manipulierte Matches werden abgelehnt', () => {

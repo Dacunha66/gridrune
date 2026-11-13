@@ -15,8 +15,11 @@ import { DECK_SIZE } from '../game/cards';
 import { findRune, Action } from '../game/runes';
 import { PVP_ABSENT_SECONDS, PVP_TURN_SECONDS, PVP_WIN_COINS, PvpView, normalizeCode } from '../game/pvp';
 import {
-  PvpMode, pvpDeck, pvpErrorText, pvpFetch, pvpInvite, pvpJoin, pvpLeave, pvpMove, pvpPing, pvpQueue, pvpStats, pvpTick, pvpWatch,
+  PvpMode, pvpDeck, pvpErrorText, pvpFetch, pvpInvite, pvpJoin, pvpLeave, pvpMove, pvpPing, pvpQueue, pvpRanked, pvpStats, pvpTick, pvpWatch,
 } from '../game/pvpApi';
+import { LadderChange, ladderRefRemote } from '../game/adventureApi';
+import { RANKED_SEARCH_SECONDS } from '../game/ladder';
+import { LadderResult } from '../components/Ladder';
 import { Pick } from '../game/runner';
 import { DRAFT_DECK_SECONDS, DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS } from '../game/draft';
 import { DraftDeckBuilder, poolPlanText, useSecondsLeft } from './Draft';
@@ -39,13 +42,18 @@ interface Props {
   /** A duel ended: the server may have paid coins – reload the account save. */
   onFinished: () => void;
   onExit: () => void;
+  /**
+   * Ranglisten-Liga: search a player of a similar step with the league deck (`deck`) right away; nobody found within
+   * RANKED_SEARCH_SECONDS → `onNoOpponent` (the computer of the league plays). `onNext` = back to the league.
+   */
+  ranked?: { onNoOpponent: () => void; onNext: () => void } | null;
 }
 
 const SITE = typeof location !== 'undefined' ? location.origin : 'https://gridrune.pages.dev';
 
-export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMotion, autoQueue = false, onFinished, onExit }: Props) {
+export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMotion, autoQueue = false, onFinished, onExit, ranked = null }: Props) {
   const draftMode = mode === 'draft';
-  const title = draftMode ? 'Draft' : 'Gegen Spieler';
+  const title = ranked ? 'Rangliste' : draftMode ? 'Draft' : 'Gegen Spieler';
   // Online duels are played with the whole deck (5 on the hand, the rest drawn).
   const hand = deck;
   const [code, setCode] = useState(() => normalizeCode(new URLSearchParams(location.search).get('duell') ?? ''));
@@ -55,6 +63,8 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
   const [stats, setStats] = useState<{ wins: number; draws: number; losses: number } | null>(null);
   /** The duel's board finished (Battle's "Ergebnis" pressed) – then the result is shown. */
   const [duelDone, setDuelDone] = useState(false);
+  /** Rangliste: when the search for a real opponent ends. */
+  const searchEnd = useRef<string | null>(null);
   const matchId = view?.matchId ?? null;
   const status = view?.status ?? null;
   const runeDef = findRune(rune);
@@ -108,30 +118,63 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
     setError('');
     setDuelDone(false);
     const h = draftMode ? null : hand;
-    const r = kind === 'invite' ? await pvpInvite(mode, h, rune) : kind === 'join' ? await pvpJoin(mode, code, h, rune) : await pvpQueue(mode, h, rune);
+    const r = ranked ? await pvpRanked(hand, rune) : kind === 'invite' ? await pvpInvite(mode, h, rune) : kind === 'join' ? await pvpJoin(mode, code, h, rune) : await pvpQueue(mode, h, rune);
     setBusy(false);
-    if (r.ok) setView(r.view);
-    else setError(pvpErrorText(r.error));
+    if (r.ok) {
+      if (ranked) searchEnd.current = new Date(Date.now() + RANKED_SEARCH_SECONDS * 1000).toISOString();
+      setView(r.view);
+    } else setError(ranked && r.error === 'deck' ? 'Dein Ranglisten-Deck passt nicht zu den Regeln oder deiner Sammlung.' : pvpErrorText(r.error));
   }
 
-  // Zufall from the menu: look for an opponent at once (once; the lobby stays as the way back).
+  // Zufall from the menu (and the Rangliste): look for an opponent at once (once; the lobby stays as the way back).
   const queued = useRef(false);
   useEffect(() => {
-    if (!autoQueue || queued.current || draftMode || hand.length !== DECK_SIZE) return;
+    if ((!autoQueue && !ranked) || queued.current || draftMode || (!ranked && hand.length !== DECK_SIZE)) return;
     queued.current = true;
     start('queue');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoQueue]);
 
   async function leave() {
-    if (!matchId) return;
+    if (!matchId) return ranked?.onNext();
     const r = await pvpLeave(matchId);
     if (r.ok && r.view.status === 'finished') take(r.view);
+    else if (ranked) ranked.onNext();
     else {
       setView(null);
       setDuelDone(false);
     }
   }
+
+  // Rangliste: nobody found in time – stop waiting; if someone took the match meanwhile, play it, else the computer.
+  const searchLeft = useSecondsLeft(ranked && view?.status === 'waiting' ? searchEnd.current : null);
+  useEffect(() => {
+    if (!ranked || view?.status !== 'waiting' || searchLeft === null || searchLeft > 0 || !matchId) return;
+    let alive = true;
+    void pvpLeave(matchId).then((r) => {
+      if (!alive) return;
+      if (r.ok && (r.view.status === 'playing' || r.view.status === 'finished')) take(r.view);
+      else ranked.onNoOpponent();
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchLeft, view?.status]);
+
+  // Rangliste: what the match changed on the ladder (written by the server when the match ended).
+  const [ladderChange, setLadderChange] = useState<LadderChange | null>(null);
+  useEffect(() => {
+    if (!ranked || status !== 'finished' || !matchId) return;
+    let alive = true;
+    let tries = 0;
+    const look = () => void ladderRefRemote(matchId).then((c) => {
+      if (!alive) return;
+      if (c) setLadderChange(c);
+      else if (++tries < 4) setTimeout(look, 1500);
+    });
+    look();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, matchId]);
 
   // ---------- Draft: deck building, run, waiting ----------
   if (view && view.status === 'drafting' && view.draft) {
@@ -161,13 +204,16 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
           <p className="muted">gegen {view.opponentAvatar && <Avatar id={view.opponentAvatar} size={24} />} {view.opponentName ?? 'Gegner'}{view.opponentTitle && <span className="opponent-title"> · {view.opponentTitle}</span>}</p>
           <p className="result-score"><span className="blue">{r.score.me}</span> : <span className="red">{r.score.opponent}</span></p>
           {why && <p className="small">{why}</p>}
+          {ranked && (ladderChange ? <LadderResult {...ladderChange} /> : <p className="muted small">Liga wird aktualisiert …</p>)}
           {r.outcome === 'win' && (
             <p className="reward-line">{r.coins > 0 ? <><Coin /> +{r.coins} gutgeschrieben</> : r.score.me + r.score.opponent === 0 ? 'Keine Münzen – das Duell hatte noch nicht begonnen.' : 'Heute keine Münzen mehr gegen diesen Gegner (zählt aber in der Statistik).'}</p>
           )}
           {stats && <p className="muted small">{draftMode ? 'Draft' : 'Online'}-Bilanz: <GameIcon name="crown" /> {stats.wins} · <GameIcon name="handshake" /> {stats.draws} · <GameIcon name="skull" /> {stats.losses}</p>}
         </div>
         <div className="menu-buttons">
-          <button type="button" className="btn btn-primary btn-big" onClick={() => { setView(null); setDuelDone(false); }}>{draftMode ? 'Neuer Draft' : 'Neues Duell gegen Spieler'}</button>
+          {ranked
+            ? <button type="button" className="btn btn-primary btn-big" onClick={ranked.onNext}>Weiter zur Liga</button>
+            : <button type="button" className="btn btn-primary btn-big" onClick={() => { setView(null); setDuelDone(false); }}>{draftMode ? 'Neuer Draft' : 'Neues Duell gegen Spieler'}</button>}
           <button type="button" className="btn" onClick={onExit}>Zum Menü</button>
         </div>
       </main>
@@ -202,13 +248,31 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
             </section>
           ) : (
             <section className="online-card">
-              <p className="searching" aria-live="polite">Suche einen Gegner …</p>
-              <p className="muted small">Sobald jemand anderes ebenfalls sucht, startet das Duell. Lass diese Seite dafür geöffnet.</p>
+              <p className="searching" aria-live="polite">{ranked ? 'Suche einen Gegner in deiner Liga …' : 'Suche einen Gegner …'}</p>
+              {ranked
+                ? <p className="muted small">Ist in {searchLeft ?? RANKED_SEARCH_SECONDS} Sekunden niemand da, spielst du gegen den Computer deiner Liga. Lass diese Seite dafür geöffnet.</p>
+                : <p className="muted small">Sobald jemand anderes ebenfalls sucht, startet das Duell. Lass diese Seite dafür geöffnet.</p>}
             </section>
           )}
           {error && <p className="hint">{error}</p>}
         </div>
         <button type="button" className="btn" onClick={leave}>Abbrechen</button>
+      </main>
+    );
+  }
+
+  // ---------- Rangliste: starting the search (or why it did not start) ----------
+  if (ranked) {
+    return (
+      <main className="screen online">
+        <Header title={title} onBack={ranked.onNext} />
+        <div className="scroll online-body">
+          <section className="online-card">
+            {error ? <p className="admin-warning" role="alert">{error}</p> : <p className="searching" aria-live="polite">Suche einen Gegner in deiner Liga …</p>}
+          </section>
+        </div>
+        {error && <button type="button" className="btn" onClick={ranked.onNoOpponent}><GameIcon name="bot" /> Gegen den Computer spielen</button>}
+        <button type="button" className="btn" onClick={ranked.onNext}>Zurück</button>
       </main>
     );
   }

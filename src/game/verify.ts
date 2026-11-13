@@ -197,6 +197,12 @@ export interface LeagueTicket {
   playerRune: string | null;
   /** The computer's basic rune for the whole match (null = none). */
   cpuRune: string | null;
+  /** Ranglisten-Liga: the computer's strength for the player's step (missing in older tickets = "Schwer"). */
+  level?: AiLevel;
+  /** Albtraum values when the level is "nightmare". */
+  nightmare?: NightmareTicket;
+  /** The player's step when the match started (for the display). */
+  step?: number;
 }
 
 export interface LeagueLog {
@@ -214,11 +220,17 @@ export const LEAGUE_AI: AiOptions = { level: 'hard' };
  * the player brings, the computer gets a different card of the same rarity (no card of the player's deck, no card
  * twice). Older calls without a deck keep the commons-only deck.
  */
-export function leagueCpuHand(seed: string, playerDeck?: readonly string[]): HandCard[] {
+export function leagueCpuHand(seed: string, playerDeck?: readonly string[], level?: AiLevel, nightmare?: NightmareTicket): HandCard[] {
   const rng = deriveRng(seed, 'cpu-hand');
   if (!playerDeck || !playerDeck.length) return drawCpuHand(rng, DECK_SIZE, CPU_DECK_SHARE);
-  return mirrorCpuDeck(rng, playerDeck, 0, false);
+  // Ranglisten-Liga: weaker leagues meet the deck of the simple game's level ("Leicht" a fixed mix, "Normal" one rarity
+  // lower); "Schwer" (and older tickets) keep the league mirror, "Albtraum" its stronger cards.
+  if (!level || level === 'hard') return mirrorCpuDeck(rng, playerDeck, 0, false);
+  return simpleCpuDeck(rng, level, playerDeck, ticketNightmare(nightmare));
 }
+
+/** The computer's way of playing in a league match. */
+export const leagueAi = (ticket: { level?: AiLevel } | null | undefined): AiOptions => ({ level: ticket?.level ?? LEAGUE_AI.level });
 
 const RARITY_BY_ORDER = Object.fromEntries(Object.entries(RARITY_ORDER).map(([r, n]) => [n, r])) as Record<number, Rarity>;
 
@@ -287,7 +299,7 @@ export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readon
   if (!log || !Array.isArray(log.rounds)) return { ok: false, error: 'Match fehlt' };
   const picks = handPicks(ticket.deck);
   const hand: HandCard[] = picks.map((p) => ({ cardId: p.cardId, mod: p.mod }));
-  const cpuHand = leagueCpuHand(ticket.seed, ticket.deck);
+  const cpuHand = leagueCpuHand(ticket.seed, ticket.deck, ticket.level, ticket.nightmare);
   let match = emptyMatch();
   const rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[] = [];
   const duels: PlayedDuel[] = [];
@@ -307,7 +319,7 @@ export function checkLeague(ticket: LeagueTicket, log: LeagueLog, arenas: readon
     } catch {
       return { ok: false, error: 'Duell konnte nicht aufgebaut werden' };
     }
-    const duel = replayDuel(start, duelLog, { toss: r.toss, ai: r.ai }, LEAGUE_AI, step.first);
+    const duel = replayDuel(start, duelLog, { toss: r.toss, ai: r.ai }, leagueAi(ticket), step.first);
     if (!duel.ok) return { ok: false, error: `Runde ${step.round}: ${duel.error}` };
     const res = outcome(duel.end);
     const winner: Side | 'draw' = res === 'win' ? 'player' : res === 'loss' ? 'cpu' : 'draw';

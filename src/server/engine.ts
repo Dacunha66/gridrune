@@ -1,5 +1,6 @@
 // Game rules for the server functions (bundled into supabase/functions/adventure/engine.js with esbuild).
 // It loads the same content as the game and uses the same code to check runs and compute rewards.
+import { LADDER_DOC, LadderStep, PostfachGift, SeasonChange, freshLadder, ladderConfig, ladderLevel, ladderResult, parseLadderConfig, parseLadderState, rollSeason, seasonOf, setLadderConfig } from '../game/ladder';
 import { CardRecord, buildCatalog, parseCardRecord } from '../game/catalog';
 import { CARDS, DECK_SIZE, getCard, isCardId, setCardCatalog } from '../game/cards';
 import { Arena, parseArena, setArenas } from '../game/arenas';
@@ -77,6 +78,9 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
   // Albtraum: deck strength, thinking and coins set by the admin (settings/nightmare).
   const nightmareRow = rows.find((r) => r.collection === 'settings' && r.id === NIGHTMARE_DOC);
   setNightmareConfig(parseNightmare(nightmareRow?.data));
+  // Ranglisten-Ligen: the computer's strength per league and the rewards (settings/ladder).
+  const ladderRow = rows.find((r) => r.collection === 'settings' && r.id === LADDER_DOC);
+  setLadderConfig(parseLadderConfig(ladderRow?.data));
   // Login-Kalender: the 7 rewards and on/off set by the admin (settings/login).
   const loginRow = rows.find((r) => r.collection === 'settings' && r.id === LOGIN_DOC);
   setLoginConfig(parseLoginConfig(loginRow?.data));
@@ -305,13 +309,51 @@ function leagueDeckOk(save: SaveData, deck: unknown): deck is string[] {
 }
 
 /** Checks the league deck and the rune; the computer's rune follows from the seed. */
-export function prepareLeague(saveRaw: unknown, campaignRaw: unknown, deck: unknown, rune: unknown, isAdmin: boolean, seed: string):
+export function prepareLeague(saveRaw: unknown, campaignRaw: unknown, deck: unknown, rune: unknown, isAdmin: boolean, seed: string, step?: number):
   { ok: true; ticket: Omit<LeagueTicket, 'id'> } | { ok: false; error: string } {
   const save = sanitize(saveRaw);
   if (!leagueDeckOk(save, deck)) return { ok: false, error: 'deck' };
   const runesOn = released(SETTINGS.features.runes, isAdmin);
   const playerRune = allowedRune(save, sanitizeProgress(campaignRaw), rune, 'league', isAdmin);
-  return { ok: true, ticket: { seed, deck: [...deck], playerRune, cpuRune: leagueCpuRune(seed, runesOn) } };
+  const ticket: Omit<LeagueTicket, 'id'> = { seed, deck: [...deck], playerRune, cpuRune: leagueCpuRune(seed, runesOn) };
+  // Ranglisten-Liga: the computer plays at the strength of the player's league (Bronze = "Leicht").
+  if (typeof step === 'number') {
+    ticket.step = step;
+    ticket.level = ladderLevel(step);
+    if (ticket.level === 'nightmare') ticket.nightmare = nightmareTicket();
+  }
+  return { ok: true, ticket };
+}
+
+// ---------- Ranglisten-Ligen ----------
+
+/** The stored state of a player in the current season (a new month: the old season's reward and the new start). */
+export function ladderStatusServer(stateRaw: unknown, now: Date = new Date()): SeasonChange {
+  const season = seasonOf(now);
+  if (stateRaw == null) return { state: freshLadder(season), ended: null, gifts: [] };
+  return rollSeason(parseLadderState(stateRaw, season), now);
+}
+
+/** One checked ranked result: first a season change if due, then the step; all Postfach gifts together. */
+export function ladderApplyServer(stateRaw: unknown, result: 'win' | 'loss' | 'draw', now: Date = new Date()):
+  { step: LadderStep; ended: SeasonChange['ended']; gifts: PostfachGift[] } {
+  const roll = ladderStatusServer(stateRaw, now);
+  const step = ladderResult(roll.state, result);
+  return { step, ended: roll.ended, gifts: [...roll.gifts, ...step.gifts] };
+}
+
+/** Ranked online match: the league deck (league limits, own cards) and an allowed rune. */
+export function prepareRanked(saveRaw: unknown, campaignRaw: unknown, deck: unknown, rune: unknown, isAdmin: boolean):
+  { ok: true; hand: string[]; rune: string | null } | { ok: false; error: string } {
+  const save = sanitize(saveRaw);
+  if (!leagueDeckOk(save, deck)) return { ok: false, error: 'deck' };
+  return { ok: true, hand: [...deck], rune: allowedRune(save, sanitizeProgress(campaignRaw), rune, 'league', isAdmin) };
+}
+
+export { RANKED_RANGE } from '../game/ladder';
+
+export function ladderSettingsServer() {
+  return ladderConfig();
 }
 
 /** Replays the match; a won match unlocks a random card not owned yet (else coins). */
