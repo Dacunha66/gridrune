@@ -7,9 +7,10 @@
 // Only for accounts: the server keeps the state (table "ladder") and applies every checked result exactly once.
 import type { AiLevel } from './ai';
 import { Reward, parseReward } from './campaign';
-import { QUEST_TIME_ZONE } from './quests';
 
 export const LADDER_DOC = 'ladder';
+/** Seasons follow the German calendar month (like the daily quests). */
+const SEASON_TIME_ZONE = 'Europe/Berlin';
 export const LEAGUES = [
   { id: 'bronze', name: 'Bronze' },
   { id: 'silber', name: 'Silber' },
@@ -119,7 +120,7 @@ export const ladderLevel = (step: number, c: LadderConfig = CONFIG): AiLevel => 
 
 /** The season of a moment: the Berlin month, e.g. "2026-11". */
 export function seasonOf(now: Date = new Date()): string {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: QUEST_TIME_ZONE, year: 'numeric', month: '2-digit' }).formatToParts(now);
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: SEASON_TIME_ZONE, year: 'numeric', month: '2-digit' }).formatToParts(now);
   const get = (t: string) => parts.find((p) => p.type === t)!.value;
   return `${get('year')}-${get('month')}`;
 }

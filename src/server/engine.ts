@@ -1,6 +1,5 @@
 // Game rules for the server functions (bundled into supabase/functions/adventure/engine.js with esbuild).
 // It loads the same content as the game and uses the same code to check runs and compute rewards.
-import { LADDER_DOC, LadderStep, PostfachGift, SeasonChange, freshLadder, ladderConfig, ladderLevel, ladderResult, parseLadderConfig, parseLadderState, rollSeason, seasonOf, setLadderConfig } from '../game/ladder';
 import { CardRecord, buildCatalog, parseCardRecord } from '../game/catalog';
 import { CARDS, DECK_SIZE, getCard, isCardId, setCardCatalog } from '../game/cards';
 import { Arena, parseArena, setArenas } from '../game/arenas';
@@ -257,6 +256,7 @@ export function questEquipTitle(stateRaw: unknown, title: unknown): Titles | nul
 
 export { DEFAULT_QUESTS, parseQuestConfig, questDay, questWeek } from '../game/quests';
 import { AVATARS_COLLECTION, AvatarDef, DEFAULT_AVATAR, isAvatarId, parseAvatar, setAvatars, unlockedAvatars } from '../game/avatars';
+import { LADDER_DOC, LadderStep, PostfachGift, SeasonChange, freshLadder, ladderConfig, ladderLevel, ladderResult, parseLadderConfig, parseLadderState, rollSeason, seasonOf, setLadderConfig } from '../game/ladder';
 
 export function cleanSave(raw: unknown): SaveData {
   return sanitize(raw);
