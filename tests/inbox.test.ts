@@ -51,3 +51,18 @@ describe('Postfach: Karten-Editionen aus Puzzle-Events', () => {
     expect(inboxClaimServer(defaultSave(), [{ id: 'e3', title: 'x', reward: { type: 'edition', editionId: 'ed999' } }], 'seed').results.e3).toBeUndefined();
   });
 });
+
+describe('Postfach: mehrere Packs nacheinander', () => {
+  it('jedes Pack einzeln mit seinen 3 Karten; Neu/Doppelt richtig', () => {
+    const r = inboxClaimServer(defaultSave(), [
+      { id: 'p1', title: 'Tutorial geschafft', reward: { type: 'pack', packId: 'abenteurer', amount: 7 } },
+      { id: 'p2', title: 'Tutorial geschafft', reward: { type: 'pack', packId: 'helden', amount: 1 } },
+    ], 'seed-tut');
+    expect(r.results.p1.packs).toHaveLength(7);
+    expect(r.results.p2.packs).toHaveLength(1);
+    expect(r.results.p1.packs!.every((p) => p.cards.length === 3 && p.packId === 'abenteurer')).toBe(true);
+    const flat = r.results.p1.packs!.flatMap((p) => p.cards);
+    expect(flat.filter((c) => c.isNew).map((c) => c.cardId)).toEqual(r.results.p1.cards);
+    expect(flat.filter((c) => !c.isNew).map((c) => c.cardId)).toEqual(r.results.p1.duplicates);
+  });
+});

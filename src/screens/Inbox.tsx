@@ -30,16 +30,33 @@ const SENDER: Record<InboxItem['sender'], string> = { raid: 'Raid', admin: 'Grid
 const day = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 const daysLeft = (iso: string) => Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / 86400_000));
 
-/** Cards from collected packs, turned over one by one like in the shop. */
-export function PackReveal({ cards, cardSkin, onClose }: { cards: { cardId: string; isNew: boolean }[]; cardSkin: string; onClose: () => void }) {
+export interface OpenedPack {
+  packId?: string;
+  cards: { cardId: string; isNew: boolean }[];
+}
+
+/** Cards from collected packs: one pack after the other, its cards turned over like in the shop (rarest last). */
+export function PackReveal({ packs, cardSkin, onClose }: { packs: OpenedPack[]; cardSkin: string; onClose: () => void }) {
+  const [n, setN] = useState(0);
+  const pack = packs[n];
+  const cards = [...(pack?.cards ?? [])].sort((x, y) => RARITY_ORDER[getCard(x.cardId).rarity] - RARITY_ORDER[getCard(y.cardId).rarity]);
   const [up, setUp] = useState<boolean[]>(cards.map(() => false));
   const back = getSkin(cardSkin).colors;
-  const all = up.every(Boolean);
+  const all = up.length === cards.length && up.every(Boolean);
+  const def = pack?.packId ? PACKS.find((x) => x.id === pack.packId) : null;
+  const last = n >= packs.length - 1;
+  const next = () => {
+    if (last) return onClose();
+    setUp(packs[n + 1].cards.map(() => false));
+    setN(n + 1);
+  };
+  if (!pack) return null;
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Pack geöffnet">
       <div className="modal pack-reveal">
-        <h2>Pack geöffnet</h2>
-        <div className="reveal-row">
+        <h2>{def ? packView(def).name : 'Pack geöffnet'}</h2>
+        {packs.length > 1 && <p className="pack-count">Pack {n + 1} von {packs.length}</p>}
+        <div className="reveal-row" key={n}>
           {cards.map((c, i) => {
             const rarity = getCard(c.cardId).rarity;
             return (
@@ -57,10 +74,26 @@ export function PackReveal({ cards, cardSkin, onClose }: { cards: { cardId: stri
         </div>
         {!all
           ? <p className="flip-hint">Tippe auf eine Karte, um sie aufzudecken · <button type="button" className="link-btn" onClick={() => setUp(cards.map(() => true))}>Alle aufdecken</button></p>
-          : <div className="modal-actions"><button type="button" className="btn btn-primary" onClick={onClose}>Super!</button></div>}
+          : (
+            <div className="modal-actions">
+              <button type="button" className="btn btn-primary" onClick={next}>{last ? 'Super!' : `Nächstes Pack öffnen (${n + 2}/${packs.length})`}</button>
+              {!last && <button type="button" className="btn" onClick={onClose}>Rest überspringen</button>}
+            </div>
+          )}
       </div>
     </div>
   );
+}
+
+/** The packs of collected rewards, one by one; answers of an older server (no pack list) are split into packs of 3. */
+export function packsOf(results: readonly GrantedReward[]): OpenedPack[] {
+  return results.flatMap((g) => {
+    if (g.packs?.length) return g.packs;
+    const all = [...g.cards.map((cardId) => ({ cardId, isNew: true })), ...g.duplicates.map((cardId) => ({ cardId, isNew: false }))];
+    const out: OpenedPack[] = [];
+    for (let i = 0; i < all.length; i += 3) out.push({ cards: all.slice(i, i + 3) });
+    return out;
+  });
 }
 
 export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
@@ -75,7 +108,7 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [reveal, setReveal] = useState<RevealItem[] | null>(null);
-  const [pack, setPack] = useState<{ cardId: string; isNew: boolean }[] | null>(null);
+  const [pack, setPack] = useState<OpenedPack[] | null>(null);
 
   useEffect(() => {
     inboxList().then((l) => {
@@ -99,9 +132,7 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
     // Coins and Runensteine first (big), then the packs to turn over; a single card comes with the big reveal.
     const isPack = (key: string) => before.find((i) => i.id === key)?.reward.type === 'pack';
     const fromPacks = results.filter((g) => isPack(g.key));
-    // Like in the shop: from the most common to the rarest, the best card is turned over last.
-    const packCards = fromPacks.flatMap((g) => [...g.cards.map((cardId) => ({ cardId, isNew: true })), ...g.duplicates.map((cardId) => ({ cardId, isNew: false }))])
-      .sort((x, y) => RARITY_ORDER[getCard(x.cardId).rarity] - RARITY_ORDER[getCard(y.cardId).rarity]);
+    const opened = packsOf(fromPacks);
     const rest = results.map((g) => (fromPacks.includes(g) ? { ...g, cards: [] } : g));
     // Card editions from Puzzle-Events: shown big, in their special look.
     const editions: RevealItem[] = results.flatMap((g) => (g.editions ?? []).flatMap((id) => {
@@ -110,7 +141,7 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
     }));
     const big = [...editions, ...revealOfGranted(rest)];
     setReveal(big.length ? big : null);
-    setPack(packCards.length ? packCards : null);
+    setPack(opened.length ? opened : null);
   }
 
   const list = items === 'offline' || items === null ? [] : items;
@@ -157,7 +188,7 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
         )}
       </div>
       {reveal && <RewardReveal items={reveal} reducedMotion={reducedMotion} onClose={() => setReveal(null)} />}
-      {!reveal && pack && <PackReveal cards={pack} cardSkin={cardSkin} onClose={() => setPack(null)} />}
+      {!reveal && pack && <PackReveal packs={pack} cardSkin={cardSkin} onClose={() => setPack(null)} />}
     </main>
   );
 }

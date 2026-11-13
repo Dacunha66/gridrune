@@ -30,6 +30,8 @@ export interface GrantedReward {
   duplicates: string[];
   /** Card editions received (Puzzle-Events via the Postfach). */
   editions?: string[];
+  /** Booster packs opened, one by one with their cards (for showing them pack by pack). */
+  packs?: { packId: string; cards: { cardId: string; isNew: boolean }[] }[];
 }
 
 const PAYABLE = new Set<Reward['type']>(['coins', 'stones', 'card', 'pack']);
@@ -91,7 +93,16 @@ export function grantRewards(save: SaveData, owed: OwedReward[], rng: Rng): { sa
       give(o.reward.cardId, g);
     } else if (o.reward.type === 'pack') {
       const pack = PACKS.find((p) => p.id === o.reward.packId) ?? PACKS[0];
-      for (let i = 0; i < (o.reward.amount ?? 1); i++) for (const id of rollPack(pack, rng)) give(id, g);
+      g.packs = [];
+      for (let i = 0; i < (o.reward.amount ?? 1); i++) {
+        const opened: { cardId: string; isNew: boolean }[] = [];
+        for (const id of rollPack(pack, rng)) {
+          if (!isCardId(id)) continue;
+          opened.push({ cardId: id, isNew: !unlocked.includes(id) });
+          give(id, g);
+        }
+        g.packs.push({ packId: pack.id, cards: opened });
+      }
     }
     granted.push(g);
   }

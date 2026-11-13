@@ -4,12 +4,12 @@ import { ReactNode, useState } from 'react';
 import { Coin, Stone } from './Coin';
 import { GameIcon } from './GameIcon';
 import { RevealItem, RewardReveal, revealOfGranted } from './RewardReveal';
-import { PackReveal } from '../screens/Inbox';
+import { OpenedPack, PackReveal, packsOf } from '../screens/Inbox';
 import { PackArt } from '../screens/Shop';
 import { CloudSave } from '../game/cloudSave';
 import { LoginView } from '../game/loginCalendar';
 import { loginClaimRemote } from '../game/adventureApi';
-import { RARITY_ORDER, getCard } from '../game/cards';
+import { getCard } from '../game/cards';
 import { PACKS, packView } from '../game/shop';
 import type { Reward } from '../game/campaign';
 
@@ -37,7 +37,7 @@ export function LoginCalendar({ view, onClose, onAdopt, onView, reducedMotion, c
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [reveal, setReveal] = useState<RevealItem[] | null>(null);
-  const [pack, setPack] = useState<{ cardId: string; isNew: boolean }[] | null>(null);
+  const [pack, setPack] = useState<OpenedPack[] | null>(null);
 
   async function claim() {
     if (busy || !view.canClaim) return;
@@ -50,11 +50,8 @@ export function LoginCalendar({ view, onClose, onAdopt, onView, reducedMotion, c
     const g = r.granted;
     const isPack = view.fields[view.index]?.reward.type === 'pack';
     if (isPack) {
-      const cards = [...g.cards.map((cardId) => ({ cardId, isNew: true })), ...g.duplicates.map((cardId) => ({ cardId, isNew: false }))]
-        .sort((x, y) => RARITY_ORDER[getCard(x.cardId).rarity] - RARITY_ORDER[getCard(y.cardId).rarity]);
-      const big = revealOfGranted([{ ...g, cards: [] }]);
-      setReveal(big.length ? big : null);
-      setPack(cards.length ? cards : null);
+      const opened = packsOf([g]);
+      setPack(opened.length ? opened : null);
     } else {
       const big = revealOfGranted([g]);
       setReveal(big.length ? big : null);
@@ -62,7 +59,7 @@ export function LoginCalendar({ view, onClose, onAdopt, onView, reducedMotion, c
   }
 
   if (reveal) return <RewardReveal items={reveal} reducedMotion={reducedMotion} onClose={() => setReveal(null)} />;
-  if (pack) return <PackReveal cards={pack} cardSkin={cardSkin} onClose={() => setPack(null)} />;
+  if (pack) return <PackReveal packs={pack} cardSkin={cardSkin} onClose={() => setPack(null)} />;
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Login-Kalender">
