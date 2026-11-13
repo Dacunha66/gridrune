@@ -2817,3 +2817,14 @@ label.btn.disabled { opacity: .45; }
 .unlock-inbox svg { width: 18px; height: 18px; flex: none; }
 .pack-reveal { max-height: calc(var(--app-h, 100dvh) - 32px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .pack-count { margin: 0; color: var(--muted); font-size: 0.9rem; }
+/* Packs from the Postfach: one at a time; the whole window scrolls if the screen is small. */
+.pack-backdrop { overflow-y: auto; -webkit-overflow-scrolling: touch; align-items: flex-start; padding-top: max(16px, env(safe-area-inset-top)); padding-bottom: 24px; }
+.pack-backdrop .pack-reveal { margin: auto; }
+.pack-closed { display: flex; justify-content: center; padding: 8px; margin: 8px 0 4px; border: 0; background: none; cursor: pointer; }
+.pack-closed .pack-art.big { width: min(52vw, 190px); max-width: none; }
+:root:not(.reduced-motion) .pack-closed .pack-art { animation: pack-wiggle 2.2s ease-in-out infinite; }
+@keyframes pack-wiggle { 0%, 100% { transform: rotate(0); } 46% { transform: rotate(0); } 50% { transform: rotate(-3deg) scale(1.03); } 54% { transform: rotate(3deg) scale(1.03); } 58% { transform: rotate(0); } }
+.update-notice { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 900; display: flex; align-items: center; gap: 8px;
+  max-width: calc(100vw - 24px); padding: 8px 10px 8px 12px; border-radius: 12px; background: #173a49; border: 1px solid var(--glow); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); font-size: 0.85rem; }
+.update-notice svg { width: 18px; height: 18px; color: var(--glow); flex: none; }
+.update-notice .update-text { white-space: nowrap; }

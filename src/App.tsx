@@ -28,6 +28,7 @@ import { Privacy } from './screens/Privacy';
 import { Inbox } from './screens/Inbox';
 import { inboxList, openCount } from './game/inboxApi';
 import { LoginCalendar } from './components/LoginCalendar';
+import { UpdateNotice } from './components/UpdateNotice';
 import { Tutorial, TutorialOffer } from './screens/Tutorial';
 import { TUTORIAL_REWARD_TEXT, pendingTutorialLog, setPendingTutorialLog, setTutorialState, tutorialState } from './game/tutorial';
 import type { LoginView } from './game/loginCalendar';
@@ -482,6 +483,7 @@ export function App() {
   return (
     <>
     <PageArt design={pageDesign} />
+    <UpdateNotice />
     <SymbolTips />
     <div className={`app ${screen.name === 'admin' ? 'app-wide' : ''} ${pageDesign ? 'has-page-art' : ''}`} style={skinStyle(getSkin(save.skins.card).colors)}>
       {newCards.length > 0 && (screen.name === 'menu' || screen.name === 'events') && (

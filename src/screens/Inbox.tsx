@@ -14,6 +14,7 @@ import type { GrantedReward } from '../game/campaignRewards';
 import { InboxItem, inboxClaim, inboxList, openCount } from '../game/inboxApi';
 import { getSkin } from '../game/skins';
 import { PACKS, packView } from '../game/shop';
+import { PackArt } from './Shop';
 import type { Reward } from '../game/campaign';
 
 /** "1 × Helden-Pack" instead of "1 Kartenpack". */
@@ -35,51 +36,72 @@ export interface OpenedPack {
   cards: { cardId: string; isNew: boolean }[];
 }
 
-/** Cards from collected packs: one pack after the other, its cards turned over like in the shop (rarest last). */
+/**
+ * Cards from collected packs: one pack after the other. First the pack itself ("tap to open"), then its cards face
+ * down, turned over like in the shop (rarest last), then the next pack.
+ */
 export function PackReveal({ packs, cardSkin, onClose }: { packs: OpenedPack[]; cardSkin: string; onClose: () => void }) {
   const [n, setN] = useState(0);
+  const [opened, setOpened] = useState(false);
   const pack = packs[n];
   const cards = [...(pack?.cards ?? [])].sort((x, y) => RARITY_ORDER[getCard(x.cardId).rarity] - RARITY_ORDER[getCard(y.cardId).rarity]);
   const [up, setUp] = useState<boolean[]>(cards.map(() => false));
   const back = getSkin(cardSkin).colors;
   const all = up.length === cards.length && up.every(Boolean);
-  const def = pack?.packId ? PACKS.find((x) => x.id === pack.packId) : null;
+  const def = (pack?.packId ? PACKS.find((x) => x.id === pack.packId) : null) ?? null;
+  const name = def ? packView(def).name : 'Kartenpack';
   const last = n >= packs.length - 1;
   const next = () => {
     if (last) return onClose();
     setUp(packs[n + 1].cards.map(() => false));
+    setOpened(false);
     setN(n + 1);
   };
   if (!pack) return null;
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Pack geöffnet">
+    <div className="modal-backdrop pack-backdrop" role="dialog" aria-modal="true" aria-label={name}>
       <div className="modal pack-reveal">
-        <h2>{def ? packView(def).name : 'Pack geöffnet'}</h2>
+        <h2>{name}</h2>
         {packs.length > 1 && <p className="pack-count">Pack {n + 1} von {packs.length}</p>}
-        <div className="reveal-row" key={n}>
-          {cards.map((c, i) => {
-            const rarity = getCard(c.cardId).rarity;
-            return (
-              <button key={`${c.cardId}-${i}`} type="button" className={`reveal-slot flip-slot hint-${rarity} ${up[i] ? 'is-up' : ''}`}
-                style={{ animationDelay: `${0.1 + i * 0.15}s` } as CSSProperties}
-                onClick={() => setUp((u) => u.map((x, k) => x || k === i))} aria-label={up[i] ? `${getCard(c.cardId).name}, ${RARITY_LABEL[rarity]}` : `Karte ${i + 1} aufdecken`}>
-                <span className="flip-inner">
-                  <span className="flip-face flip-back" aria-hidden="true" style={{ '--b1': back[0], '--b2': back[1], '--b3': back[2] } as CSSProperties}><span className="flip-rune">ᚱ</span></span>
-                  <span className="flip-face flip-front"><Card id={c.cardId} size="md" showName /></span>
-                </span>
-                <span className={`reveal-tag ${c.isNew ? 'new' : ''}`} style={{ visibility: up[i] ? 'visible' : 'hidden' }}>{c.isNew ? 'NEU!' : 'Doppelt → Schmiede'}</span>
-              </button>
-            );
-          })}
-        </div>
-        {!all
-          ? <p className="flip-hint">Tippe auf eine Karte, um sie aufzudecken · <button type="button" className="link-btn" onClick={() => setUp(cards.map(() => true))}>Alle aufdecken</button></p>
-          : (
+        {!opened ? (
+          <>
+            <button type="button" className="pack-closed" key={`p${n}`} onClick={() => setOpened(true)} aria-label={`${name} öffnen`}>
+              {def ? <PackArt pack={def} big /> : <span className="pack-art big" aria-hidden="true" />}
+            </button>
+            <p className="flip-hint">Tippe auf das Pack, um es zu öffnen</p>
             <div className="modal-actions">
-              <button type="button" className="btn btn-primary" onClick={next}>{last ? 'Super!' : `Nächstes Pack öffnen (${n + 2}/${packs.length})`}</button>
-              {!last && <button type="button" className="btn" onClick={onClose}>Rest überspringen</button>}
+              <button type="button" className="btn btn-primary" onClick={() => setOpened(true)}>Pack öffnen</button>
+              {packs.length > 1 && <button type="button" className="btn" onClick={onClose}>Rest überspringen</button>}
             </div>
-          )}
+          </>
+        ) : (
+          <>
+            <div className="reveal-row" key={n}>
+              {cards.map((c, i) => {
+                const rarity = getCard(c.cardId).rarity;
+                return (
+                  <button key={`${c.cardId}-${i}`} type="button" className={`reveal-slot flip-slot hint-${rarity} ${up[i] ? 'is-up' : ''}`}
+                    style={{ animationDelay: `${0.1 + i * 0.15}s` } as CSSProperties}
+                    onClick={() => setUp((u) => u.map((x, k) => x || k === i))} aria-label={up[i] ? `${getCard(c.cardId).name}, ${RARITY_LABEL[rarity]}` : `Karte ${i + 1} aufdecken`}>
+                    <span className="flip-inner">
+                      <span className="flip-face flip-back" aria-hidden="true" style={{ '--b1': back[0], '--b2': back[1], '--b3': back[2] } as CSSProperties}><span className="flip-rune">ᚱ</span></span>
+                      <span className="flip-face flip-front"><Card id={c.cardId} size="md" showName /></span>
+                    </span>
+                    <span className={`reveal-tag ${c.isNew ? 'new' : ''}`} style={{ visibility: up[i] ? 'visible' : 'hidden' }}>{c.isNew ? 'NEU!' : 'Doppelt → Schmiede'}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {!all
+              ? <p className="flip-hint">Tippe auf eine Karte, um sie aufzudecken · <button type="button" className="link-btn" onClick={() => setUp(cards.map(() => true))}>Alle aufdecken</button></p>
+              : (
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-primary" onClick={next}>{last ? 'Super!' : `Nächstes Pack (${n + 2}/${packs.length})`}</button>
+                  {!last && <button type="button" className="btn" onClick={onClose}>Rest überspringen</button>}
+                </div>
+              )}
+          </>
+        )}
       </div>
     </div>
   );
