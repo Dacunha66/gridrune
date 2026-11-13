@@ -49,6 +49,15 @@ Deno.serve(async (req) => {
 
   if (body.action === 'list') return json({ ok: true, items: await list() });
 
+  // Deletes one collected message of this player (open gifts stay until collected or expired).
+  if (body.action === 'delete') {
+    const id = typeof body.id === 'string' && UUID.test(body.id) ? body.id : '';
+    if (!id) return json({ error: 'bad_request' }, 400);
+    const { error } = await db.from('inbox_items').delete().eq('id', id).eq('player_id', uid).not('claimed_at', 'is', null);
+    if (error) return json({ error: 'database' }, 500);
+    return json({ ok: true, items: await list() });
+  }
+
   if (body.action === 'claim') {
     const { data: rows, error: e1 } = await db.from('content_docs').select('collection, id, data');
     if (e1) return json({ error: 'database' }, 500);

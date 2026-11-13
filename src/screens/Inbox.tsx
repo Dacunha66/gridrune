@@ -11,7 +11,7 @@ import { findEdition } from '../game/puzzles';
 import { CloudSave } from '../game/cloudSave';
 import { rewardText } from '../game/campaign';
 import type { GrantedReward } from '../game/campaignRewards';
-import { InboxItem, inboxClaim, inboxList, openCount } from '../game/inboxApi';
+import { InboxItem, inboxClaim, inboxDelete, inboxList, openCount } from '../game/inboxApi';
 import { getSkin } from '../game/skins';
 import { PACKS, packView } from '../game/shop';
 import { PackArt } from './Shop';
@@ -166,6 +166,16 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
     setPack(opened.length ? opened : null);
   }
 
+  async function remove(id: string) {
+    if (busy) return;
+    setBusy(true);
+    const next = await inboxDelete(id);
+    setBusy(false);
+    if (!next) return setMessage('Löschen hat nicht geklappt – bitte noch einmal versuchen.');
+    setItems(next);
+    setMessage('');
+  }
+
   const list = items === 'offline' || items === null ? [] : items;
   const open = list.filter((i) => !i.claimedAt && Date.parse(i.expiresAt) > Date.now());
   const done = list.filter((i) => i.claimedAt);
@@ -201,6 +211,7 @@ export function Inbox({ onBack, onAdopt, onCount, reducedMotion, cardSkin }: {
                     <li key={i.id} className="inbox-item">
                       <span className={`inbox-icon sender-${i.sender}`} aria-hidden="true"><GameIcon name="check" /></span>
                       <span className="inbox-text"><small>{SENDER[i.sender]} · abgeholt am {day(i.claimedAt!)}</small><b>{i.title}</b><span className="inbox-reward">{giftText(i.reward)}</span></span>
+                      <button type="button" className="inbox-delete" disabled={busy} onClick={() => remove(i.id)} aria-label={`Nachricht „${i.title}“ löschen`}><GameIcon name="close" /></button>
                     </li>
                   ))}
                 </ul>

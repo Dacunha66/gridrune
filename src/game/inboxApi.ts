@@ -40,6 +40,12 @@ export async function inboxClaim(ids?: string[]): Promise<{ results: Record<stri
   return { results: (d.results as Record<string, GrantedReward>) ?? {}, items: (d.items as InboxItem[]) ?? [], cloud };
 }
 
+/** Deletes a collected message (open gifts cannot be deleted). The new list; null = did not work. */
+export async function inboxDelete(id: string): Promise<InboxItem[] | null> {
+  const d = await call({ action: 'delete', id });
+  return d?.ok === true && Array.isArray(d.items) ? (d.items as InboxItem[]) : null;
+}
+
 /** Admin: a gift into the Postfach of one player (by name) or of everyone ("all"). */
 export async function inboxSend(to: string, title: string, message: string, reward: Reward): Promise<{ ok: true; sent: number } | { ok: false; reason: string }> {
   const d = await call({ action: 'admin-send', to, title, message, reward });

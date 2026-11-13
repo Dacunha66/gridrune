@@ -2685,7 +2685,8 @@ label.btn.disabled { opacity: .45; }
 .inbox-badge { top: -5px; left: auto; right: -6px; }
 .inbox-list { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 8px; }
 .inbox-item { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 10px; border-radius: 14px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.1); }
-.inbox-list.done .inbox-item { opacity: 0.6; grid-template-columns: 40px 1fr; }
+.inbox-list.done .inbox-item { grid-template-columns: 40px 1fr auto; }
+.inbox-list.done .inbox-item > :not(.inbox-delete) { opacity: 0.6; }
 .inbox-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(69, 227, 207, 0.12); color: var(--glow); }
 .inbox-icon.sender-raid { background: rgba(248, 113, 113, 0.15); color: #fca5a5; }
 .inbox-icon .gi { width: 22px; height: 22px; }
@@ -2828,3 +2829,6 @@ label.btn.disabled { opacity: .45; }
   max-width: calc(100vw - 24px); padding: 8px 10px 8px 12px; border-radius: 12px; background: #173a49; border: 1px solid var(--glow); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); font-size: 0.85rem; }
 .update-notice svg { width: 18px; height: 18px; color: var(--glow); flex: none; }
 .update-notice .update-text { white-space: nowrap; }
+.inbox-delete { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--gold-faint); background: rgba(255, 255, 255, 0.04); color: var(--muted); cursor: pointer; }
+.inbox-delete svg { width: 16px; height: 16px; }
+.inbox-delete:hover, .inbox-delete:active { color: var(--text); border-color: var(--gold-line); }
