@@ -11,7 +11,7 @@ import {
   DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS, PVP_ABSENT_SECONDS, PVP_DAILY_PAID_WINS, PVP_MIN_MOVES_FOR_COINS, PVP_TURN_SECONDS, PVP_WIN_COINS,
   completeDraftDeck, draftLayout, draftPool, inviteCode, isGameOver, loadContent, normalizeCode, otherSeat, picksToHand, preparePvp, pvpAction,
   RANKED_RANGE, ladderApplyServer, ladderStatusServer, onlineQuestEvent, prepareRanked, pvpScore, pvpWinner, questDelta, questPeriod, replayDraftRun, seatSide, shownAvatar, startPvp, timeoutMove, validDraftDeck, viewState,
-} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@640dee04f454acd6d31955e5a508e15156fe0bdc/public/server/engine-e2088434e6ed.js';
+} from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@9e7a2ef6d0d3a2ecfb0f4d1007838003195f089f/public/server/engine-454bba2ed2b5.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
