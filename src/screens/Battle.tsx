@@ -3,6 +3,7 @@ import { Avatar } from '../components/Avatar';
 import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
 import { Coin, coinLargeImg } from '../components/Coin';
 import { Card } from '../components/Card';
+import { CardFlight, FlightInfo } from '../components/CardFlight';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { GameIcon } from '../components/GameIcon';
 import { Burst } from '../components/Effects';
@@ -144,13 +145,20 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     );
   });
   const [state, setState] = useState<BattleState>(initial);
+  // A placed card on its way to the board (shown large, then flown to its field); the new state applies when it lands.
+  const [flight, setFlight] = useState<(FlightInfo & { next: BattleState; hand: number | null }) | null>(null);
+  /** The move whose card arrived by flight (it lands softly instead of dropping from above). */
+  const flownMove = useRef(-1);
   // Online: the server's state replaces the local one whenever it is ahead or different (opponent's move, time-out).
   const onlineKey = online ? `${online.state.moveCount}:${online.state.log.length}` : '';
   useEffect(() => {
     if (!online) return;
-    setState((s) => (`${s.moveCount}:${s.log.length}` === onlineKey ? s : online.state));
+    if (`${state.moveCount}:${state.log.length}` === onlineKey) return;
+    // The own move is still flying: the server's answer is the same state.
+    if (flight) return;
+    commit(online.state);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onlineKey]);
+  }, [onlineKey, flight]);
   // Online: seconds left for the current move.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -226,7 +234,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     if (phase === 'play') onProgress?.(record.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, phase]);
-  const animating = pendingFlips.length > 0;
+  const animating = pendingFlips.length > 0 || !!flight;
   const fxTime = reducedMotion ? 0 : 1;
   // Tutorial: the current speech bubble (info bubbles wait for "Weiter"; the computer waits meanwhile).
   const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set());
@@ -268,9 +276,38 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     return () => timers.forEach(clearTimeout);
   }, [state, fxTime]);
 
+  /**
+   * Applies a new state; a newly placed card first flies there: from the hand (own card) or from the opponent's side,
+   * shown large for a moment. Without motion (or without a placement) the state applies at once.
+   */
+  function commit(next: BattleState, hand: number | null = null) {
+    const cell = next.lastPlaced;
+    const placedCard = cell !== null ? next.board[cell] : null;
+    const toEl = cell !== null ? document.querySelectorAll<HTMLElement>('.board > .cell')[cell] : undefined;
+    if (reducedMotion || cell === null || !placedCard || next.moveCount <= state.moveCount || !toEl) {
+      setState(next);
+      return;
+    }
+    const fromEl = hand !== null ? document.querySelectorAll<HTMLElement>('.hand .hand-slot')[hand] : null;
+    const info = cellBreakdown(next.board, next.terrain, cell);
+    setFlight({
+      cardId: placedCard.cardId, mod: placedCard.mod, owner: placedCard.placedBy, values: [...info.values], base: [...info.base], rot: info.rot,
+      from: fromEl?.getBoundingClientRect() ?? null, to: toEl.getBoundingClientRect(), next, hand,
+    });
+  }
+  const land = useCallback(() => {
+    setFlight((f) => {
+      if (f) {
+        flownMove.current = f.next.moveCount;
+        setState(f.next);
+      }
+      return null;
+    });
+  }, []);
+
   // Computer turn.
   useEffect(() => {
-    if (online || phase !== 'play' || over || state.turn !== 'cpu' || guideBlocks) return;
+    if (online || phase !== 'play' || over || state.turn !== 'cpu' || guideBlocks || flight) return;
     const delay = reducedMotion ? 450 : state.lastClashes.length > 0 || state.lastEvents.length > 0 ? 1250 : 800;
     const t = setTimeout(() => {
       // The computer may use its rune first (still its turn afterwards), then it places a card.
@@ -282,10 +319,11 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
       }
       const move = chooseCpuMove(state, rng, aiOptions);
       record.current.moves.push(move);
-      setState(applyMove(state, move));
+      commit(applyMove(state, move));
     }, delay);
     return () => clearTimeout(t);
-  }, [state, over, rng, reducedMotion, phase, setup?.ai, guideBlocks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, over, rng, reducedMotion, phase, setup?.ai, guideBlocks, flight]);
 
   const start = useCallback((first: Side) => {
     starter.current = first;
@@ -298,7 +336,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   function play(handIndex: number, cell: number, target?: number, rot = 0) {
     const move: Move = { handIndex, cell, ...(target === undefined ? {} : { target }), ...(rot ? { rot } : {}) };
     record.current.moves.push(move);
-    setState(applyMove(state, move));
+    commit(applyMove(state, move), handIndex);
     online?.onAction(move, state);
     setSelected(null);
     setTargeting(null);
@@ -528,7 +566,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                     owner={owner}
                     size="sm"
                     className={[
-                      flipped ? 'anim-flip' : placed ? `anim-drop ${activated.some((a) => a.effect === getCard(cell.cardId).effect) ? 'anim-drop-fx' : ''}` : '',
+                      flipped ? 'anim-flip' : placed ? `${flownMove.current === state.moveCount ? 'anim-land' : 'anim-drop'} ${activated.some((a) => a.effect === getCard(cell.cardId).effect) ? 'anim-drop-fx' : ''}` : '',
                       pending ? 'under-attack' : '',
                       twisting ? 'twist-preview' : '',
                       winner && owner === winner ? 'winner-glow' : '',
@@ -657,7 +695,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           {state.hands.player.map(({ cardId: id, mod }, i) => {
             const t = i - (state.hands.player.length - 1) / 2;
             return (
-            <div key={handOrigin[i]} className={`hand-slot ${selected === i ? 'sel' : ''} ${bubble?.hand === i && selected !== i ? 'guide-glow' : ''} ${state.lastDraw === 'player' && (i === state.hands.player.length - 1 || state.lastRune?.side === 'player') && !reducedMotion ? 'drawn' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
+            <div key={handOrigin[i]} className={`hand-slot ${flight?.hand === i ? 'flying' : ''} ${selected === i ? 'sel' : ''} ${bubble?.hand === i && selected !== i ? 'guide-glow' : ''} ${state.lastDraw === 'player' && (i === state.hands.player.length - 1 || state.lastRune?.side === 'player') && !reducedMotion ? 'drawn' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
               {...longPress(() => setPreview({ id, mod }))}>
               <Card
                 id={id}
@@ -687,6 +725,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           )}
         </div>
       </div>
+      {flight && <CardFlight key={flight.next.moveCount} flight={flight} onDone={land} />}
       {preview && (
         <div className="card-preview" aria-live="polite">
           <Card id={preview.id} mod={preview.mod} size="lg" detail />

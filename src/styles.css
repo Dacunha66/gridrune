@@ -2885,3 +2885,15 @@ label.btn.disabled { opacity: .45; }
 /* Admin: the header and the tab bar never shrink – long tabs scroll below them. */
 .admin > .admin-tabs, .admin > header { flex-shrink: 0; }
 .admin-balance-tab > .scroll { overflow: visible; flex: none; }
+
+/* ---------- Placing a card: shown large, then flown to its field (components/CardFlight.tsx) ---------- */
+.card-flight { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: auto; perspective: 900px; }
+.card-flight-card { width: min(46vw, 210px); transform-origin: center; will-change: transform, opacity; filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 14px var(--flight-glow)); }
+.card-flight-card .card { width: 100% !important; height: auto; }
+.hand-slot.flying { visibility: hidden; }
+@keyframes land { 0% { transform: scale(1.06); } 55% { transform: scale(0.95); } 100% { transform: scale(1); } }
+.anim-land { animation: land 0.28s ease-out; }
+.anim-land.anim-drop-fx { animation: land 0.28s ease-out, effect-flare 0.9s ease-out 0.2s; }
+:root:not(.reduced-motion) .play-area .card.anim-land:is(.rarity-legendary, .rarity-mythic) { animation: land 0.28s ease-out !important; }
+:root:not(.reduced-motion) .play-area .card.anim-land.anim-drop-fx:is(.rarity-legendary, .rarity-mythic) { animation: land 0.28s ease-out, effect-flare 0.9s ease-out 0.2s !important; }
+.card-flight-name { margin: 6px 0 0; text-align: center; font-family: var(--f-display); font-size: 1rem; color: var(--text); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8); white-space: nowrap; }
