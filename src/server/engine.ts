@@ -37,7 +37,7 @@ import {
 } from '../game/quests';
 import { EffectId } from '../game/effects';
 import {
-  EDITIONS_COLLECTION, EditionDef, PUZZLES_COLLECTION, PuzzleCounters, PuzzleDef, allPuzzles, earnedClaim, findEdition, parseEdition,
+  EDITIONS_COLLECTION, EditionDef, PUZZLES_COLLECTION, PuzzleCounters, PuzzleDef, allPuzzles, earnedClaim, findEdition, ownEditions, parseEdition,
   parsePuzzle, puzzlePhase, setEditions, setPuzzles, taskViews, puzzleStages, totalPieces, stageDone, StageBase, currentStage, parseStageBase, stageBaseNow, stageIndex,
 } from '../game/puzzles';
 
@@ -607,7 +607,8 @@ export function inboxClaimServer(saveRaw: unknown, items: { id: string; title: s
     if (!raw || raw.type !== 'edition' || typeof raw.editionId !== 'string') continue;
     const e = findEdition(raw.editionId);
     if (!e) continue;
-    if (!save.editions.owned.includes(e.id)) save = { ...save, editions: { ...save.editions, owned: [...save.editions.owned, e.id] } };
+    // The edition brings its card along (a card not owned yet joins the collection).
+    save = ownEditions(save, [e.id]);
     results[it.id] = { key: it.id, source: it.title, coins: 0, cards: [], duplicates: [], editions: [e.id] };
   }
   return { save, results };

@@ -74,6 +74,29 @@ export function nextEditionId(existing: Iterable<string>): string {
   return `ed${String(max + 1).padStart(2, '0')}`;
 }
 
+/**
+ * Gives editions to the player. An edition brings its card along: a card not owned yet is added to the collection,
+ * and it shows the new edition right away (an owned card keeps the look the player chose).
+ */
+export function ownEditions(save: SaveData, editionIds: readonly string[]): SaveData {
+  let s = save;
+  for (const id of editionIds) {
+    const e = findEdition(id);
+    const owned = s.editions.owned.includes(id) ? s.editions.owned : [...s.editions.owned, id];
+    if (!e) {
+      s = { ...s, editions: { ...s.editions, owned } };
+      continue;
+    }
+    const newCard = isCardId(e.cardId) && !s.unlocked.includes(e.cardId);
+    s = {
+      ...s,
+      unlocked: newCard ? [...s.unlocked, e.cardId] : s.unlocked,
+      editions: { owned, equipped: newCard ? { ...s.editions.equipped, [e.cardId]: e.id } : s.editions.equipped },
+    };
+  }
+  return s;
+}
+
 /** Picks an edition for a card (or back to the original). Only editions the player owns. */
 export function equipEdition(save: SaveData, cardId: string, editionId: string | null): SaveData {
   const equipped = { ...save.editions.equipped };
@@ -479,7 +502,7 @@ export function earnedClaim(p: PuzzleDef, have: readonly number[], countersRaw: 
 export function grantPuzzleReward(save: SaveData, p: PuzzleDef, have?: readonly number[]): SaveData {
   const ids = puzzleStages(p).filter((st) => !have || stageDone(st, have)).map((st) => st.editionId).filter((id) => !save.editions.owned.includes(id));
   if (!ids.length) return save;
-  return { ...save, editions: { ...save.editions, owned: [...save.editions.owned, ...ids] } };
+  return ownEditions(save, ids);
 }
 
 /** Stages completed by adding `gained` to `before` (for the save and the unlock animation). */

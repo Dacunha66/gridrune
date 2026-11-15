@@ -67,10 +67,13 @@ describe('Puzzle-Events: Editionen', () => {
   it('Belohnung genau einmal; Auswahl nur mit eigener Edition', () => {
     const s1 = grantPuzzleReward(defaultSave(), p);
     expect(s1.editions.owned).toEqual(['ed01']);
+    // The edition brings its card (Runenwolf) along and shows it right away.
+    expect(s1.unlocked).toContain('r02');
+    expect(s1.editions.equipped).toEqual({ r02: 'ed01' });
     expect(grantPuzzleReward(s1, p)).toBe(s1);
     expect(equipEdition(defaultSave(), 'r02', 'ed01').editions.equipped).toEqual({});
     expect(equipEdition(s1, 'r02', 'ed01').editions.equipped).toEqual({ r02: 'ed01' });
-    expect(equipEdition(s1, 'c01', 'ed01').editions.equipped).toEqual({});
+    expect(equipEdition(s1, 'c01', 'ed01').editions.equipped).toEqual({ r02: 'ed01' });
     expect(equipEdition(equipEdition(s1, 'r02', 'ed01'), 'r02', null).editions.equipped).toEqual({});
   });
   it('Admin-Edition ersetzt die eingebaute; ungültige werden verworfen', () => {

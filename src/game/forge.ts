@@ -7,6 +7,7 @@ import { CARDS, RARITIES, Rarity, getCard, isCardId } from './cards';
 import { deriveRng } from './league';
 import {
   EditionDef, PuzzleDef, StageInfo, allEditions, allPuzzles, currentStage, puzzlePhase, puzzleStages, totalPieces,
+  ownEditions,
 } from './puzzles';
 import { SaveData } from './storage';
 import { FORGE_FRAMES, FrameDef, ForgeState, MAX_COPIES, MAX_ESSENCE, emptyForge } from './forgeState';
@@ -162,7 +163,7 @@ export function craftEdition(save: SaveData, editionId: unknown, now: Date = new
   const { rarity: r, cost } = c.edition;
   if (save.forge.essence[r] < cost) return { ok: false, reason: short(save, r, cost) };
   const s = pay(save, r, cost);
-  return { ok: true, editionId: e.id, save: { ...s, editions: { ...s.editions, owned: [...s.editions.owned, e.id] } } };
+  return { ok: true, editionId: e.id, save: ownEditions(s, [e.id]) };
 }
 
 export function buyFrame(save: SaveData, frameId: unknown, c: ForgeConfig = CONFIG): ForgeResult<{ frameId: string }> {
