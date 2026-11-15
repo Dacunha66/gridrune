@@ -458,7 +458,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
               ? <>{selectedEffect.cls && <ClassGlyph cls={selectedEffect.cls} />} {selectedEffect.name}: {selectedEffect.short}</>
               : selectedElement
                 ? <><ClassGlyph cls={selectedDef!.cls!} /> {CLASS_INFO[selectedDef!.cls!].label}: auf <TerrainGlyph terrain={selectedElement} /> {TERRAIN_INFO[selectedElement].label} +1 auf alle Werte</>
-                : 'Tippe auf ein freies Feld.';
+                : bubble?.cell !== undefined ? 'Tippe auf das Feld mit „Hier hin“.' : 'Tippe auf ein freies Feld.';
   const rows = boardRows(state.board.length);
   const holes = boardHoles(state.board.length);
   const cellCenter = (cell: number) => cellCenterOn(cell, rows);
@@ -544,12 +544,19 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 key={i}
                 type="button"
                 role="gridcell"
-                className={`cell terrain-${terrain} ${canDrop && !placing && !runeMode ? 'droppable' : ''} ${elementHere && !placing ? 'element-here' : ''} ${isTarget ? 'targetable' : ''} ${runePicked ? 'rune-picked' : ''} ${targeting?.cell === i || ghost ? 'pending' : ''} ${bubble?.cell === i && selected === bubble.hand ? 'guide-glow' : ''}`}
+                className={`cell terrain-${terrain} ${canDrop && !placing && !runeMode && (bubble?.cell === undefined || bubble.cell === i) ? 'droppable' : ''} ${elementHere && !placing ? 'element-here' : ''} ${isTarget ? 'targetable' : ''} ${runePicked ? 'rune-picked' : ''} ${targeting?.cell === i || ghost ? 'pending' : ''} ${bubble?.cell === i && bubble.hand !== undefined && !cell ? `guide-target ${selected === bubble.hand ? 'guide-glow' : ''}` : ''}`}
                 onClick={() => tapCell(i)}
                 disabled={!cell && (over || phase !== 'play')}
                 aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei${terrain !== 'normal' ? `, ${TERRAIN_INFO[terrain].label}` : ''}`}
               >
                 {!cell && terrain !== 'normal' && !ghost && <span className="terrain-icon" aria-hidden="true"><TerrainGlyph terrain={terrain} /></span>}
+                {/* Tutorial: the card that belongs here, shown faintly on its field, with "Hier hin". */}
+                {!cell && !ghost && bubble?.cell === i && bubble.hand !== undefined && state.hands.player[bubble.hand] && (
+                  <>
+                    <Card id={state.hands.player[bubble.hand].cardId} mod={state.hands.player[bubble.hand].mod} size="sm" owner="player" className="guide-ghost" />
+                    <span className="guide-here" aria-hidden="true">Hier hin</span>
+                  </>
+                )}
                 {ghost && placingValues && (
                   <Card id={placingCard!.cardId} mod={placingCard!.mod} size="sm" owner="player" values={placingValues} base={placingValues} rot={placing!.rot} className="ghost-card" />
                 )}
@@ -695,8 +702,9 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
           {state.hands.player.map(({ cardId: id, mod }, i) => {
             const t = i - (state.hands.player.length - 1) / 2;
             return (
-            <div key={handOrigin[i]} className={`hand-slot ${flight?.hand === i ? 'flying' : ''} ${selected === i ? 'sel' : ''} ${bubble?.hand === i && selected !== i ? 'guide-glow' : ''} ${state.lastDraw === 'player' && (i === state.hands.player.length - 1 || state.lastRune?.side === 'player') && !reducedMotion ? 'drawn' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
+            <div key={handOrigin[i]} className={`hand-slot ${flight?.hand === i ? 'flying' : ''} ${selected === i ? 'sel' : ''} ${bubble?.hand !== undefined ? (bubble.hand === i ? (selected !== i ? 'guide-glow guide-pick' : 'guide-picked') : 'guide-other') : ''} ${state.lastDraw === 'player' && (i === state.hands.player.length - 1 || state.lastRune?.side === 'player') && !reducedMotion ? 'drawn' : ''}`} style={{ '--t': t, '--t2': t * t, zIndex: selected === i ? 30 : i + 1 } as CSSProperties}
               {...longPress(() => setPreview({ id, mod }))}>
+              {bubble?.hand === i && selected !== i && <span className="guide-arrow" aria-hidden="true">Diese Karte<b>▼</b></span>}
               <Card
                 id={id}
                 mod={mod}
