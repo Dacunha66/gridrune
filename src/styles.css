@@ -2709,10 +2709,16 @@ label.btn.disabled { opacity: .45; }
 
 /* Card picture cropper (admin): the 3:4 frame, the picture moved and zoomed inside it. */
 .card-cropper { max-width: 360px; }
-.crop-frame { position: relative; width: min(78vw, 280px); aspect-ratio: 3 / 4; margin: 8px auto 12px; overflow: hidden; border-radius: 12px; border: 2px solid var(--gold-line); background: #0b1120; touch-action: none; cursor: grab; }
+.crop-frame { position: relative; width: min(78vw, 280px, calc((100dvh - 340px) * 0.75)); min-width: 150px; aspect-ratio: 3 / 4; margin: 8px auto 12px; overflow: hidden; border-radius: 12px; border: 2px solid var(--gold-line); background: #0b1120; touch-action: none; cursor: grab; }
 .crop-frame:active { cursor: grabbing; }
 .crop-frame img { position: absolute; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-.card-cropper .modal-actions { flex-wrap: wrap; }
+.cropper-backdrop { overflow-y: auto; place-items: start center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+.cropper-backdrop .card-cropper { margin: auto 0; padding: 16px; }
+.card-cropper h2 { margin: 0; }
+.card-cropper .slider-row { width: 100%; }
+.cropper-actions { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.cropper-actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cropper-actions .btn { width: 100%; }
 
 /* Login-Kalender: 7 fields (day 7 wide), today's field shines. */
 .login-calendar { max-width: 420px; }

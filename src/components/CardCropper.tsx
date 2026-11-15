@@ -1,6 +1,7 @@
 // Choosing the part of a card picture: the picture in the 3:4 card frame, one finger (or the mouse) moves it, two
 // fingers zoom, plus a zoom slider. Only the chosen part is uploaded (see prepareCardImage).
 import { PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CARD_ZOOM_MAX, CardCrop, cardCrop } from '../game/cardStore';
 
 export function CardCropper({ file, onDone, onCancel }: { file: Blob; onDone: (crop: CardCrop) => void; onCancel: () => void }) {
@@ -63,8 +64,9 @@ export function CardCropper({ file, onDone, onCancel }: { file: Blob; onDone: (c
   const fw = frame.current?.clientWidth ?? 0;
   const scale = part && fw ? fw / part.sw : 0;
 
-  return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Bildausschnitt wählen">
+  // On top of everything (not inside the card editor's scroll area), scrollable on small screens.
+  return createPortal(
+    <div className="modal-backdrop cropper-backdrop" role="dialog" aria-modal="true" aria-label="Bildausschnitt wählen">
       <div className="modal card-cropper">
         <h2>Bildausschnitt</h2>
         <div ref={frame} className="crop-frame" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
@@ -80,12 +82,15 @@ export function CardCropper({ file, onDone, onCancel }: { file: Blob; onDone: (c
           <output>{Math.round(crop.zoom * 100)} %</output>
         </label>
         <p className="muted small">1 Finger verschiebt das Bild, 2 Finger zoomen. Was im Rahmen ist, kommt auf die Karte.</p>
-        <div className="modal-actions">
-          <button type="button" className="btn" onClick={onCancel}>Abbrechen</button>
-          <button type="button" className="btn" onClick={() => update({ zoom: 1, cx: 0.5, cy: 0.5 })}>Zurücksetzen</button>
+        <div className="cropper-actions">
           <button type="button" className="btn btn-primary" disabled={!size} onClick={() => onDone(fix(crop))}>Übernehmen</button>
+          <div className="cropper-actions-row">
+            <button type="button" className="btn" onClick={onCancel}>Abbrechen</button>
+            <button type="button" className="btn" onClick={() => update({ zoom: 1, cx: 0.5, cy: 0.5 })}>Zurücksetzen</button>
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
