@@ -4,8 +4,10 @@ import { RARITY_LABEL, getCard } from '../game/cards';
 import { CLASS_INFO, EFFECTS } from '../game/effects';
 import { editionsOf, findEdition } from '../game/puzzles';
 
-export function CardDetail({ id, locked, status, onClose, editions }: {
+export function CardDetail({ id, locked, status, onClose, editions, action }: {
   id: string; locked: boolean; status: string; onClose: () => void;
+  /** An extra button (e.g. "Ins Deck" in the deck editor). */
+  action?: { label: string; onClick: () => void; disabled?: boolean } | null;
   /** Card editions the player owns: choose which one is used (in the collection, the deck and own duel cards). */
   editions?: { owned: string[]; equipped: string | null; onChoose: (editionId: string | null) => void };
 }) {
@@ -37,7 +39,8 @@ export function CardDetail({ id, locked, status, onClose, editions }: {
         )}
         {!locked && c.description && <p className="card-description">{c.description}</p>}
         <p className="muted">{status}</p>
-        <button type="button" className="btn btn-primary" onClick={onClose}>Schließen</button>
+        {action && <button type="button" className="btn btn-primary" disabled={action.disabled} onClick={action.onClick}>{action.label}</button>}
+        <button type="button" className={`btn ${action ? '' : 'btn-primary'}`} onClick={onClose}>Schließen</button>
       </div>
     </div>
   );

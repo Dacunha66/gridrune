@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { GameIcon } from '../components/GameIcon';
 import { Card } from '../components/Card';
 import { ClassShield } from '../components/cardIcons';
@@ -10,6 +10,7 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { RuneBadge } from '../components/RuneBadge';
 import { findRune } from '../game/runes';
 import { RuneChoiceProps, RunePicker } from './Runes';
+import { CardDetail } from './CardDetail';
 
 interface Props {
   save: SaveData;
@@ -26,6 +27,25 @@ export function DeckEditor({ save, onSave, onBack, runes = null }: Props) {
   const [deck, setDeck] = useState<string[]>(save.deck);
   const [tab, setTab] = useState<'cards' | 'rune'>('cards');
   const [cls, setCls] = useState<CardClass | null>(null);
+  /** Card shown large (magnifier or holding the card). */
+  const [zoom, setZoom] = useState<string | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** True after a long press, so the tap that follows does not put the card in or out of the deck. */
+  const pressedLong = useRef(false);
+  const hold = (id: string) => ({
+    onPointerDown: () => {
+      pressedLong.current = false;
+      if (pressTimer.current) clearTimeout(pressTimer.current);
+      pressTimer.current = setTimeout(() => {
+        pressedLong.current = true;
+        setZoom(id);
+      }, 450);
+    },
+    onPointerUp: () => { if (pressTimer.current) clearTimeout(pressTimer.current); },
+    onPointerLeave: () => { if (pressTimer.current) clearTimeout(pressTimer.current); },
+    onPointerCancel: () => { if (pressTimer.current) clearTimeout(pressTimer.current); },
+    onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
+  });
   const [sort, setSort] = useState<Sort>('rarity');
   const rune = runes ? findRune(runes.equipped) : null;
   const [message, setMessage] = useState('');
@@ -125,8 +145,11 @@ export function DeckEditor({ save, onSave, onBack, runes = null }: Props) {
           <div className="scroll">
             <div className="card-grid deck-grid">
               {shown.map((id) => (
-                <div key={id} className={`grid-item ${selected.has(id) ? 'picked' : ''}`}>
-                  <Card id={id} size="md" showName onClick={() => toggle(id)} ariaLabel={`${getCard(id).name}${selected.has(id) ? ", im Deck" : ""}`} />
+                <div key={id} className={`grid-item ${selected.has(id) ? 'picked' : ''}`} {...hold(id)}>
+                  <Card id={id} size="md" showName onClick={() => { if (!pressedLong.current) toggle(id); }} ariaLabel={`${getCard(id).name}${selected.has(id) ? ", im Deck" : ""}`} />
+                  <button type="button" className="zoom-btn" aria-label={`${getCard(id).name} groß ansehen`} onClick={() => setZoom(id)}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" /><path d="M15 15l5 5" /></svg>
+                  </button>
                   {selected.has(id) && <span className="in-deck-tag" aria-hidden="true">✓ Im Deck</span>}
                 </div>
               ))}
@@ -134,6 +157,14 @@ export function DeckEditor({ save, onSave, onBack, runes = null }: Props) {
             </div>
           </div>
         </>
+      )}
+      {zoom && (
+        <CardDetail id={zoom} locked={false} status={selected.has(zoom) ? 'Im Deck' : 'Nicht im Deck'} onClose={() => setZoom(null)}
+          action={{
+            label: selected.has(zoom) ? 'Aus dem Deck nehmen' : 'Ins Deck',
+            disabled: !selected.has(zoom) && deck.length >= DECK_SIZE,
+            onClick: () => { toggle(zoom); setZoom(null); },
+          }} />
       )}
       <footer className="bottombar">
         <button

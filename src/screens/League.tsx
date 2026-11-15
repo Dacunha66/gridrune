@@ -14,6 +14,7 @@ import { SaveData } from '../game/storage';
 import { Header } from './Header';
 import { Battle } from './Battle';
 import { Online } from './Online';
+import { CardDetail } from './CardDetail';
 import { RuneMatchup } from '../components/RuneBadge';
 import { findRune } from '../game/runes';
 import { DuelLog, LeagueTicket, handPicks, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
@@ -326,6 +327,7 @@ function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay, busy = false,
     [owned],
   );
   const limit = (r: Rarity) => RULES.deck.rarityLimits[r];
+  const [zoom, setZoom] = useState<string | null>(null);
 
   function add(id: string) {
     if (deck.length >= RULES.deck.size || (counts.get(id) ?? 0) >= RULES.deck.maxCopies) return;
@@ -361,7 +363,7 @@ function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay, busy = false,
             const n = counts.get(c.id) ?? 0;
             return (
               <li key={c.id} className={`admin-row league-row ${n ? 'in-deck-row' : ''}`}>
-                <span className="admin-thumb league-thumb"><Card id={c.id} size="sm" /></span>
+                <button type="button" className="admin-thumb league-thumb" aria-label={`${c.name} groß ansehen`} onClick={() => setZoom(c.id)}><Card id={c.id} size="sm" /></button>
                 <span className="admin-row-main">
                   <strong>{c.name}</strong>
                   <span className="admin-row-meta"><span className={`rarity-text rarity-${c.rarity}`}>{RARITY_LABEL[c.rarity]}</span> · Σ {cardPower(c)}</span>
@@ -375,8 +377,9 @@ function LeagueDeckEditor({ deck, owned, onChange, onBack, onPlay, busy = false,
             );
           })}
         </ul>
-        <p className="muted small center">Jede Karte, die du besitzt, zählt als 2 Exemplare.</p>
+        <p className="muted small center">Jede Karte, die du besitzt, zählt als 2 Exemplare. Tippe ein Kartenbild an, um es groß zu sehen.</p>
       </div>
+      {zoom && <CardDetail id={zoom} locked={false} status={`${counts.get(zoom) ?? 0}× im Deck`} onClose={() => setZoom(null)} />}
       <footer className="bottombar">
         {notice && <p className="league-notice" role="alert">{notice}</p>}
         <button type="button" className="btn btn-primary btn-wide" disabled={errors.length > 0 || busy} onClick={onPlay}>
