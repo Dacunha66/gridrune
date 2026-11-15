@@ -2897,3 +2897,12 @@ label.btn.disabled { opacity: .45; }
 :root:not(.reduced-motion) .play-area .card.anim-land:is(.rarity-legendary, .rarity-mythic) { animation: land 0.28s ease-out !important; }
 :root:not(.reduced-motion) .play-area .card.anim-land.anim-drop-fx:is(.rarity-legendary, .rarity-mythic) { animation: land 0.28s ease-out, effect-flare 0.9s ease-out 0.2s !important; }
 .card-flight-name { margin: 6px 0 0; text-align: center; font-family: var(--f-display); font-size: 1rem; color: var(--text); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8); white-space: nowrap; }
+
+/* Event card (Puzzle-Event edition): a band across the lower part of the card in the edition's colour. */
+.card .ev-band {
+  position: absolute; z-index: 6; left: 0; right: 0; bottom: 4%; pointer-events: none; text-align: center; white-space: nowrap; overflow: hidden;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ed, #a78bfa) 45%, #3b0764) 16%, var(--ed, #a78bfa) 50%, color-mix(in srgb, var(--ed, #a78bfa) 45%, #3b0764) 84%, transparent);
+  color: #fff; font: 700 max(6px, 7.5cqw)/1.75 Cinzel, Georgia, serif; letter-spacing: 0.16em; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+.card .ev-band.with-name { bottom: 15%; }
+.card.edition-moon .ev-band { --ed: #a78bfa; }

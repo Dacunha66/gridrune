@@ -243,10 +243,15 @@ export function Card({
       {showName && <span className="name">{locked ? '???' : c.name}</span>}
     </>
   );
+  // Event card (Puzzle-Event edition): a band across the card, with the event's sign.
+  const eventBand = c !== base0 && ed && !locked && size !== 'xs'
+    ? <span className={`ev-band ${klarName || showName ? 'with-name' : ''}`} aria-hidden="true">{EVENT_SIGN[ed.frame] ?? '✦'} EVENT {EVENT_SIGN[ed.frame] ?? '✦'}</span>
+    : null;
   if (onClick) {
     return (
       <button type="button" className={classes} style={style} onClick={onClick} aria-label={label} aria-pressed={selected}>
         {content}
+        {eventBand}
         {fr && <span className="frame-deco" aria-hidden="true" />}
       </button>
     );
@@ -254,10 +259,14 @@ export function Card({
   return (
     <div className={classes} style={style} role="img" aria-label={label}>
       {content}
+      {eventBand}
       {fr && <span className="frame-deco" aria-hidden="true" />}
     </div>
   );
 }
+
+/** The sign on the event band per edition frame. */
+const EVENT_SIGN: Record<string, string> = { moon: '☾', gold: '✦', ember: '✹', frost: '❄' };
 
 /** Hybrid Premium: inner frame in the material of the class (wood, glowing iron, silver, obsidian, steel, arcane). */
 function ClassFrame({ cls }: { cls?: CardClass }) {
