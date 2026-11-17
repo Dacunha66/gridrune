@@ -17,7 +17,7 @@ import { Online } from './Online';
 import { CardDetail } from './CardDetail';
 import { RuneMatchup } from '../components/RuneBadge';
 import { findRune } from '../game/runes';
-import { DuelLog, LeagueTicket, handPicks, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
+import { DuelLog, LeagueLog, LeagueTicket, handPicks, leagueCpuHand, leagueCpuRune, leagueRound } from '../game/verify';
 import { LadderChange, ladderStatusRemote } from '../game/adventureApi';
 import { LadderConfig, LadderState, ladderLevel } from '../game/ladder';
 import { LadderPanel, LadderResult } from '../components/Ladder';
@@ -58,11 +58,17 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
   const [stage, setStage] = useState<'ladder' | 'deck' | 'online' | 'intro' | 'run' | 'match' | 'done'>('ladder');
   // Ranglisten-Ligen (accounts): the player's step; null while loading, 'offline' without a connection.
   const [ladder, setLadder] = useState<{ ladder: LadderState; config: LadderConfig } | null | 'offline'>(null);
+  /** Ranked matches started earlier and never finished – the server counted them as lost. */
+  const [forfeited, setForfeited] = useState(0);
   const [ladderLoads, setLadderLoads] = useState(0);
   useEffect(() => {
     if (!account) return;
     let alive = true;
-    void ladderStatusRemote().then((r) => { if (alive) setLadder((cur) => r ?? (cur && cur !== 'offline' ? cur : 'offline')); });
+    void ladderStatusRemote().then((r) => {
+      if (!alive) return;
+      setLadder((cur) => r ?? (cur && cur !== 'offline' ? cur : 'offline'));
+      if (r?.forfeited) setForfeited((n) => n + r.forfeited);
+    });
     return () => { alive = false; };
   }, [account?.uid, ladderLoads]);
   const toLadder = () => {
@@ -103,6 +109,13 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
     if (account) {
       if (starting === '…') return;
       setStarting('…');
+      // Results that could not be sent yet (no connection) go first – otherwise the new start would count them as lost.
+      for (const p of readPending(account.uid).filter((x) => x.kind === 'league')) {
+        const done = await finishLeagueRemote(p.ticketId, p.log as LeagueLog);
+        if (done.kind === 'offline') break;
+        if (done.kind === 'paid' || done.cloud) account.adopt(done.cloud!);
+        writePending(account.uid, readPending(account.uid).filter((x) => x.ticketId !== p.ticketId));
+      }
       const r = await startLeague(deck, runes?.player ?? null);
       if (r.kind !== 'ticket') {
         setStarting(r.kind === 'offline'
@@ -113,6 +126,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
       }
       t = r.ticket;
       s = t.seed;
+      if (r.forfeited) setForfeited((n) => n + r.forfeited);
     }
     setStarting(null);
     setTicket(t);
@@ -178,6 +192,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
         <div className="scroll">
           {account && !ladder && <p className="muted center">Liga wird geladen …</p>}
           {account && ladder === 'offline' && <p className="hint center">Keine Verbindung – für die Rangliste brauchst du kurz Internet.</p>}
+          {forfeited > 0 && <p className="hint center forfeit-note">{forfeited === 1 ? 'Ein abgebrochenes Ranglisten-Match wurde' : `${forfeited} abgebrochene Ranglisten-Matches wurden`} als Niederlage gewertet.</p>}
           {l && <LadderPanel state={l.ladder} config={l.config} />}
           {!account && (
             <section className="runner-info">
@@ -224,7 +239,8 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
             </ul>
             {runes && <RuneMatchup player={playerRune} cpu={cpuRune} note={runeNote} />}
             <p className="league-prize"><GameIcon name="gift" /> <b>Gewinnst du das Match</b>, bekommst du eine <b>zufällige Karte, die du noch nicht hast</b>. Hast du schon alle, gibt es <Coin /> 50.</p>
-            <p className="muted small">{account ? 'Match gegen den Computer – der Server prüft die Duelle, bevor die Belohnung gutgeschrieben wird.' : 'Als Gast spielst du ohne Belohnung – melde dich an, um Karten zu gewinnen.'}</p>
+            {forfeited > 0 && <p className="hint forfeit-note">{forfeited === 1 ? 'Dein abgebrochenes Ranglisten-Match wurde' : `${forfeited} abgebrochene Ranglisten-Matches wurden`} als Niederlage gewertet.</p>}
+            <p className="muted small">{account ? 'Match gegen den Computer – der Server prüft die Duelle, bevor die Belohnung gutgeschrieben wird. Ein abgebrochenes Match zählt als Niederlage.' : 'Als Gast spielst du ohne Belohnung – melde dich an, um Karten zu gewinnen.'}</p>
           </section>
         </div>
         <footer className="bottombar"><button type="button" className="btn btn-primary btn-wide" onClick={() => { setPicks(handPicks(deck)); setStage('match'); }}><GameIcon name="swords" /> Match starten</button></footer>

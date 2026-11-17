@@ -14,6 +14,45 @@ export const COINS_PER_MINUTE = 300;
 export const CARDS_STEP = 12;
 export const START_COINS_MAX = 100000;
 
+// ---------- First save of a new account (the guest progress taken over) ----------
+// The browser's progress is not checked by the server, so only a small, safe part of it is taken over.
+
+/** Coins a guest may bring along. */
+export const GUEST_COINS_MAX = 2000;
+/** Only these rarities may be brought along (rarer cards are earned on the server). */
+export const GUEST_RARITIES = ['common', 'uncommon'];
+/** Every new account has these (the same as STARTING_UNLOCKED / STARTER_DECK / DEFAULT_SKINS in the game). */
+export const START_CARDS = ['c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08', 'c09', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15', 'c16', 'u01', 'u02', 'u03', 'u04', 'u05', 'u06', 'u07', 'u08'];
+export const START_DECK = ['c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08', 'c09', 'c10', 'c13', 'c14', 'u01', 'u02', 'u03', 'u04', 'u05', 'u06', 'u07', 'u08'];
+export const START_SKINS = { card: 'card-saphir', runner: 'runner-blau' };
+
+/**
+ * The save a new account starts with: the guest's coins (at most GUEST_COINS_MAX), common and uncommon cards (plus
+ * the starting cards), deck and statistics; no Runensteine, editions, forge, bought skins, runes or campaign stars –
+ * those only come from the server. `rarity`: card id → rarity from the card catalog.
+ */
+export function guestStart(raw: unknown, rarity: Record<string, string>): { save: Obj; campaign: Obj } {
+  const s = cleanSave(raw) as Obj & { unlocked: string[]; deck: string[]; leagueDeck: string[]; coins: number };
+  const unlocked = [...new Set([...START_CARDS, ...s.unlocked.filter((id) => GUEST_RARITIES.includes(rarity[id] ?? ''))])];
+  const deck = s.deck.filter((id) => unlocked.includes(id));
+  return {
+    save: {
+      ...s,
+      unlocked,
+      deck: deck.length === 20 ? deck : [...START_DECK],
+      leagueDeck: s.leagueDeck.filter((id) => unlocked.includes(id)),
+      coins: Math.min(s.coins, GUEST_COINS_MAX),
+      skins: { owned: [START_SKINS.card, START_SKINS.runner], card: START_SKINS.card, runner: START_SKINS.runner },
+      runes: { owned: [], equipped: null },
+      stones: 0,
+      shop: { freeAt: null, offerDay: '', offerBought: [] },
+      editions: { owned: [], equipped: {} },
+      forge: cleanForge(null),
+    },
+    campaign: { version: 1, missions: {}, updatedAt: '' },
+  };
+}
+
 const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.isArray(v);
 const nat = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
 const ids = (v: unknown, re: RegExp, max: number) => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && re.test(x)))].slice(0, max) : []);

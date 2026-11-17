@@ -8,7 +8,7 @@
 // completed stage goes into the Postfach once (puzzle_stage_reward); "newCards" tells the game to show it.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { forgeFragmentServer, loadContent, puzzleClaimServer, puzzleStageBase, puzzleStageRewards, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@40daff1aa4ecf0e6a9bf02caf9d182b8eb7caa07/public/server/engine-a93a7e6fbcb9.js';
+import { forgeFragmentServer, loadContent, puzzleClaimServer, puzzleStageBase, puzzleStageRewards, puzzleView, visiblePuzzles } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@903cf3998fbd1de6c86847e916c03379482750d1/public/server/engine-6c94b9c871d5.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

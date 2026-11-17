@@ -139,10 +139,11 @@ export type LeagueFinish =
   | { kind: 'rejected'; error: string; cloud: CloudSave | null }
   | { kind: 'offline' };
 
-export async function startLeague(deck: string[], rune: string | null): Promise<{ kind: 'ticket'; ticket: LeagueTicket } | { kind: 'offline' } | { kind: 'error'; error: string }> {
+export async function startLeague(deck: string[], rune: string | null): Promise<{ kind: 'ticket'; ticket: LeagueTicket; forfeited: number } | { kind: 'offline' } | { kind: 'error'; error: string }> {
   const r = await call({ action: 'league-start', deck, rune }, 'game');
   if (!r || !r.data || r.status >= 500) return { kind: 'offline' };
-  if (r.data.ticket) return { kind: 'ticket', ticket: r.data.ticket as LeagueTicket };
+  // forfeited: ranked matches started earlier and never sent – they count as lost.
+  if (r.data.ticket) return { kind: 'ticket', ticket: r.data.ticket as LeagueTicket, forfeited: Number(r.data.forfeited) || 0 };
   return { kind: 'error', error: String(r.data.error ?? 'unknown') };
 }
 
@@ -173,11 +174,11 @@ export async function ladderRefRemote(matchId: string): Promise<LadderChange | n
   return r?.data?.ok === true ? ((r.data.change as LadderChange | null) ?? null) : null;
 }
 
-export async function ladderStatusRemote(): Promise<{ ladder: LadderState; config: LadderConfig } | null> {
+export async function ladderStatusRemote(): Promise<{ ladder: LadderState; config: LadderConfig; forfeited: number } | null> {
   const r = await call({ action: 'ladder-status' }, 'game');
   if (r?.data?.ok !== true) return null;
   const now = seasonOf();
-  return { ladder: parseLadderState(r.data.ladder, now), config: parseLadderConfig(r.data.config) };
+  return { ladder: parseLadderState(r.data.ladder, now), config: parseLadderConfig(r.data.config), forfeited: Number(r.data.forfeited) || 0 };
 }
 
 // ---------- Results waiting for a connection (per account, on this device) ----------

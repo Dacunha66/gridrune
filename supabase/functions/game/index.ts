@@ -2,7 +2,8 @@
 // "mission-start": checks mission, deck, hand and rune against the stored save and hands out a ticket (seed).
 // "mission-finish": replays the duel (and run) with the game's own rules, stores the stars and pays every reward
 // owed. "league-start" / "league-finish": Collection League match against the computer (ranked), replayed here; a won
-// match unlocks the rarest new discovery of the run and moves the player on the ladder ("ladder-status": the state). "claim": pays rewards earned earlier (once).
+// match unlocks the rarest new discovery of the run and moves the player on the ladder ("ladder-status": the state).
+// A ranked match that is never sent counts as lost (when the next one starts, or after TICKET_HOURS). "claim": pays rewards earned earlier (once).
 // "buy-pack" / "buy-skin": coins are taken and the cards drawn
 // here. "free-coins" / "buy-coins" / "buy-offer": Runensteine shop (free coins, coins for Runensteine, card offers).
 // "login-status" / "login-claim": Login-Kalender (one field per day). "tutorial-finish": tutorial reward (once).
@@ -164,10 +165,29 @@ Deno.serve(async (req) => {
     return null;
   }
 
+  /**
+   * Ranglisten-Liga: a ranked match that was started but never sent counts as lost – when a new one starts (`all`),
+   * otherwise once it can no longer be sent (after TICKET_HOURS). Closing the app to dodge a defeat does not work.
+   */
+  async function forfeitOpen(all: boolean): Promise<number> {
+    const { data: open } = await db.from('game_tickets').select('id, ticket, created_at').eq('player_id', uid).eq('kind', 'league').is('finished_at', null);
+    let n = 0;
+    for (const t of open ?? []) {
+      if (typeof t.ticket?.step !== 'number') continue;
+      if (!all && Date.now() - new Date(t.created_at).getTime() < TICKET_HOURS * 3600_000) continue;
+      const { data: done } = await db.rpc('pay_ticket', {
+        p_ticket: t.id, p_player: uid, p_result: { ok: false, error: 'forfeit', forfeit: true }, p_save: null, p_campaign: null, p_version: 0,
+      });
+      if (done === 'paid' && await ladderApply(`league:${t.id}`, 'loss')) n++;
+    }
+    return n;
+  }
+
   if (body.action === 'ladder-status') {
     try {
+      const forfeited = await forfeitOpen(false);
       const state = await ladderNow();
-      return json({ ok: true, ladder: state, config: ladderSettingsServer() });
+      return json({ ok: true, ladder: state, config: ladderSettingsServer(), forfeited });
     } catch {
       return json({ error: 'database' }, 500);
     }
@@ -182,8 +202,13 @@ Deno.serve(async (req) => {
   }
 
   if (body.action === 'league-start') {
+    // Check the deck first (a refused start must not cost the open match), then: one ranked match at a time.
+    const check = prepareLeague(saveRow.save, saveRow.campaign, body.deck, body.rune ?? null, isAdmin, seed(), 0);
+    if (!check.ok) return json({ error: check.error }, 422);
     let step: number;
+    let forfeited = 0;
     try {
+      forfeited = await forfeitOpen(true);
       step = (await ladderNow()).step;
     } catch {
       return json({ error: 'database' }, 500);
@@ -192,7 +217,7 @@ Deno.serve(async (req) => {
     if (!prep.ok) return json({ error: prep.error }, 422);
     const { data, error } = await db.from('game_tickets').insert({ player_id: uid, kind: 'league', ticket: prep.ticket }).select('id').single();
     if (error) return json({ error: 'database' }, 500);
-    return json({ ticket: { ...prep.ticket, id: data.id } });
+    return json({ ticket: { ...prep.ticket, id: data.id }, forfeited });
   }
 
   if (body.action === 'league-finish') {

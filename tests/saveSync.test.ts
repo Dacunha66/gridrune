@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 // The server function's rules (Deno file without Deno APIs – the same code runs on the server).
-import { COIN_STEP, cleanCampaign, cleanSave, implausible, mergeChoices } from '../supabase/functions/save-sync/logic';
+import {
+  COIN_STEP, GUEST_COINS_MAX, START_CARDS, START_DECK, START_SKINS, cleanCampaign, cleanSave, guestStart, implausible, mergeChoices,
+} from '../supabase/functions/save-sync/logic';
+import { STARTER_DECK, STARTING_UNLOCKED } from '../src/game/cards';
+import { DEFAULT_SKINS } from '../src/game/skins';
 import { defaultSave } from '../src/game/storage';
 import { emptyProgress } from '../src/game/campaignProgress';
 
@@ -64,5 +68,41 @@ describe('Spielstand gesperrt (Phase 4d)', () => {
     const stored = cleanSave(defaultSave());
     const bad = [...(stored.deck as string[]).slice(1), 'l03'];
     expect((mergeChoices(stored, { ...stored, deck: bad }) as { deck: string[] }).deck).toEqual(stored.deck);
+  });
+});
+
+describe('Neues Konto: Gast-Fortschritt nur begrenzt übernommen', () => {
+  const rarity: Record<string, string> = { c01: 'common', u20: 'uncommon', r02: 'rare', l04: 'legendary', m02: 'mythic' };
+  it('Münzen höchstens 2000, nur gewöhnliche und ungewöhnliche Karten, keine Sterne/Runen/Skins', () => {
+    const guest = {
+      ...defaultSave(), coins: 99999, unlocked: [...STARTING_UNLOCKED, 'u20', 'r02', 'l04', 'm02'],
+      deck: [...STARTER_DECK.slice(0, 19), 'l04'], leagueDeck: ['l04', 'u20'],
+      skins: { owned: ['card-saphir', 'runner-blau', 'card-gold'], card: 'card-gold', runner: 'runner-blau' },
+      runes: { owned: ['rn02'], equipped: 'rn02' }, stones: 500,
+    };
+    const { save, campaign } = guestStart(guest, rarity);
+    expect(save.coins).toBe(GUEST_COINS_MAX);
+    expect(save.unlocked).toContain('u20');
+    expect(save.unlocked).not.toContain('r02');
+    expect(save.unlocked).not.toContain('l04');
+    expect(save.unlocked).not.toContain('m02');
+    expect(save.deck).toEqual(STARTER_DECK); // the deck had a card that was not taken over
+    expect(save.leagueDeck).toEqual(['u20']);
+    expect(save.skins).toEqual({ owned: ['card-saphir', 'runner-blau'], card: 'card-saphir', runner: 'runner-blau' });
+    expect(save.runes).toEqual({ owned: [], equipped: null });
+    expect(save.stones).toBe(0);
+    expect(campaign.missions).toEqual({});
+  });
+  it('ein ehrlicher Gast behält Münzen bis 2000, sein Deck und seine Statistik', () => {
+    const guest = { ...defaultSave(), coins: 850, stats: { wins: 7, draws: 1, losses: 3, runs: 2 } };
+    const { save } = guestStart(guest, rarity);
+    expect(save.coins).toBe(850);
+    expect(save.deck).toEqual(STARTER_DECK);
+    expect(save.stats).toEqual({ wins: 7, draws: 1, losses: 3, runs: 2 });
+  });
+  it('die Startwerte des Servers stimmen mit denen des Spiels überein', () => {
+    expect(START_CARDS).toEqual(STARTING_UNLOCKED);
+    expect(START_DECK).toEqual(STARTER_DECK);
+    expect(START_SKINS).toEqual(DEFAULT_SKINS);
   });
 });

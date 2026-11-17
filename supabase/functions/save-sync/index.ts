@@ -12,7 +12,7 @@ const CORS = {
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-import { Obj, START_COINS_MAX, cleanCampaign, cleanSave, mergeChoices } from './logic.ts';
+import { Obj, cleanSave, guestStart, mergeChoices } from './logic.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -32,21 +32,20 @@ Deno.serve(async (req) => {
   }
   const base = typeof body.base === 'number' ? body.base : null;
   const save = cleanSave(body.save);
-  const campaign = cleanCampaign(body.campaign);
 
   const { data: row, error } = await admin.from('player_saves').select('save, campaign, version, updated_at').eq('player_id', uid).maybeSingle();
   if (error) return json({ error: 'database' }, 500);
 
   if (!row) {
-    // First save of this account (new player, or the browser progress taken over once).
-    if ((save.coins as number) > START_COINS_MAX) return json({ error: 'implausible', reason: 'zu viele Münzen' }, 422);
-    // Runensteine are only earned on the server (never taken over from a browser save).
-    save.stones = 0;
-    save.editions = { owned: [], equipped: {} };
-    save.forge = { essence: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 }, melt: {}, frames: [], frame: null };
-    const { error: e } = await admin.from('player_saves').insert({ player_id: uid, save, campaign, version: 1 });
+    // First save of this account (new player, or the guest progress taken over once): only a small, safe part of the
+    // browser's progress counts – see guestStart.
+    const { data: cards, error: ec } = await admin.from('content_docs').select('id, rarity:data->>rarity').eq('collection', 'cards');
+    if (ec) return json({ error: 'database' }, 500);
+    const rarity = Object.fromEntries((cards ?? []).map((c: { id: string; rarity: string | null }) => [c.id, c.rarity ?? '']));
+    const start = guestStart(body.save, rarity);
+    const { error: e } = await admin.from('player_saves').insert({ player_id: uid, save: start.save, campaign: start.campaign, version: 1 });
     if (e) return json({ error: 'database' }, 500);
-    return json({ version: 1, save, campaign });
+    return json({ version: 1, save: start.save, campaign: start.campaign });
   }
   if (base !== row.version) return json({ conflict: true, version: row.version, save: row.save, campaign: row.campaign });
 

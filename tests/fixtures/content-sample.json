@@ -1,0 +1,467 @@
+[
+ {
+  "collection": "cards",
+  "id": "c01",
+  "data": {
+   "art": "🌿",
+   "cls": "natur",
+   "hue": 110,
+   "top": 4,
+   "left": 6,
+   "name": "Moosling",
+   "right": 2,
+   "bottom": 3,
+   "effect": "naturbund",
+   "rarity": "common",
+   "status": "active",
+   "inRunner": true,
+   "rewardOnly": false,
+   "description": ""
+  }
+ },
+ {
+  "collection": "cards",
+  "id": "c02",
+  "data": {
+   "art": "✨",
+   "cls": "feuer",
+   "hue": 50,
+   "top": 6,
+   "left": 4,
+   "name": "Funkenwicht",
+   "right": 5,
+   "bottom": 1,
+   "effect": null,
+   "rarity": "common",
+   "status": "active",
+   "description": ""
+  }
+ },
+ {
+  "collection": "cards",
+  "id": "c03",
+  "data": {
+   "art": "🦀",
+   "cls": "frost",
+   "hue": 15,
+   "top": 2,
+   "left": 2,
+   "name": "Kieselkrabbe",
+   "plate": "",
+   "right": 5,
+   "bottom": 4,
+   "effect": "frostpanzer",
+   "rarity": "common",
+   "status": "active",
+   "inRunner": true,
+   "rewardOnly": false,
+   "description": ""
+  }
+ },
+ {
+  "collection": "arenas",
+  "id": "a18",
+  "data": {
+   "name": "Die Kristall-Arena",
+   "cells": [
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "normal"
+   ],
+   "ranked": true,
+   "status": "active"
+  }
+ },
+ {
+  "collection": "arenas",
+  "id": "a22",
+  "data": {
+   "name": "Runennacht",
+   "cells": [
+    "normal",
+    "schatten",
+    "schatten",
+    "normal",
+    "schatten",
+    "schatten",
+    "schatten",
+    "schatten",
+    "normal",
+    "normal",
+    "normal",
+    "normal",
+    "runen",
+    "runen",
+    "runen",
+    "runen",
+    "normal",
+    "runen",
+    "runen",
+    "normal"
+   ],
+   "ranked": false,
+   "status": "active"
+  }
+ },
+ {
+  "collection": "runes",
+  "id": "rn01",
+  "data": {
+   "name": "Rune der Verdrehung",
+   "glyph": "ᛃ",
+   "modes": {
+    "league": true,
+    "campaign": true,
+    "adventure": true
+   },
+   "amount": 1,
+   "effect": "twist",
+   "rarity": "rare",
+   "status": "active",
+   "unlock": {
+    "kind": "start"
+   },
+   "minPlaced": 0,
+   "maxTargets": 1,
+   "description": "Drehe eine Karte."
+  }
+ },
+ {
+  "collection": "runes",
+  "id": "rn06",
+  "data": {
+   "name": "Rune der Hand",
+   "glyph": "ᚺ",
+   "modes": {
+    "raid": true,
+    "league": true,
+    "campaign": true,
+    "adventure": true
+   },
+   "amount": 1,
+   "effect": "mulligan",
+   "rarity": "legendary",
+   "status": "active",
+   "unlock": {
+    "kind": "start"
+   },
+   "minPlaced": 0,
+   "maxTargets": 1,
+   "description": "Neue Hand."
+  }
+ },
+ {
+  "collection": "avatars",
+  "id": "av27",
+  "data": {
+   "bg": [
+    "#ef4444",
+    "#450a0a"
+   ],
+   "art": "🌋",
+   "name": "Rotglutkönig",
+   "frame": "silver",
+   "quest": "a-terrain150",
+   "active": true
+  }
+ },
+ {
+  "collection": "campaign_worlds",
+  "id": "w01",
+  "data": {
+   "name": "Flüsterwald",
+   "order": 1,
+   "status": "active",
+   "unlock": {},
+   "milestones": [
+    {
+     "stars": 5,
+     "reward": {
+      "type": "coins",
+      "amount": 200
+     }
+    },
+    {
+     "stars": 10,
+     "reward": {
+      "type": "pack",
+      "amount": 1
+     }
+    }
+   ],
+   "description": "Wald."
+  }
+ },
+ {
+  "collection": "editions",
+  "id": "ed01",
+  "data": {
+   "name": "Mondfinsternis",
+   "frame": "moon",
+   "image": null,
+   "cardId": "r02"
+  }
+ },
+ {
+  "collection": "editions",
+  "id": "ed05",
+  "data": {
+   "name": "Mondfinsternis",
+   "frame": "moon",
+   "image": null,
+   "cardId": "e09"
+  }
+ },
+ {
+  "collection": "puzzles",
+  "id": "pz01",
+  "data": {
+   "run": {
+    "id": "r1",
+    "endsAt": "2026-12-06T22:59:00.000Z",
+    "startsAt": "2026-11-10T05:55:02.000Z"
+   },
+   "cols": 3,
+   "name": "Mondfinsternis",
+   "rows": 3,
+   "image": null,
+   "tasks": [
+    {
+     "id": "tday",
+     "steps": [
+      4,
+      6
+     ],
+     "title": "",
+     "metric": "wins",
+     "period": "daily",
+     "target": 2,
+     "fragments": 1,
+     "description": ""
+    },
+    {
+     "id": "tweek",
+     "steps": [
+      25,
+      50
+     ],
+     "title": "",
+     "metric": "wins",
+     "period": "weekly",
+     "target": 10,
+     "fragments": 2,
+     "description": ""
+    },
+    {
+     "id": "tonce",
+     "steps": [
+      3,
+      5,
+      10
+     ],
+     "title": "",
+     "metric": "big_wins",
+     "period": "once",
+     "target": 1,
+     "fragments": 1,
+     "description": ""
+    },
+    {
+     "id": "t4",
+     "steps": [
+      10
+     ],
+     "title": "",
+     "metric": "runes_used",
+     "period": "daily",
+     "target": 5,
+     "fragments": 1,
+     "description": ""
+    },
+    {
+     "id": "tgames",
+     "steps": [
+      6,
+      10
+     ],
+     "title": "",
+     "metric": "games",
+     "period": "daily",
+     "target": 3,
+     "fragments": 1,
+     "description": ""
+    },
+    {
+     "id": "tcap",
+     "steps": [
+      30
+     ],
+     "title": "",
+     "metric": "captures",
+     "period": "daily",
+     "target": 15,
+     "fragments": 1,
+     "description": ""
+    }
+   ],
+   "pieces": 9,
+   "reward": {
+    "type": "edition",
+    "editionId": "ed01"
+   },
+   "stages": [
+    {
+     "cols": 3,
+     "rows": 3,
+     "pieces": 9,
+     "editionId": "ed05"
+    }
+   ],
+   "status": "published",
+   "description": "Event."
+  }
+ },
+ {
+  "collection": "raids",
+  "id": "raid01",
+  "data": {
+   "cls": "natur",
+   "name": "Erwachen des Waldwächters",
+   "maxHp": 20000,
+   "damage": {
+    "max": 1200,
+    "win": 500,
+    "draw": 300,
+    "loss": 100,
+    "perField": 100
+   },
+   "endsAt": "2026-11-11T00:00:00.000Z",
+   "phases": [
+    {
+     "deck": [
+      "c06",
+      "c09",
+      "c11",
+      "c19",
+      "c08",
+      "u08",
+      "u09",
+      "u10"
+     ],
+     "name": "Erwachen",
+     "rune": "rn05",
+     "level": "easy",
+     "prefer": [
+      "natur"
+     ],
+     "arenaId": "a02",
+     "mechanic": "",
+     "threshold": 100
+    }
+   ],
+   "status": "published",
+   "version": 2,
+   "bossName": "Waldwächter",
+   "startsAt": "2026-11-04T00:00:00.000Z",
+   "dailyLimit": 5,
+   "milestones": [
+    {
+     "damage": 1000,
+     "reward": {
+      "type": "coins",
+      "amount": 100
+     }
+    }
+   ],
+   "description": "Raid.",
+   "globalRewards": [
+    {
+     "reward": {
+      "type": "coins",
+      "amount": 50
+     },
+     "percent": 25
+    }
+   ],
+   "resumeMinutes": 30,
+   "minAttacksForGlobal": 1
+  }
+ },
+ {
+  "collection": "settings",
+  "id": "game",
+  "data": {
+   "drawHand": true,
+   "features": {
+    "runes": "all",
+    "abilities": "all"
+   },
+   "chainDepth": 1,
+   "discoveryShares": {
+    "epic": 12,
+    "rare": 24,
+    "common": 28,
+    "mythic": 1,
+    "uncommon": 30,
+    "legendary": 5
+   }
+  }
+ },
+ {
+  "collection": "settings",
+  "id": "shop",
+  "data": {
+   "packs": {
+    "helden": {
+     "name": "",
+     "image": null,
+     "price": 750,
+     "description": ""
+    },
+    "abenteurer": {
+     "name": "",
+     "image": null,
+     "price": 300,
+     "description": ""
+    }
+   }
+  }
+ },
+ {
+  "collection": "settings",
+  "id": "ladder",
+  "data": {}
+ },
+ {
+  "collection": "settings",
+  "id": "nightmare",
+  "data": {
+   "deckBoost": 1,
+   "valueBonus": 0
+  }
+ },
+ {
+  "collection": "settings",
+  "id": "login",
+  "data": {
+   "enabled": true
+  }
+ }
+]
