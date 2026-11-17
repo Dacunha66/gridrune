@@ -380,6 +380,11 @@ function mission(
   };
 }
 
+const REPLACED_GOAL_IDS: Record<string, string[]> = {
+  m014: ['m014-g1', 'm014-g4', 'm014-g3'],
+  m019: ['m019-g1', 'm019-g2', 'm019-g4'],
+};
+
 export const BUILTIN_MISSIONS: readonly Mission[] = [
   mission('m001', 1, 'Erstes Duell', 'tutorial', 'a01', 'o001', goals('m001', { type: 'min_fields', n: 10 }, { type: 'play_class', n: 2, cls: 'natur' }),
     'Lerne das Raster-Duell gegen einen freundlichen Moosling.', { x: 0.5, y: 0.94 }, {
@@ -400,8 +405,10 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
     'Waldhüter Bram prüft, ob du deine Karten klug nebeneinander legst.', { x: 0.8, y: 0.65 }),
   mission('m005', 5, 'Dornenprüfung', 'special', 'a02', 'o005', goals('m005', { type: 'min_captures', n: 6 }, { type: 'min_margin', n: 4 }),
     'Nur Naturkarten sind erlaubt. Fehlende Plätze füllen gewöhnliche Leihkarten.', { x: 0.5, y: 0.56 }, { onlyClass: 'natur' }),
-  mission('m006', 6, 'Verwunschener Pfad', 'normal', 'a05', 'o006', goals('m006', { type: 'runner_clean', n: 0 }, { type: 'min_fields', n: 10 }),
-    'Erst durch den verwunschenen Pfad laufen, dann gegen das Irrlicht antreten.', { x: 0.22, y: 0.47 }, { mode: 'runner' }),
+  // Stern 2 war früher „Lauf ohne Fehler“ (den Lauf gibt es nicht mehr) – neue Ziel-Id, verdiente Sterne bleiben.
+  mission('m006', 6, 'Verwunschener Pfad', 'normal', 'a05', 'o006',
+    [{ id: 'm006-g1', type: 'win', n: 0 }, { id: 'm006-g4', type: 'min_captures', n: 5 }, { id: 'm006-g3', type: 'min_fields', n: 10 }],
+    'Auf dem verwunschenen Pfad lauert ein Irrlicht – und schwächt deine Karten.', { x: 0.22, y: 0.47 }),
   mission('m007', 7, 'Pilzhöhle', 'normal', 'a05', 'o007', goals('m007', { type: 'min_fields', n: 10 }, { type: 'without_class', n: 0, cls: 'schatten' }),
     'In der dunklen Pilzhöhle wartet der Pilzkönig.', { x: 0.45, y: 0.38 }),
   mission('m008', 8, 'Alte Ruinen', 'elite', 'a06', 'o008', goals('m008', { type: 'min_fields', n: 11 }, { type: 'min_captures', n: 7 }),
@@ -420,8 +427,8 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
       'Ein Schwarm Glutkäfer summt über die heißen Wiesen.', { x: 0.27, y: 0.85 }, {}],
     ['m013', 'Aschetal', 'normal', 'a16', 'o013', [{ type: 'min_captures', n: 5 }, { type: 'without_class', n: 0, cls: 'krieger' }],
       'Im stillen Aschetal brennen die ewigen Kerzen.', { x: 0.65, y: 0.77 }, {}],
-    ['m014', 'Lavafelder', 'normal', 'a03', 'o014', [{ type: 'runner_clean', n: 0 }, { type: 'min_fields', n: 10 }],
-      'Erst über die glühenden Lavafelder laufen, dann gegen das Echsen-Rudel antreten.', { x: 0.82, y: 0.67 }, { mode: 'runner' }],
+    ['m014', 'Lavafelder', 'normal', 'a03', 'o014', [{ type: 'terrain_bonus', n: 2 }, { type: 'min_fields', n: 10 }],
+      'Auf den glühenden Lavafeldern sonnt sich ein Echsen-Rudel.', { x: 0.82, y: 0.67 }, {}],
     ['m015', 'Schmiede am Berg', 'special', 'a16', 'o015', [{ type: 'min_fields', n: 10 }, { type: 'min_captures', n: 6 }],
       'Schmiedemeister Brann hütet die Rune der Glut. Besiege ihn, und sie gehört dir.', { x: 0.55, y: 0.57 }, {}],
     ['m016', 'Funkentanz', 'normal', 'a16', 'o016', [{ type: 'min_margin', n: 4 }, { type: 'min_captures', n: 6 }],
@@ -430,12 +437,14 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
       'Durch die graue Aschenwüste zieht ein stiller Wanderer.', { x: 0.45, y: 0.38 }, {}],
     ['m018', 'Meteorfall', 'elite', 'a03', 'o018', [{ type: 'min_fields', n: 11 }, { type: 'min_captures', n: 7 }],
       'Elite: Meteorreiter Kael stürzt sich vom Himmel auf dich.', { x: 0.75, y: 0.29 }, {}],
-    ['m019', 'Phönixnest', 'elite', 'a03', 'o019', [{ type: 'min_margin', n: 5 }, { type: 'runner_clean', n: 0 }],
-      'Elite: Erst zum Phönixnest hinauflaufen, dann Seraya besiegen.', { x: 0.4, y: 0.18 }, { mode: 'runner' }],
+    ['m019', 'Phönixnest', 'elite', 'a03', 'o019', [{ type: 'min_margin', n: 6 }, { type: 'min_captures', n: 7 }],
+      'Elite: Hoch oben im Phönixnest wartet Seraya.', { x: 0.4, y: 0.18 }, {}],
     ['m020', 'Herz des Vulkans', 'boss', 'a17', 'o020', [{ type: 'min_fields', n: 10 }, { type: 'min_captures', n: 7 }],
       'Endboss: Im Krater wartet das Vulkanherz.', { x: 0.5, y: 0.06 }, {}],
   ] as const).map(([id, name, kind, arenaId, opponentId, g, description, pos, extra], i) =>
-    mission(id, i + 1, name, kind, arenaId, opponentId, goals(id, ...(g as unknown as Omit<Goal, 'id'>[])), description, pos, { worldId: 'w02', ...(extra as Partial<Mission>) })),
+    mission(id, i + 1, name, kind, arenaId, opponentId, goals(id, ...(g as unknown as Omit<Goal, 'id'>[])), description, pos, { worldId: 'w02', ...(extra as Partial<Mission>) }))
+    // Former "Lauf ohne Fehler" goals (the run no longer exists) got new ids, so earned stars stay untouched.
+    .map((m) => (REPLACED_GOAL_IDS[m.id] ? { ...m, goals: m.goals.map((g, k) => ({ ...g, id: REPLACED_GOAL_IDS[m.id][k] ?? g.id })) } : m)),
 ];
 
 // ---------- Content in use (built-ins replaced or extended by the admin's documents) ----------
