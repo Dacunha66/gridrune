@@ -2,6 +2,7 @@
 // clan ranking. Every change is done by the server function "community"; history and new messages come straight from
 // the database (live). Chat rules are confirmed once before writing; players can report messages and block players.
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { markChatSeen, unreadChat } from '../game/chatSeen';
 import { Avatar } from '../components/Avatar';
 import { Coin } from '../components/Coin';
 import { ConfirmButton } from '../components/ConfirmButton';
@@ -116,6 +117,18 @@ function Chat({ uid, state, act, busy, onMessage, onPrivacy }: { uid: string; st
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' });
   }, [list?.length]);
+  // Neue Nachrichten: the open channel counts as read; other channels with news get a dot.
+  const [unread, setUnread] = useState<Record<string, number>>({});
+  useEffect(() => {
+    let live = true;
+    void unreadChat(uid).then((u) => live && u && setUnread(u.byChannel));
+    return () => { live = false; };
+  }, [uid]);
+  useEffect(() => {
+    const last = list?.length ? list[list.length - 1].id : 0;
+    if (last) markChatSeen(uid, channel, last);
+    setUnread((u) => (u[channel] ? { ...u, [channel]: 0 } : u));
+  }, [uid, channel, list]);
 
   async function send(e: FormEvent) {
     e.preventDefault();
@@ -137,7 +150,7 @@ function Chat({ uid, state, act, busy, onMessage, onPrivacy }: { uid: string; st
     <div className="chat">
       {channels.length > 1 && (
         <div className="chips" role="tablist">
-          {channels.map((c) => <button key={c.id} type="button" role="tab" aria-selected={channel === c.id} className={`chip ${channel === c.id ? 'active' : ''}`} onClick={() => setChannel(c.id)}>{c.label}</button>)}
+          {channels.map((c) => <button key={c.id} type="button" role="tab" aria-selected={channel === c.id} className={`chip ${channel === c.id ? 'active' : ''}`} onClick={() => setChannel(c.id)}>{c.label}{channel !== c.id && (unread[c.id] ?? 0) > 0 && <span className="seg-badge" aria-label="neue Nachrichten">{unread[c.id]}</span>}</button>)}
         </div>
       )}
       <div className="chat-list" aria-live="polite">

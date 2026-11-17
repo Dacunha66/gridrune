@@ -20,7 +20,8 @@ import { getSkin } from './game/skins';
 import { CARDS, getCard, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
 import { getDb, isAdmin, loadArenas, loadAvatars, loadCampaign, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings, loadRunes, loadShopLooks, loadStoneConfig, loadForgeConfig } from './game/cardStore';
-import { setStoneConfig } from './game/stones';
+import { freeCoinsAt, setStoneConfig } from './game/stones';
+import { unreadChat } from './game/chatSeen';
 import { setForgeConfig } from './game/forge';
 import { Forge } from './screens/Forge';
 import { Community } from './screens/Community';
@@ -171,6 +172,9 @@ export function App() {
   const cloud = useCloudSync({ account, save, setSave, progress: campaignProgress, setProgress: setCampaignProgress });
   // Erfolge: how many rewards are ready (badge on the menu button), looked up when the menu opens.
   const [questsReady, setQuestsReady] = useState(0);
+  // Marks on the bottom bar: free coins ready in the shop, new chat messages under Community.
+  const [chatNew, setChatNew] = useState(0);
+  const [freeTick, setFreeTick] = useState(0);
   /** The signed-in player's avatar (from the server, with the titles). */
   const [myAvatar, setMyAvatar] = useState<string | null>(null);
   /** Open tab of the main menu (kept while Shop or Erfolge is open). */
@@ -232,6 +236,27 @@ export function App() {
       alive = false;
     };
   }, [screen.name, cloud.uid, cloud.phase]);
+  // Community: new chat messages – looked up when a screen with the bottom bar opens and every 45 seconds there.
+  useEffect(() => {
+    if (!['menu', 'shop', 'quests'].includes(screen.name) || !cloud.uid || cloud.phase !== 'ready') return;
+    const uid = cloud.uid;
+    let alive = true;
+    const look = () => void unreadChat(uid).then((u) => alive && u && setChatNew(u.total));
+    look();
+    const t = window.setInterval(look, 45_000);
+    return () => {
+      alive = false;
+      window.clearInterval(t);
+    };
+  }, [screen.name, cloud.uid, cloud.phase]);
+  // Shop: the dot appears by itself when the free coins become ready.
+  const freeAt = freeCoinsAt(save);
+  const shopReady = freeAt === null;
+  useEffect(() => {
+    if (!freeAt) return;
+    const t = window.setTimeout(() => setFreeTick((n) => n + 1), Math.min(2 ** 31 - 1, Math.max(1000, freeAt.getTime() - Date.now() + 500)));
+    return () => window.clearTimeout(t);
+  }, [freeAt?.getTime(), freeTick]);
   useEffect(() => {
     if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
     let alive = true;
@@ -373,7 +398,7 @@ export function App() {
   );
   /** The menu's bottom bar under Shop and Erfolge (same tabs as in the menu). */
   const tabBar = (active: TabBarItem) => (
-    <MenuTabBar active={active} questsReady={questsReady} showQuests={!!account} onTab={(t) => {
+    <MenuTabBar active={active} questsReady={questsReady} shopReady={shopReady} chatNew={chatNew} showQuests={!!account} onTab={(t) => {
       if (t === 'shop') return setScreen({ name: 'shop' });
       if (t === 'quests') return setScreen({ name: 'quests' });
       if (t === 'community') return setScreen({ name: 'community' });
@@ -530,6 +555,8 @@ export function App() {
           onRaid={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'raid' }) : undefined}
           onQuests={account ? () => setScreen({ name: 'quests' }) : undefined}
           questsReady={questsReady}
+          shopReady={shopReady}
+          chatNew={chatNew}
           avatar={account?.kind === 'signedIn' ? myAvatar : null}
           tab={menuTab}
           onTab={setMenuTab}

@@ -2074,6 +2074,9 @@ label.btn.disabled { opacity: .45; }
 .menu-tab.on { color: var(--glow); }
 .menu-tab.on .gi { color: var(--glow); filter: drop-shadow(0 0 6px var(--glow)); }
 .menu-tab-badge { position: absolute; top: 0; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--glow); color: #0b1120; font: 900 11px/18px var(--f-body); box-shadow: 0 0 8px var(--glow); }
+.menu-tab-badge.dot { min-width: 12px; width: 12px; height: 12px; padding: 0; top: 3px; left: calc(50% + 9px); background: var(--gold, #e3b75a); box-shadow: 0 0 8px rgba(227, 183, 90, 0.9); animation: tab-dot-pulse 1.8s ease-in-out infinite; }
+@keyframes tab-dot-pulse { 50% { transform: scale(1.25); } }
+@media (prefers-reduced-motion: reduce) { .menu-tab-badge.dot { animation: none; } }
 
 /* ---------- Board shape „Kristall“: 4 columns × 5 rows without the corners ---------- */
 /* The tall board needs the height: the hand cards are a little smaller there, so the board's cards grow. */
