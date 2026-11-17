@@ -127,3 +127,13 @@ Was getestet ist und was noch offen ist, steht in [TESTING.md](TESTING.md).
 ## Veröffentlichung im Web (Netlify)
 
 Das Spiel läuft unter **https://gridrune.netlify.app**. Netlify baut es bei jedem Hochladen in den Zweig `claude/project-card-rush-dev-84c1jl` automatisch neu (`npm run build`, Ordner `dist`, siehe `netlify.toml`). Diese Version liest Karten, Designs, Runen und Kampagnen-Inhalte aus Supabase (Tabelle `content_docs`, Bilder im Speicher `game-images`); ohne Verbindung spielt sie mit den eingebauten Karten. Der Fortschritt liegt vorerst nur im Browser (Spielerkonten folgen).
+
+## Server-Funktionen veröffentlichen (Spielregeln)
+
+Die Server-Funktionen (`supabase/functions/*`) laden die Spielregeln als eine gebündelte Datei (`public/server/engine-<hash>.js`). **Alle Funktionen müssen immer auf dieselbe Datei zeigen** – sonst gelten Regeländerungen nicht überall gleich.
+
+1. `npm run build:engine` – baut die Regeln neu (neuer Dateiname, wenn sich etwas geändert hat).
+2. Committen und pushen (die Datei muss im Commit liegen).
+3. `node scripts/set-engine.mjs` – trägt den aktuellen Commit in **allen** Funktionen ein und listet sie auf.
+4. `npm test` – `tests/engineBundle.test.ts` prüft: genau eine Engine, alle Funktionen auf demselben Stand, jede importierte Funktion vorhanden, die Regeln laden echte Inhalte ohne Absturz (`tests/fixtures/content-sample.json`).
+5. Committen, pushen, dann **jede** gelistete Funktion veröffentlichen und kurz prüfen, dass sie startet (Antwort `{"error":"not_signed_in"}` ohne Anmeldung).

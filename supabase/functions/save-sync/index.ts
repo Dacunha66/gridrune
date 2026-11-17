@@ -1,5 +1,5 @@
 // Stores the signed-in player's progress (phase 3, locked down in phase 4d). The very first save of an account
-// may take over the browser progress (plausibility-checked). After that only the player's choices are taken from
+// may take over a small, safe part of the browser progress (guestStart). After that only the player's choices are taken from
 // the game (deck, league deck, settings, equipped skins and rune); coins, cards, statistics and the campaign only
 // change through the checked server functions "adventure" and "game". The stored result is sent back.
 // Optimistic locking: the game sends the version it started from; if another device saved in between,
