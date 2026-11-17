@@ -20,6 +20,9 @@ import {
 import { LadderChange, ladderRefRemote } from '../game/adventureApi';
 import { RANKED_SEARCH_SECONDS } from '../game/ladder';
 import { LadderResult } from '../components/Ladder';
+import { Card } from '../components/Card';
+import { getCard } from '../game/cards';
+import { LEAGUE_DAILY_CARDS } from '../game/rewards';
 import { Pick } from '../game/runner';
 import { DRAFT_DECK_SECONDS, DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS } from '../game/draft';
 import { DraftDeckBuilder, poolPlanText, useSecondsLeft } from './Draft';
@@ -204,6 +207,9 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
           <p className="muted">gegen {view.opponentAvatar && <Avatar id={view.opponentAvatar} size={24} />} {view.opponentName ?? 'Gegner'}{view.opponentTitle && <span className="opponent-title"> · {view.opponentTitle}</span>}</p>
           <p className="result-score"><span className="blue">{r.score.me}</span> : <span className="red">{r.score.opponent}</span></p>
           {why && <p className="small">{why}</p>}
+          {ranked && r.outcome === 'win' && (r.card
+            ? <div className="ranked-card"><Card id={r.card} size="md" /><p><b>Neue Karte: {getCard(r.card).name}</b></p></div>
+            : r.score.me + r.score.opponent > 0 && <p className="small muted">Keine neue Karte – das Tageslimit von {LEAGUE_DAILY_CARDS} neuen Karten aus der Rangliste ist erreicht (oder du hast schon alle).</p>)}
           {ranked && (ladderChange ? <LadderResult {...ladderChange} /> : <p className="muted small">Liga wird aktualisiert …</p>)}
           {r.outcome === 'win' && (
             <p className="reward-line">{r.coins > 0 ? <><Coin /> +{r.coins} gutgeschrieben</> : r.score.me + r.score.opponent === 0 ? 'Keine Münzen – das Duell hatte noch nicht begonnen.' : 'Heute keine Münzen mehr gegen diesen Gegner (zählt aber in der Statistik).'}</p>

@@ -123,3 +123,23 @@ describe('Ranglisten-Ligen', () => {
     expect(c.season).toEqual(DEFAULT_LADDER.season);
   });
 });
+
+describe('Rangliste: höchstens 3 neue Karten pro Tag', () => {
+  it('ein Sieg bringt eine Karte – ist das Tageslimit erreicht, 50 Münzen', async () => {
+    const { leagueReward, LEAGUE_DAILY_CARDS, LEAGUE_NO_CARD_COINS } = await import('../src/game/rewards');
+    expect(LEAGUE_DAILY_CARDS).toBe(3);
+    const card = leagueReward(true, 'seed-1', []);
+    expect(card.newCard).not.toBeNull();
+    const capped = leagueReward(true, 'seed-1', [], false);
+    expect(capped).toMatchObject({ newCard: null, coins: LEAGUE_NO_CARD_COINS, capped: true });
+    expect(leagueReward(false, 'seed-1', [], false)).toMatchObject({ newCard: null, coins: 0 });
+  });
+  it('Online-Ranglistensieg: eine neue Karte in den Spielstand', async () => {
+    const { rankedCardServer } = await import('../src/server/engine');
+    const { defaultSave } = await import('../src/game/storage');
+    const r = rankedCardServer(defaultSave(), 'match-seed:a');
+    expect(r).not.toBeNull();
+    expect(defaultSave().unlocked).not.toContain(r!.cardId);
+    expect(r!.save.unlocked).toContain(r!.cardId);
+  });
+});

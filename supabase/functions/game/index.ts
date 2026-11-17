@@ -12,7 +12,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, checkTutorial, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, ladderApplyServer, ladderSettingsServer, ladderStatusServer, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod,
+  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, checkTutorial, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, LEAGUE_DAILY_CARDS, ladderApplyServer, ladderSettingsServer, ladderStatusServer, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@903cf3998fbd1de6c86847e916c03379482750d1/public/server/engine-6c94b9c871d5.js';
 
 const CORS = {
@@ -21,6 +21,19 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+
+/** Game content (cards, arenas, runes, …) is kept for CONTENT_SECONDS: a warm function skips the biggest query of a
+ * request. Admin changes reach the server functions at the latest after that time. */
+const CONTENT_SECONDS = 30;
+// deno-lint-ignore no-explicit-any
+let contentCache: { at: number; data: any[] } | null = null;
+// deno-lint-ignore no-explicit-any
+async function contentDocs(db: ReturnType<typeof createClient>): Promise<{ data: any[] | null; error: unknown }> {
+  if (contentCache && Date.now() - contentCache.at < CONTENT_SECONDS * 1000) return { data: contentCache.data, error: null };
+  const { data, error } = await db.from('content_docs').select('collection, id, data');
+  if (!error && data) contentCache = { at: Date.now(), data };
+  return { data, error };
+}
 const TICKET_HOURS = 24;
 
 function seed(): string {
@@ -57,7 +70,7 @@ Deno.serve(async (req) => {
   }
 
   const [{ data: rows, error: e1 }, { data: adminRow }, { data: saveRow, error: e2 }] = await Promise.all([
-    db.from('content_docs').select('collection, id, data'),
+    contentDocs(db),
     db.from('admins').select('user_id').eq('user_id', uid).maybeSingle(),
     db.from('player_saves').select('save, campaign, version').eq('player_id', uid).maybeSingle(),
   ]);
@@ -226,18 +239,38 @@ Deno.serve(async (req) => {
     if (!t) return json({ error: 'unknown_ticket' }, 404);
     if (t.finished_at) return json({ ...(t.result ?? {}), repeated: true, ...saveRow });
     if (Date.now() - new Date(t.created_at).getTime() > TICKET_HOURS * 3600_000) return json({ error: 'expired' }, 410);
+    // At most LEAGUE_DAILY_CARDS new cards a day from the Rangliste: a win beyond that pays coins instead.
+    const day = questPeriod().day;
+    let allowCard = true;
+    let taken = false;
+    const giveBack = async () => {
+      if (taken) await db.rpc('card_quota_give_back', { p_player: uid, p_day: day });
+      taken = false;
+    };
     for (let attempt = 0; attempt < 5; attempt++) {
       const cur = await readSave();
-      const res = finishLeague({ ...t.ticket, id: t.id }, body.log as never, cur.save);
+      let res = finishLeague({ ...t.ticket, id: t.id }, body.log as never, cur.save, allowCard);
+      if (res.ok && res.reward.newCard && !taken) {
+        const { data: ok } = await db.rpc('card_quota_take', { p_player: uid, p_day: day, p_limit: LEAGUE_DAILY_CARDS });
+        if (ok === true) taken = true;
+        else {
+          allowCard = false;
+          res = finishLeague({ ...t.ticket, id: t.id }, body.log as never, cur.save, false);
+        }
+      }
       const result = res.ok ? { ok: true, won: res.won, rounds: res.rounds, reward: res.reward } : { ok: false, error: res.error };
       const { data: paid, error } = await db.rpc('pay_ticket', {
         p_ticket: t.id, p_player: uid, p_result: result, p_save: res.ok ? res.save : null, p_campaign: null, p_version: cur.version,
       });
-      if (error) return json({ error: 'database' }, 500);
+      if (error) {
+        await giveBack();
+        return json({ error: 'database' }, 500);
+      }
       if (paid === 'conflict') continue;
       // Ranglisten-Liga: the checked result moves the player on the ladder (once per ticket, also when repeated).
       const ranked = typeof t.ticket?.step === 'number';
       if (paid === 'already') {
+        await giveBack();
         const { data: done } = await db.from('game_tickets').select('result').eq('id', t.id).single();
         const ladder = ranked && done?.result?.ok ? await ladderApply(`league:${t.id}`, done.result.won ? 'win' : 'loss') : null;
         return json({ ...(done?.result ?? {}), ladder, repeated: true, ...(await readSave()) });
@@ -247,6 +280,7 @@ Deno.serve(async (req) => {
       const ladder = ranked ? await ladderApply(`league:${t.id}`, res.won ? 'win' : 'loss') : null;
       return json({ ...result, ladder, save: res.save, campaign: cur.campaign, version: cur.version + 1 });
     }
+    await giveBack();
     return json({ error: 'busy' }, 503);
   }
 

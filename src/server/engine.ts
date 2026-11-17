@@ -357,16 +357,26 @@ export function ladderSettingsServer() {
 }
 
 /** Replays the match; a won match unlocks a random card not owned yet (else coins). */
-export function finishLeague(ticket: LeagueTicket, log: LeagueLog, saveRaw: unknown):
+/** `allowCard` false: today's ranked cards are used up (the server counts them) – a win pays coins instead. */
+export function finishLeague(ticket: LeagueTicket, log: LeagueLog, saveRaw: unknown, allowCard = true):
   { ok: true; won: boolean; rounds: { first: Side; winner: Side | 'draw'; score: Record<Side, number> }[]; reward: Reward; save: SaveData; quest: QuestEvent } | { ok: false; error: string } {
   const check = checkLeague(ticket, log);
   if (!check.ok) return check;
   const save = sanitize(saveRaw);
   const won = check.winner === 'player';
-  const reward = leagueReward(won, ticket.seed, save.unlocked);
+  const reward = leagueReward(won, ticket.seed, save.unlocked, allowCard);
   const quest: QuestEvent = { games: check.rounds.length, wins: won ? 1 : 0, leagueWins: won ? 1 : 0, ...duelTally(check.duels) };
   return { ok: true, won, rounds: check.rounds, reward, save: grant(save, reward), quest };
 }
+
+/** Online ranked win: a random card not owned yet (like a ranked win against the computer); null = none left. */
+export function rankedCardServer(saveRaw: unknown, seed: string): { save: SaveData; cardId: string } | null {
+  const save = sanitize(saveRaw);
+  const r = leagueReward(true, seed, save.unlocked);
+  return r.newCard ? { save: grant(save, r), cardId: r.newCard } : null;
+}
+
+export { LEAGUE_DAILY_CARDS } from '../game/rewards';
 
 // ---------- Campaign (phase 4c) ----------
 

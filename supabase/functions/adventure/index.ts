@@ -12,6 +12,19 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+
+/** Game content (cards, arenas, runes, …) is kept for CONTENT_SECONDS: a warm function skips the biggest query of a
+ * request. Admin changes reach the server functions at the latest after that time. */
+const CONTENT_SECONDS = 30;
+// deno-lint-ignore no-explicit-any
+let contentCache: { at: number; data: any[] } | null = null;
+// deno-lint-ignore no-explicit-any
+async function contentDocs(db: ReturnType<typeof createClient>): Promise<{ data: any[] | null; error: unknown }> {
+  if (contentCache && Date.now() - contentCache.at < CONTENT_SECONDS * 1000) return { data: contentCache.data, error: null };
+  const { data, error } = await db.from('content_docs').select('collection, id, data');
+  if (!error && data) contentCache = { at: Date.now(), data };
+  return { data, error };
+}
 const TICKET_HOURS = 24;
 
 function seed(): string {
@@ -46,7 +59,7 @@ Deno.serve(async (req) => {
   }
 
   const [{ data: rows, error: e1 }, { data: adminRow }, { data: saveRow, error: e2 }] = await Promise.all([
-    db.from('content_docs').select('collection, id, data'),
+    contentDocs(db),
     db.from('admins').select('user_id').eq('user_id', uid).maybeSingle(),
     db.from('player_saves').select('save, campaign, version').eq('player_id', uid).maybeSingle(),
   ]);

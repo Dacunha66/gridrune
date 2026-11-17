@@ -23,7 +23,7 @@ import { LadderConfig, LadderState, ladderLevel } from '../game/ladder';
 import { LadderPanel, LadderResult } from '../components/Ladder';
 import { nightmareTicket } from '../game/nightmare';
 import { LEVEL_LABEL } from '../game/stats';
-import { Reward } from '../game/rewards';
+import { LEAGUE_DAILY_CARDS, Reward } from '../game/rewards';
 import { CloudSave } from '../game/cloudSave';
 import { finishLeagueRemote, readPending, startLeague, writePending } from '../game/adventureApi';
 import { RevealItem, RewardReveal } from '../components/RewardReveal';
@@ -238,7 +238,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
               <li><GameIcon name="lock" /> In jedem Duell blockiert ein <b>Fels</b> ein Feld: 15 Felder, kein Unentschieden, kein Startvorteil.</li>
             </ul>
             {runes && <RuneMatchup player={playerRune} cpu={cpuRune} note={runeNote} />}
-            <p className="league-prize"><GameIcon name="gift" /> <b>Gewinnst du das Match</b>, bekommst du eine <b>zufällige Karte, die du noch nicht hast</b>. Hast du schon alle, gibt es <Coin /> 50.</p>
+            <p className="league-prize"><GameIcon name="gift" /> <b>Gewinnst du das Match</b>, bekommst du eine <b>zufällige Karte, die du noch nicht hast</b> – höchstens {LEAGUE_DAILY_CARDS} pro Tag aus der Rangliste. Danach (oder wenn du schon alle hast) gibt es <Coin /> 50.</p>
             {forfeited > 0 && <p className="hint forfeit-note">{forfeited === 1 ? 'Dein abgebrochenes Ranglisten-Match wurde' : `${forfeited} abgebrochene Ranglisten-Matches wurden`} als Niederlage gewertet.</p>}
             <p className="muted small">{account ? 'Match gegen den Computer – der Server prüft die Duelle, bevor die Belohnung gutgeschrieben wird. Ein abgebrochenes Match zählt als Niederlage.' : 'Als Gast spielst du ohne Belohnung – melde dich an, um Karten zu gewinnen.'}</p>
           </section>
@@ -291,10 +291,12 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
   const reward = payout?.reward;
   const reveal: RevealItem[] = reward?.newCard
     ? [{ kind: 'card', cardId: reward.newCard, source: 'Sieg in der Rangliste' }]
-    : reward && reward.coins > 0 ? [{ kind: 'coins', amount: reward.coins, sources: ['Sieg in der Rangliste (keine neue Entdeckung)'] }] : [];
+    : reward && reward.coins > 0 ? [{ kind: 'coins', amount: reward.coins, sources: [reward.capped ? `Sieg in der Rangliste (Tageslimit: ${LEAGUE_DAILY_CARDS} neue Karten)` : 'Sieg in der Rangliste (keine neue Entdeckung)'] }] : [];
   const statusText = !payout ? '' : {
     checking: 'Match wird vom Server geprüft …',
-    paid: reward?.newCard ? `✓ Geprüft – neue Karte: ${getCard(reward.newCard).name}` : `✓ Geprüft – keine neue Entdeckung, dafür 🪙 ${reward?.coins ?? 0}`,
+    paid: reward?.newCard ? `✓ Geprüft – neue Karte: ${getCard(reward.newCard).name}`
+      : reward?.capped ? `✓ Geprüft – heute gab es schon ${LEAGUE_DAILY_CARDS} neue Karten aus der Rangliste, dafür 🪙 ${reward.coins}`
+        : `✓ Geprüft – keine neue Entdeckung, dafür 🪙 ${reward?.coins ?? 0}`,
     pending: 'Keine Verbindung – die Belohnung wird gutgeschrieben, sobald du wieder online bist (innerhalb von 24 Stunden).',
     rejected: 'Das Match konnte nicht bestätigt werden – es gibt keine Belohnung.',
     guest: 'Als Gast gibt es keine Belohnung – mit einem Konto gewinnst du hier Karten.',

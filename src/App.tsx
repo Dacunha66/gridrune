@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { Outcome } from './game/battle';
 import { Reward, applyReward, computeReward } from './game/rewards';
 import type { AiLevel } from './game/ai';
@@ -46,7 +46,8 @@ import { PageArt } from './components/DesignArt';
 import { setArenas } from './game/arenas';
 import { GameSettings, SETTINGS, released, setGameSettings } from './game/settings';
 import { GameMode, RUNES, RuneDef, availableRunes, setRunes } from './game/runes';
-import { Admin } from './screens/Admin';
+// The admin area (card management, editors) is loaded only when the admin opens it – players never download it.
+const Admin = lazy(() => import('./screens/Admin').then((m) => ({ default: m.Admin })));
 import { League } from './screens/League';
 import { Campaign } from './screens/Campaign';
 import { runeUnlocked } from './game/campaignProgress';
@@ -656,6 +657,7 @@ export function App() {
         />
       )}
       {screen.name === 'admin' && (
+        <Suspense fallback={<main className="screen"><p className="muted center">Kartenverwaltung lädt …</p></main>}>
         <Admin
           onCatalogChange={applyRecords}
           onSettingsChange={(s: GameSettings) => {
@@ -670,6 +672,7 @@ export function App() {
           campaign={campaign}
           onBack={toMenu}
         />
+        </Suspense>
       )}
       {screen.name === 'campaign' && (
         <Campaign

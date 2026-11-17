@@ -156,6 +156,8 @@ export interface PvpView {
     reason: 'normal' | 'absent' | 'left';
     score: { me: number; opponent: number };
     coins: number;
+    /** Rangliste online: the new card the winner got (null/missing: none). */
+    card?: string | null;
   };
   updatedAt: string;
 }

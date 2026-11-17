@@ -10,7 +10,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   DRAFT_PREPARE_SECONDS, DRAFT_WIN_COINS, PVP_ABSENT_SECONDS, PVP_DAILY_PAID_WINS, PVP_MIN_MOVES_FOR_COINS, PVP_TURN_SECONDS, PVP_WIN_COINS,
   completeDraftDeck, draftLayout, draftPool, inviteCode, isGameOver, loadContent, normalizeCode, otherSeat, picksToHand, preparePvp, pvpAction,
-  RANKED_RANGE, ladderApplyServer, ladderStatusServer, onlineQuestEvent, prepareRanked, pvpScore, pvpWinner, questDelta, questPeriod, replayDraftRun, seatSide, shownAvatar, startPvp, timeoutMove, validDraftDeck, viewState,
+  LEAGUE_DAILY_CARDS, RANKED_RANGE, ladderApplyServer, rankedCardServer, ladderStatusServer, onlineQuestEvent, prepareRanked, pvpScore, pvpWinner, questDelta, questPeriod, replayDraftRun, seatSide, shownAvatar, startPvp, timeoutMove, validDraftDeck, viewState,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@903cf3998fbd1de6c86847e916c03379482750d1/public/server/engine-6c94b9c871d5.js';
 
 const CORS = {
@@ -19,6 +19,19 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+
+/** Game content (cards, arenas, runes, …) is kept for CONTENT_SECONDS: a warm function skips the biggest query of a
+ * request. Admin changes reach the server functions at the latest after that time. */
+const CONTENT_SECONDS = 30;
+// deno-lint-ignore no-explicit-any
+let contentCache: { at: number; data: any[] } | null = null;
+// deno-lint-ignore no-explicit-any
+async function contentDocs(db: ReturnType<typeof createClient>): Promise<{ data: any[] | null; error: unknown }> {
+  if (contentCache && Date.now() - contentCache.at < CONTENT_SECONDS * 1000) return { data: contentCache.data, error: null };
+  const { data, error } = await db.from('content_docs').select('collection, id, data');
+  if (!error && data) contentCache = { at: Date.now(), data };
+  return { data, error };
+}
 /** Small allowance for slow connections before a time-out counts. */
 const GRACE_SECONDS = 3;
 
@@ -47,6 +60,8 @@ function viewOf(m: Match, seat: Seat) {
       reason: m.end_reason,
       score: m.state ? pvpScore(m.state, seat) : { me: 0, opponent: 0 },
       coins: m.winner === seat ? m.coins : 0,
+      // Rangliste online: the card the winner got (null: none – daily limit reached or every card owned).
+      card: m.winner === seat ? m.reward_card ?? null : null,
     }
     : null;
   const myDeck = m[`deck_${seat}`] ?? null;
@@ -151,6 +166,29 @@ Deno.serve(async (req) => {
     }
   }
 
+  /**
+   * Rangliste online: the winner of a played ranked duel gets a new card like after a ranked win against the computer
+   * (counted in the same daily limit). Stored on the match for the result screen.
+   */
+  async function rankedCard(m: Match, winner: Seat) {
+    const player = m[`player_${winner}`];
+    const day = questPeriod().day;
+    const { data: ok } = await db.rpc('card_quota_take', { p_player: player, p_day: day, p_limit: LEAGUE_DAILY_CARDS });
+    if (ok !== true) return;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const { data: row } = await db.from('player_saves').select('save, version').eq('player_id', player).maybeSingle();
+      const r = row ? rankedCardServer(row.save, `${m.seed}:${winner}`) : null;
+      if (!r) break;
+      const { data: updated } = await db.from('player_saves').update({ save: r.save, version: row!.version + 1, updated_at: new Date().toISOString() })
+        .eq('player_id', player).eq('version', row!.version).select('version').maybeSingle();
+      if (updated) {
+        await db.from('pvp_matches').update({ reward_card: r.cardId }).eq('id', m.id);
+        return;
+      }
+    }
+    await db.rpc('card_quota_give_back', { p_player: player, p_day: day });
+  }
+
   /** Ends the match (once): coins for the winner unless the daily limit against this opponent is reached. */
   async function finish(m: Match, state: unknown, winner: Seat | 'draw', reason: 'normal' | 'absent' | 'left') {
     let coins = 0;
@@ -175,6 +213,13 @@ Deno.serve(async (req) => {
       for (const s of ['a', 'b'] as Seat[]) if (m[`player_${s}`]) await addQuest(db, m[`player_${s}`], onlineQuestEvent(winner === s));
     }
     if (done) await ladderFinish(m, winner, reason, moves);
+    if (done && m.kind === 'ranked' && winner !== 'draw' && (reason === 'normal' || moves >= PVP_MIN_MOVES_FOR_COINS)) {
+      try {
+        await rankedCard(m, winner);
+      } catch {
+        // A missing card must never break the end of a duel.
+      }
+    }
     const { data: fresh } = await db.from('pvp_matches').select('*').eq('id', m.id).single();
     if (done || fresh) await writeViews(fresh);
     return fresh as Match;
@@ -202,7 +247,7 @@ Deno.serve(async (req) => {
   }
 
   // Card values, arenas and runes as players see them (the same for both players – no admin previews in duels).
-  const { data: contentRows } = await db.from('content_docs').select('collection, id, data');
+  const { data: contentRows } = await contentDocs(db);
   loadContent(contentRows ?? [], false);
 
   async function needSave() {

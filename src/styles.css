@@ -2934,3 +2934,19 @@ label.btn.disabled { opacity: .45; }
 .cell .guide-ghost { position: absolute; inset: 0; width: 100%; opacity: 0.38; filter: saturate(0.7); pointer-events: none; }
 .cell .guide-here { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); z-index: 3; padding: 2px 6px; border-radius: 999px; pointer-events: none; white-space: nowrap;
   background: #ffd34d; color: #2a1a06; font: 700 11px/1.3 var(--f-body); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+
+/* Auffangnetz: a crashed screen shows this page instead of nothing. */
+.crash-screen { justify-content: center; align-items: center; }
+.crash-card { max-width: 420px; display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 12px; background: var(--panel); border: 1px solid var(--gold-line); text-align: center; }
+.crash-card h1 { margin: 0; font-size: 22px; color: var(--gold-light); }
+.crash-card p { margin: 0; }
+.admin-error-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.admin-error { border: 1px solid var(--gold-faint); border-radius: 8px; background: var(--panel); }
+.admin-error.kind-crash { border-color: rgba(239, 68, 68, 0.6); }
+.admin-error-head { width: 100%; display: grid; gap: 2px; padding: 10px 12px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.admin-error-head b { font-size: 14px; word-break: break-word; }
+.admin-error-head small { color: var(--muted); }
+.admin-error-kind { font-size: 12px; font-weight: 700; color: var(--gold-light); }
+.admin-error.kind-crash .admin-error-kind { color: #fca5a5; }
+.admin-error-detail { padding: 0 12px 12px; }
+.admin-error-stack { max-height: 220px; overflow: auto; margin: 6px 0; padding: 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.35); font-size: 11px; white-space: pre-wrap; word-break: break-all; }

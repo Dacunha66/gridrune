@@ -138,10 +138,10 @@ export function Quests({ signedIn, reducedMotion, onAccount, onAdopt, initialTab
       </div>
 
       {!signedIn ? (
-        <section className="quest-guest">
+        <section className="scroll quest-guest">
           <p className="quest-guest-icon" aria-hidden="true"><GameIcon name="trophy" /></p>
           <p><b>Erfolge gibt es mit einem Konto.</b></p>
-          <p className="muted">Täglich 3 Quests, jede Woche 3 größere Aufgaben und dauerhafte Erfolge – mit Münzen, Boostern, Karten, Kartenrücken, Runen und Titeln als Belohnung. Der Server zählt nur echte, geprüfte Spiele.</p>
+          <p className="muted">Täglich 5 Quests, jede Woche größere Aufgaben und dauerhafte Erfolge – mit Münzen, Boostern, Karten, Kartenrücken, Runen und Titeln als Belohnung. Der Server zählt nur echte, geprüfte Spiele.</p>
           {onAccount && <button type="button" className="btn btn-primary" onClick={onAccount}><GameIcon name="user" /> Anmelden / Konto erstellen</button>}
         </section>
       ) : (

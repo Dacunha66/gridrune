@@ -11,6 +11,19 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+
+/** Game content (cards, arenas, runes, …) is kept for CONTENT_SECONDS: a warm function skips the biggest query of a
+ * request. Admin changes reach the server functions at the latest after that time. */
+const CONTENT_SECONDS = 30;
+// deno-lint-ignore no-explicit-any
+let contentCache: { at: number; data: any[] } | null = null;
+// deno-lint-ignore no-explicit-any
+async function contentDocs(db: ReturnType<typeof createClient>): Promise<{ data: any[] | null; error: unknown }> {
+  if (contentCache && Date.now() - contentCache.at < CONTENT_SECONDS * 1000) return { data: contentCache.data, error: null };
+  const { data, error } = await db.from('content_docs').select('collection, id, data');
+  if (!error && data) contentCache = { at: Date.now(), data };
+  return { data, error };
+}
 // deno-lint-ignore no-explicit-any
 type Row = Record<string, any>;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -59,7 +72,7 @@ Deno.serve(async (req) => {
   }
 
   if (body.action === 'claim') {
-    const { data: rows, error: e1 } = await db.from('content_docs').select('collection, id, data');
+    const { data: rows, error: e1 } = await contentDocs(db);
     if (e1) return json({ error: 'database' }, 500);
     loadContent(rows ?? [], false);
     const wanted = Array.isArray(body.ids) ? (body.ids as unknown[]).filter((x): x is string => typeof x === 'string' && UUID.test(x)) : null;
@@ -82,7 +95,7 @@ Deno.serve(async (req) => {
   if (body.action === 'admin-send') {
     const { data: adminRow } = await db.from('admins').select('user_id').eq('user_id', uid).maybeSingle();
     if (!adminRow) return json({ error: 'forbidden' }, 403);
-    const { data: rows } = await db.from('content_docs').select('collection, id, data');
+    const { data: rows } = await contentDocs(db);
     loadContent(rows ?? [], true);
     const reward = checkGift(body.reward);
     if (!reward) return json({ ok: false, reason: 'Diese Belohnung gibt es so nicht (Karte oder Pack unbekannt?).' }, 422);

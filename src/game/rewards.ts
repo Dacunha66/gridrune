@@ -23,6 +23,8 @@ export const AI_COINS: Record<AiLevel, Record<Outcome, number>> = {
 export const aiCoins = (level: AiLevel): Record<Outcome, number> => (level === 'nightmare' ? nightmareConfig().coins : AI_COINS[level]);
 /** Collection League: coins for a won match when every card is owned already. */
 export const LEAGUE_NO_CARD_COINS = 50;
+/** Rangliste: at most this many new cards per player and day (computer and online wins together, Berlin day). */
+export const LEAGUE_DAILY_CARDS = 3;
 
 export interface Reward {
   coins: number;
@@ -30,6 +32,8 @@ export interface Reward {
   newCard: string | null;
   /** A discovered card that was already owned, converted into coins. */
   duplicateCard: string | null;
+  /** Rangliste: today's cards were already given – coins instead. */
+  capped?: boolean;
 }
 
 export const isAiLevel = (v: unknown): v is AiLevel => v === 'easy' || v === 'medium' || v === 'hard' || v === 'nightmare';
@@ -43,8 +47,10 @@ export function computeReward(result: Outcome, level: AiLevel = 'medium'): Rewar
  * Collection League match: only a won match pays – a random card not owned yet (rarity shares from the admin,
  * the same draw on every device for this match seed), else coins.
  */
-export function leagueReward(won: boolean, seed: string, unlocked: readonly string[]): Reward {
+export function leagueReward(won: boolean, seed: string, unlocked: readonly string[], allowCard = true): Reward {
   if (!won) return { coins: 0, newCard: null, duplicateCard: null };
+  // Daily limit reached (the server counts the cards of the day): coins instead of a card.
+  if (!allowCard) return { coins: LEAGUE_NO_CARD_COINS, newCard: null, duplicateCard: null, capped: true };
   const owned = new Set(unlocked);
   // Cards the admin allows as a find ("Ranglisten-Belohnung", formerly the run's final gate).
   const fresh = CARDS.filter((c) => c.inRunner !== false && !owned.has(c.id));

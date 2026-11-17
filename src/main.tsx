@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { CrashGuard } from './components/CrashScreen';
+import { watchErrors } from './game/errorReport';
 // Fonts are shipped with the game (no request to Google; SIL Open Font License), latin letters incl. ä ö ü ß.
 import '@fontsource/grenze-gotisch/latin-600.css';
 import '@fontsource/grenze-gotisch/latin-800.css';
@@ -29,6 +31,8 @@ for (const [rel, href] of [['icon', favicon], ['apple-touch-icon', touchIcon]]) 
 }
 
 fixStandaloneHeight();
+// Fehlersammlung: errors in the game are reported to the admin (no personal data).
+watchErrors();
 
 // Start picture: shown for at least 3 seconds from opening the page, then it fades out. The game loads behind it.
 const splash = document.querySelector<HTMLElement>('#root .splash');
@@ -43,7 +47,9 @@ if (splash) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <CrashGuard>
+      <App />
+    </CrashGuard>
   </StrictMode>,
 );
 

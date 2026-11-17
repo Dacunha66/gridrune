@@ -137,3 +137,7 @@ Die Server-Funktionen (`supabase/functions/*`) laden die Spielregeln als eine ge
 3. `node scripts/set-engine.mjs` – trägt den aktuellen Commit in **allen** Funktionen ein und listet sie auf.
 4. `npm test` – `tests/engineBundle.test.ts` prüft: genau eine Engine, alle Funktionen auf demselben Stand, jede importierte Funktion vorhanden, die Regeln laden echte Inhalte ohne Absturz (`tests/fixtures/content-sample.json`).
 5. Committen, pushen, dann **jede** gelistete Funktion veröffentlichen und kurz prüfen, dass sie startet (Antwort `{"error":"not_signed_in"}` ohne Anmeldung).
+
+## Layout-Prüfung für kleine Handys
+
+`node scripts/check-layout.cjs [Adresse] [Breite] [Höhe]` öffnet (bei laufendem `npx vite --port 4196`) die wichtigsten Bildschirme als Gast in iPhone-SE-Größe (375 × 667) und meldet Knöpfe, die man nicht erreichen kann, und Seiten, die breiter als der Bildschirm sind. Für sehr kleine Geräte: `… 320 480`.
