@@ -18,7 +18,7 @@ import {
   PvpMode, pvpDeck, pvpErrorText, pvpFetch, pvpInvite, pvpJoin, pvpLeave, pvpMove, pvpPing, pvpQueue, pvpRanked, pvpStats, pvpTick, pvpWatch,
 } from '../game/pvpApi';
 import { LadderChange, ladderRefRemote } from '../game/adventureApi';
-import { RANKED_SEARCH_SECONDS } from '../game/ladder';
+import { RANKED_PER_OPPONENT, RANKED_SEARCH_SECONDS } from '../game/ladder';
 import { LadderResult } from '../components/Ladder';
 import { Card } from '../components/Card';
 import { getCard } from '../game/cards';
@@ -166,7 +166,7 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
   // Rangliste: what the match changed on the ladder (written by the server when the match ended).
   const [ladderChange, setLadderChange] = useState<LadderChange | null>(null);
   useEffect(() => {
-    if (!ranked || status !== 'finished' || !matchId) return;
+    if (!ranked || status !== 'finished' || !matchId || view?.result?.ladderCounted === false) return;
     let alive = true;
     let tries = 0;
     const look = () => void ladderRefRemote(matchId).then((c) => {
@@ -210,7 +210,9 @@ export function Online({ uid, mode = 'duel', onPractice, deck, rune, reducedMoti
           {ranked && r.outcome === 'win' && (r.card
             ? <div className="ranked-card"><Card id={r.card} size="md" /><p><b>Neue Karte: {getCard(r.card).name}</b></p></div>
             : r.score.me + r.score.opponent > 0 && <p className="small muted">Keine neue Karte – das Tageslimit von {LEAGUE_DAILY_CARDS} neuen Karten aus der Rangliste ist erreicht (oder du hast schon alle).</p>)}
-          {ranked && (ladderChange ? <LadderResult {...ladderChange} /> : <p className="muted small">Liga wird aktualisiert …</p>)}
+          {ranked && (r.ladderCounted === false
+            ? <p className="hint small">Gegen {view.opponentName ?? 'diesen Gegner'} zählen pro Tag nur {RANKED_PER_OPPONENT} Spiele für die Liga. Dieses Spiel hat deine Stufe nicht verändert.</p>
+            : ladderChange ? <LadderResult {...ladderChange} /> : <p className="muted small">Liga wird aktualisiert …</p>)}
           {r.outcome === 'win' && (
             <p className="reward-line">{r.coins > 0 ? <><Coin /> +{r.coins} gutgeschrieben</> : r.score.me + r.score.opponent === 0 ? 'Keine Münzen – das Duell hatte noch nicht begonnen.' : 'Heute keine Münzen mehr gegen diesen Gegner (zählt aber in der Statistik).'}</p>
           )}

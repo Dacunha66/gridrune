@@ -21,6 +21,7 @@ import { DuelLog, LeagueLog, LeagueTicket, handPicks, leagueCpuHand, leagueCpuRu
 import { LadderChange, ladderStatusRemote } from '../game/adventureApi';
 import { LadderConfig, LadderState, ladderLevel } from '../game/ladder';
 import { LadderPanel, LadderResult } from '../components/Ladder';
+import { LadderBoardView } from '../components/LadderBoard';
 import { nightmareTicket } from '../game/nightmare';
 import { LEVEL_LABEL } from '../game/stats';
 import { LEAGUE_DAILY_CARDS, Reward } from '../game/rewards';
@@ -55,7 +56,7 @@ function ownedCounts(save: SaveData): OwnedCounts {
 export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, account = null, online = null }: Props) {
   const owned = useMemo(() => ownedCounts(save), [save]);
   const savedDeck = save.leagueDeck.length ? save.leagueDeck : autoDeck(RULES.deck, owned);
-  const [stage, setStage] = useState<'ladder' | 'deck' | 'online' | 'intro' | 'run' | 'match' | 'done'>('ladder');
+  const [stage, setStage] = useState<'ladder' | 'board' | 'deck' | 'online' | 'intro' | 'run' | 'match' | 'done'>('ladder');
   // Ranglisten-Ligen (accounts): the player's step; null while loading, 'offline' without a connection.
   const [ladder, setLadder] = useState<{ ladder: LadderState; config: LadderConfig } | null | 'offline'>(null);
   /** Ranked matches started earlier and never finished – the server counted them as lost. */
@@ -184,6 +185,8 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
     else setBetween(after.decider ? `Stand ${wins(next, 'player')}:${wins(next, 'cpu')} – Entscheidungsduell! Ein neuer Münzwurf entscheidet, wer beginnt.` : `Stand ${wins(next, 'player')}:${wins(next, 'cpu')} – in Runde 2 beginnt ${after.first === 'player' ? 'du' : 'der Gegner'}.`);
   }
 
+  if (stage === 'board') return <LadderBoardView onBack={() => setStage('ladder')} />;
+
   if (stage === 'ladder') {
     const l = ladder && ladder !== 'offline' ? ladder : null;
     return (
@@ -194,6 +197,7 @@ export function League({ save, reducedMotion, runes = null, onSaveDeck, onExit, 
           {account && ladder === 'offline' && <p className="hint center">Keine Verbindung – für die Rangliste brauchst du kurz Internet.</p>}
           {forfeited > 0 && <p className="hint center forfeit-note">{forfeited === 1 ? 'Ein abgebrochenes Ranglisten-Match wurde' : `${forfeited} abgebrochene Ranglisten-Matches wurden`} als Niederlage gewertet.</p>}
           {l && <LadderPanel state={l.ladder} config={l.config} />}
+          {l && <button type="button" className="btn btn-wide ladder-board-btn" onClick={() => setStage('board')}><GameIcon name="trophy" /> Bestenliste der Saison</button>}
           {!account && (
             <section className="runner-info">
               <h2>Ligen</h2>

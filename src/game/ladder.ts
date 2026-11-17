@@ -28,6 +28,9 @@ export const SAFE_USES = 3;
 export const RANKED_RANGE = 3;
 /** Online: seconds to look for a real opponent before the computer of the league steps in. */
 export const RANKED_SEARCH_SECONDS = 20;
+/** Online: results against the same opponent that move the ladder within 24 hours (the server function "pvp" holds
+ * the same number; tests/engineBundle.test.ts checks that both agree). */
+export const RANKED_PER_OPPONENT = 3;
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
 
 export interface LadderConfig {

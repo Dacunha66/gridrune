@@ -3,7 +3,8 @@
 // after 90 seconds) and absences (whoever is still there after 20 seconds without a sign of life from the other
 // one wins). The full duel stays in pvp_matches; each player gets only their own view in pvp_views (live).
 // Draft League ("draft"): both get the same pool of 30 cards, build a secret deck of 20 and duel with it.
-// Ranglisten-Liga ("ranked"): two players of similar steps with their league decks; the result moves both on the ladder.
+// Ranglisten-Liga ("ranked"): two players of similar steps with their league decks; the result moves both on the ladder
+// (at most RANKED_PER_OPPONENT results against the same opponent in 24 hours).
 // Every duel: the deck is shuffled, 5 cards on the hand, the rest drawn before each own move.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
@@ -34,6 +35,8 @@ async function contentDocs(db: ReturnType<typeof createClient>): Promise<{ data:
 }
 /** Small allowance for slow connections before a time-out counts. */
 const GRACE_SECONDS = 3;
+/** Rangliste online: results against the same opponent that move the ladder within 24 hours (no swapping wins). */
+const RANKED_PER_OPPONENT = 3;
 
 type Seat = 'a' | 'b';
 // deno-lint-ignore no-explicit-any
@@ -62,6 +65,8 @@ function viewOf(m: Match, seat: Seat) {
       coins: m.winner === seat ? m.coins : 0,
       // Rangliste online: the card the winner got (null: none – daily limit reached or every card owned).
       card: m.winner === seat ? m.reward_card ?? null : null,
+      // Rangliste online: false = the daily limit against this opponent was reached, the ladder did not move.
+      ladderCounted: m.kind === 'ranked' ? m.ladder_counted !== false : null,
     }
     : null;
   const myDeck = m[`deck_${seat}`] ?? null;
@@ -153,6 +158,17 @@ Deno.serve(async (req) => {
   async function ladderFinish(m: Match, winner: Seat | 'draw', reason: 'normal' | 'absent' | 'left', moves: number) {
     if (m.kind !== 'ranked') return;
     const played = reason === 'normal' || moves >= PVP_MIN_MOVES_FOR_COINS;
+    // At most RANKED_PER_OPPONENT counted results against the same opponent in 24 hours; later ones are played but
+    // leave both ladders as they are (ladder_counted = false tells the result screen).
+    if (m.player_a && m.player_b) {
+      const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+      const { count } = await db.from('pvp_matches').select('id', { count: 'exact', head: true })
+        .eq('kind', 'ranked').eq('ladder_counted', true).neq('id', m.id).gte('finished_at', since)
+        .or(`and(player_a.eq.${m.player_a},player_b.eq.${m.player_b}),and(player_a.eq.${m.player_b},player_b.eq.${m.player_a})`);
+      const counted = (count ?? 0) < RANKED_PER_OPPONENT;
+      await db.from('pvp_matches').update({ ladder_counted: counted }).eq('id', m.id);
+      if (!counted) return;
+    }
     for (const s of ['a', 'b'] as Seat[]) {
       const player = m[`player_${s}`];
       if (!player) continue;
@@ -371,17 +387,11 @@ Deno.serve(async (req) => {
     return m ? json({ view: viewOf(m, 'a') }) : json({ error: 'database' }, 500);
   }
 
+  // Wins, draws and losses: live matches plus the archive of matches removed by the nightly cleanup.
   if (action === 'stats') {
-    const { data } = await db.from('pvp_matches').select('player_a, winner').eq('status', 'finished').eq('mode', body.mode === 'draft' ? 'draft' : 'duel')
-      .or(`player_a.eq.${uid},player_b.eq.${uid}`).limit(5000);
-    const s = { wins: 0, draws: 0, losses: 0 };
-    for (const m of data ?? []) {
-      const seat = m.player_a === uid ? 'a' : 'b';
-      if (m.winner === 'draw') s.draws++;
-      else if (m.winner === seat) s.wins++;
-      else s.losses++;
-    }
-    return json(s);
+    const { data, error } = await db.rpc('pvp_stats', { p_player: uid, p_mode: body.mode === 'draft' ? 'draft' : 'duel' });
+    if (error || !data) return json({ error: 'database' }, 500);
+    return json({ wins: Number(data.wins) || 0, draws: Number(data.draws) || 0, losses: Number(data.losses) || 0 });
   }
 
   // Everything else acts on one match of this player.

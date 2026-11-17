@@ -141,3 +141,12 @@ Die Server-Funktionen (`supabase/functions/*`) laden die Spielregeln als eine ge
 ## Layout-Prüfung für kleine Handys
 
 `node scripts/check-layout.cjs [Adresse] [Breite] [Höhe]` öffnet (bei laufendem `npx vite --port 4196`) die wichtigsten Bildschirme als Gast in iPhone-SE-Größe (375 × 667) und meldet Knöpfe, die man nicht erreichen kann, und Seiten, die breiter als der Bildschirm sind. Für sehr kleine Geräte: `… 320 480`.
+
+## Aufräumen und Sicherung (automatisch)
+
+Die Datenbank erledigt zwei Dinge selbst (Zeitplan mit `pg_cron`, Migration 031):
+
+- **Jede Nacht (02:17 UTC) – `private.nightly_cleanup()`:** löscht beendete Spiel-Belege, Online-Partien, Liga-Belege einzelner Matches, abgeholte oder abgelaufene Postfach-Einträge, alte Tages-/Wochen-Quests und Karten-Tageszähler, die älter als 30 Tage sind. Vorher wird jedes beendete Spiel als kurze Zeile in `game_archive` gespeichert (400 Tage). Deshalb bleiben die Admin-Statistik und die Online-Statistik der Spieler vollständig. Spielstände, Karten, Konten, Liga, Raids und Puzzle-Events werden nie angefasst.
+- **Jeden Montag (02:43 UTC) – `private.content_backup()`:** kopiert alle Spielinhalte (`content_docs`: Karten, Arenen, Kampagne, Events …) nach `content_backups`. Die letzten 8 Sicherungen bleiben. Wiederherstellen macht ein Entwickler per SQL aus dieser Tabelle.
+
+Ranglisten-Bestenliste: `ladder_board(season, player, limit)`, abgerufen über die Server-Funktion `game` (`ladder-board`). Online-Ranglistenspiele gegen denselben Gegner zählen höchstens `RANKED_PER_OPPONENT` (3) Mal in 24 Stunden für die Liga (Server-Funktion `pvp`, gleiche Zahl in `src/game/ladder.ts`, ein Test prüft beide).

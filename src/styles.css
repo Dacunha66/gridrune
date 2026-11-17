@@ -2950,3 +2950,17 @@ label.btn.disabled { opacity: .45; }
 .admin-error.kind-crash .admin-error-kind { color: #fca5a5; }
 .admin-error-detail { padding: 0 12px 12px; }
 .admin-error-stack { max-height: 220px; overflow: auto; margin: 6px 0; padding: 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.35); font-size: 11px; white-space: pre-wrap; word-break: break-all; }
+
+/* Rangliste: Bestenliste der Saison */
+.board-list { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.board-list li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--gold-faint); background: rgba(16, 24, 44, 0.88); }
+.board-list li.me { border-color: var(--gold-line); background: rgba(255, 196, 64, 0.12); }
+.board-rank { font-weight: 800; text-align: center; color: var(--accent); }
+.board-list li:nth-child(-n+3) .board-rank { font-size: 18px; }
+.board-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.board-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-step { display: flex; align-items: center; gap: 6px; font-size: 13px; text-align: right; }
+.board-step > span { display: flex; flex-direction: column; line-height: 1.2; }
+.board-step small { opacity: 0.7; font-size: 11px; }
+.ladder-board-btn { margin-top: 10px; }

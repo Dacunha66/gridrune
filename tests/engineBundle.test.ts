@@ -4,6 +4,7 @@
 // imports really exists in it. Pointing all functions at the engine: node scripts/set-engine.mjs
 import { describe, expect, it } from 'vitest';
 import content from './fixtures/content-sample.json';
+import { RANKED_PER_OPPONENT } from '../src/game/ladder';
 
 const ENGINE_URL = /https:\/\/cdn\.jsdelivr\.net\/gh\/Dacunha66\/gridrune@([0-9a-f]{40})\/public\/server\/(engine-[0-9a-f]+\.js)/;
 type Engine = Record<string, unknown> & {
@@ -47,5 +48,10 @@ describe('Server-Regeln (Engine-Bündel)', () => {
     // A few calls the functions make right after loading.
     expect(engine.ladderStatusServer(null).state.step).toBe(0);
     expect(engine.questPeriod().day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('Online-Rangliste: Server und Spiel nennen dasselbe Limit pro Gegner', () => {
+    const pvp = Object.entries(sources).find(([path]) => path.endsWith('/pvp/index.ts'))?.[1] ?? '';
+    expect(pvp.match(/const RANKED_PER_OPPONENT = (\d+);/)?.[1]).toBe(String(RANKED_PER_OPPONENT));
   });
 });

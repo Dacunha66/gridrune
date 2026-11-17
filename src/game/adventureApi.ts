@@ -174,6 +174,44 @@ export async function ladderRefRemote(matchId: string): Promise<LadderChange | n
   return r?.data?.ok === true ? ((r.data.change as LadderChange | null) ?? null) : null;
 }
 
+/** One line of the Bestenliste (current season). */
+export interface BoardRow {
+  rank: number;
+  name: string;
+  avatar: string;
+  me: boolean;
+  step: number;
+  points: number;
+  wins: number;
+  games: number;
+}
+export interface LadderBoard {
+  season: string;
+  total: number;
+  rows: BoardRow[];
+  me: { rank: number; step: number; points: number; wins: number; games: number } | null;
+}
+
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+/** Bestenliste of the current season: the top 100 and the own place (null: no connection). */
+export async function ladderBoardRemote(): Promise<LadderBoard | null> {
+  const r = await call({ action: 'ladder-board' }, 'game');
+  const d = r?.data;
+  if (!d || d.ok !== true) return null;
+  const rows = Array.isArray(d.rows) ? d.rows as Record<string, unknown>[] : [];
+  const me = d.me && typeof d.me === 'object' ? d.me as Record<string, unknown> : null;
+  return {
+    season: String(d.season ?? seasonOf()),
+    total: num(d.total),
+    rows: rows.map((x) => ({
+      rank: num(x.rank), name: String(x.name ?? 'Spieler').slice(0, 20), avatar: String(x.avatar ?? ''), me: x.me === true,
+      step: num(x.step), points: num(x.points), wins: num(x.wins), games: num(x.games),
+    })),
+    me: me ? { rank: num(me.rank), step: num(me.step), points: num(me.points), wins: num(me.wins), games: num(me.games) } : null,
+  };
+}
+
 export async function ladderStatusRemote(): Promise<{ ladder: LadderState; config: LadderConfig; forfeited: number } | null> {
   const r = await call({ action: 'ladder-status' }, 'game');
   if (r?.data?.ok !== true) return null;

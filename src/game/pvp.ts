@@ -158,6 +158,8 @@ export interface PvpView {
     coins: number;
     /** Rangliste online: the new card the winner got (null/missing: none). */
     card?: string | null;
+    /** Rangliste online: false = limit against this opponent reached, the ladder did not move (null: not ranked). */
+    ladderCounted?: boolean | null;
   };
   updatedAt: string;
 }

@@ -3,7 +3,7 @@
 // "mission-finish": replays the duel (and run) with the game's own rules, stores the stars and pays every reward
 // owed. "league-start" / "league-finish": Collection League match against the computer (ranked), replayed here; a won
 // match unlocks the rarest new discovery of the run and moves the player on the ladder ("ladder-status": the state).
-// A ranked match that is never sent counts as lost (when the next one starts, or after TICKET_HOURS). "claim": pays rewards earned earlier (once).
+// A ranked match that is never sent counts as lost (when the next one starts, or after TICKET_HOURS). "ladder-board": Bestenliste. "claim": pays rewards earned earlier (once).
 // "buy-pack" / "buy-skin": coins are taken and the cards drawn
 // here. "free-coins" / "buy-coins" / "buy-offer": Runensteine shop (free coins, coins for Runensteine, card offers).
 // "login-status" / "login-claim": Login-Kalender (one field per day). "tutorial-finish": tutorial reward (once).
@@ -12,7 +12,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, checkTutorial, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, LEAGUE_DAILY_CARDS, ladderApplyServer, ladderSettingsServer, ladderStatusServer, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod,
+  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, checkTutorial, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, LEAGUE_DAILY_CARDS, ladderApplyServer, ladderSettingsServer, ladderStatusServer, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod, shownAvatar,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@1b8e8691749d9a309aeb7f5aaf888981c97bd517/public/server/engine-df902064558a.js';
 
 const CORS = {
@@ -212,6 +212,20 @@ Deno.serve(async (req) => {
     if (!ref) return json({ error: 'bad_request' }, 400);
     const { data } = await db.from('ladder_refs').select('result').eq('player_id', uid).eq('ref', ref).maybeSingle();
     return json({ ok: true, change: data?.result ?? null });
+  }
+
+  // Bestenliste of the current season: the top 100 and the own place (avatars as chosen under Erfolge).
+  if (body.action === 'ladder-board') {
+    try {
+      const state = await ladderNow();
+      const { data, error } = await db.rpc('ladder_board', { p_season: state.season, p_player: uid, p_limit: 100 });
+      if (error || !data) return json({ error: 'database' }, 500);
+      // deno-lint-ignore no-explicit-any
+      const rows = ((data.rows ?? []) as any[]).map(({ titles, ...r }) => ({ ...r, avatar: shownAvatar(titles) }));
+      return json({ ok: true, season: state.season, total: data.total ?? 0, rows, me: data.me ?? null });
+    } catch {
+      return json({ error: 'database' }, 500);
+    }
   }
 
   if (body.action === 'league-start') {
