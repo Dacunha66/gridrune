@@ -501,6 +501,9 @@ function WorldEditor({ db, assets, initial, content, onToast, onDone, onClose, o
   );
 }
 
+/** Arena status in words (mission editor): where the arena is used outside the campaign. */
+const ARENA_STATUS_TEXT: Record<Arena['status'], string> = { active: 'im Spiel aktiv', campaign: 'nur Kampagne', draft: 'Entwurf', disabled: 'im Spiel ausgeschaltet' };
+
 // ---------- Mission editor ----------
 
 function MissionEditor({ db, assets, initial, content, onToast, onDone, onClose, onTest }: {
@@ -508,8 +511,8 @@ function MissionEditor({ db, assets, initial, content, onToast, onDone, onClose,
 }) {
   const { draft, setDraft, dirty, busy, setBusy } = useSave(initial);
   const set = (patch: Partial<Mission>) => setDraft((d) => ({ ...d, ...patch }));
-  const arenas: Arena[] = ARENAS.filter((a) => a.status !== 'disabled' || a.id === draft.arenaId);
   const arena = ARENAS.find((a) => a.id === draft.arenaId);
+  const [arenaOpen, setArenaOpen] = useState(false);
   const problems = missionProblems(draft, content);
   const siblings = content.missions.filter((m) => m.worldId === draft.worldId && m.id !== draft.id);
   const savedGoals = new Map(initial.goals.map((g) => [g.id, g]));
@@ -584,13 +587,35 @@ function MissionEditor({ db, assets, initial, content, onToast, onDone, onClose,
             {content.opponents.map((o) => <option key={o.id} value={o.id}>{o.emoji} {o.name} ({LEVEL_LABEL[o.level]})</option>)}
           </select>
         </label>
-        <label className="field grow"><span>Arena</span>
-          <select className="admin-input" value={draft.arenaId} onChange={(e) => set({ arenaId: e.target.value })}>
-            {arenas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-        </label>
       </div>
-      {arena && <p className="arena-preview-line"><TerrainMini cells={arena.cells} /> <span className="muted small">Neue Arenen legst du im Reiter „Arenen“ an (Status „Nur Kampagne“).</span></p>}
+      <div className="field">
+        <span>Arena (Spielfeld)</span>
+        <button type="button" className="arena-current" onClick={() => setArenaOpen((o) => !o)} aria-expanded={arenaOpen}>
+          {arena ? <TerrainMini cells={arena.cells} /> : <span className="terrain-mini" />}
+          <span className="arena-current-text">
+            <b>{arena?.name ?? 'Keine Arena gewählt'}</b>
+            <small className="muted">{arena ? `${arena.id} · ${ARENA_STATUS_TEXT[arena.status]}` : ''}</small>
+          </span>
+          <span className="btn btn-small">{arenaOpen ? 'Schließen' : 'Ändern'}</span>
+        </button>
+        {arenaOpen && (
+          <>
+            <ul className="arena-pick" role="listbox" aria-label="Arena wählen">
+              {ARENAS.map((a) => (
+                <li key={a.id}>
+                  <button type="button" role="option" aria-selected={a.id === draft.arenaId} className={`arena-pick-item ${a.id === draft.arenaId ? 'on' : ''} arena-st-${a.status}`}
+                    onClick={() => { set({ arenaId: a.id }); setArenaOpen(false); }}>
+                    <TerrainMini cells={a.cells} />
+                    <b>{a.name}</b>
+                    <small>{a.id} · {ARENA_STATUS_TEXT[a.status]}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <small className="muted">Jede Arena ist hier wählbar – auch ausgeschaltete. Sie gelten dann nur in dieser Mission, nicht im normalen Spiel. Neue Arenen legst du im Reiter „Arenen“ an.</small>
+          </>
+        )}
+      </div>
       <div className="field-row wrap">
         <label className="field grow"><span>Kartenregel</span>
           <select className="admin-input" value={draft.onlyClass ?? ''} onChange={(e) => set({ onlyClass: (e.target.value || undefined) as CardClass | undefined })}>

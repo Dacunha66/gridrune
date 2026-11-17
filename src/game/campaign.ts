@@ -556,7 +556,7 @@ export function missionProblems(m: Mission, content: CampaignContent, arenas: re
   if (!content.worlds.some((w) => w.id === m.worldId)) err('Gehört zu keiner vorhandenen Welt.');
   const arena = findArena(m.arenaId, arenas);
   if (!arena) err('Arena fehlt.');
-  else if (arena.status === 'disabled') warn(`Arena „${arena.name}“ ist deaktiviert.`);
+  // A switched-off arena still works in a mission (it is only out of normal play) – no problem to report.
   const o = content.opponents.find((x) => x.id === m.opponentId);
   if (!o) err('Gegner fehlt.');
   else {
