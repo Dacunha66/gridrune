@@ -381,6 +381,8 @@ function mission(
 }
 
 const REPLACED_GOAL_IDS: Record<string, string[]> = {
+  // Funkenpfad: "9 Felder" was the same as any win – replaced by the terrain bonus.
+  m011: ['m011-g1', 'm011-g4', 'm011-g3'],
   m014: ['m014-g1', 'm014-g4', 'm014-g3'],
   m019: ['m019-g1', 'm019-g2', 'm019-g4'],
 };
@@ -419,11 +421,11 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
     'Endboss: Der Waldwächter erwartet dich im Herzen des Waldes.', { x: 0.5, y: 0.06 }),
   // World 2: Glutgebirge (from the foot of the mountain up to the crater)
   ...([
-    ['m011', 'Funkenpfad', 'normal', 'a03', 'o011', [{ type: 'min_fields', n: 9 }, { type: 'min_captures', n: 4 }],
+    ['m011', 'Funkenpfad', 'normal', 'a03', 'o011', [{ type: 'terrain_bonus', n: 1 }, { type: 'min_captures', n: 4 }],
       'Am Fuß des Glutgebirges: Lavafelder machen Feuerkarten stärker.', { x: 0.5, y: 0.94 }, {
         tips: ['Feuerkarten bekommen auf Lavafeldern +1 auf alle Werte.', 'Die Gegner hier sind stärker als im Wald – lege deine starken Seiten an ihre schwachen.'],
       }],
-    ['m012', 'Glutwiesen', 'normal', 'a03', 'o012', [{ type: 'min_fields', n: 10 }, { type: 'min_margin', n: 3 }],
+    ['m012', 'Glutwiesen', 'normal', 'a03', 'o012', [{ type: 'min_fields', n: 10 }, { type: 'min_margin', n: 4 }],
       'Ein Schwarm Glutkäfer summt über die heißen Wiesen.', { x: 0.27, y: 0.85 }, {}],
     ['m013', 'Aschetal', 'normal', 'a16', 'o013', [{ type: 'min_captures', n: 5 }, { type: 'without_class', n: 0, cls: 'krieger' }],
       'Im stillen Aschetal brennen die ewigen Kerzen.', { x: 0.65, y: 0.77 }, {}],
@@ -443,7 +445,7 @@ export const BUILTIN_MISSIONS: readonly Mission[] = [
       'Endboss: Im Krater wartet das Vulkanherz.', { x: 0.5, y: 0.06 }, {}],
   ] as const).map(([id, name, kind, arenaId, opponentId, g, description, pos, extra], i) =>
     mission(id, i + 1, name, kind, arenaId, opponentId, goals(id, ...(g as unknown as Omit<Goal, 'id'>[])), description, pos, { worldId: 'w02', ...(extra as Partial<Mission>) }))
-    // Former "Lauf ohne Fehler" goals (the run no longer exists) got new ids, so earned stars stay untouched.
+    // Replaced goals (former "Lauf ohne Fehler", goals that equalled a plain win) got new ids, so earned stars stay untouched.
     .map((m) => (REPLACED_GOAL_IDS[m.id] ? { ...m, goals: m.goals.map((g, k) => ({ ...g, id: REPLACED_GOAL_IDS[m.id][k] ?? g.id })) } : m)),
 ];
 
