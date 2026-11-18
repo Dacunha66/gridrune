@@ -124,3 +124,34 @@ export function nextArenaId(existing: Iterable<string>): string {
   }
   return `a${String(max + 1).padStart(2, '0')}`;
 }
+
+// ---------- Admin overview: order and removed built-in arenas (settings/arena_list) ----------
+
+/** Admin only: the order of the arena list and built-in arenas the admin removed (code arenas cannot be deleted). */
+export const ARENA_LIST_DOC = 'arena_list';
+export interface ArenaList {
+  order: string[];
+  hidden: string[];
+}
+const idList = (v: unknown) => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && ARENA_ID_RE.test(x)))].slice(0, 500) : []);
+export function parseArenaList(raw: unknown): ArenaList {
+  const r = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  return { order: idList(r.order), hidden: idList(r.hidden) };
+}
+
+/** Arenas in the admin's order (arenas not in the list yet come last, by id); removed built-ins left out. */
+export function orderedArenas(list: readonly Arena[], view: ArenaList): Arena[] {
+  const pos = new Map(view.order.map((id, i) => [id, i]));
+  return list
+    .filter((a) => !view.hidden.includes(a.id))
+    .sort((a, b) => (pos.get(a.id) ?? 1e9) - (pos.get(b.id) ?? 1e9) || a.id.localeCompare(b.id));
+}
+
+/** Moves one id to another place of the list (drag and drop). */
+export function moveId(ids: readonly string[], from: number, to: number): string[] {
+  const out = [...ids];
+  if (from < 0 || from >= out.length || to < 0 || to >= out.length || from === to) return out;
+  const [x] = out.splice(from, 1);
+  out.splice(to, 0, x);
+  return out;
+}

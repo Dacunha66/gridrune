@@ -7,7 +7,8 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { CampaignImage, TerrainMini } from './Campaign';
 import { Slider, usePanZoom } from './AdminDesigns';
 import { AI_LEVELS, AiLevel } from '../game/ai';
-import { ARENAS, Arena } from '../game/arenas';
+import { ARENAS, Arena, orderedArenas } from '../game/arenas';
+import { useArenaList } from './AdminArenas';
 import { HAND_SIZE } from '../game/battle';
 import { CARDS, RARITY_LABEL, cardPower, getCard, isCardId } from '../game/cards';
 import { Assets, Db, describeError, prepareCoverImage, saveMission, saveOpponent, saveWorld } from '../game/cardStore';
@@ -513,6 +514,9 @@ function MissionEditor({ db, assets, initial, content, onToast, onDone, onClose,
   const set = (patch: Partial<Mission>) => setDraft((d) => ({ ...d, ...patch }));
   const arena = ARENAS.find((a) => a.id === draft.arenaId);
   const [arenaOpen, setArenaOpen] = useState(false);
+  // Same order as under "Arenen"; deleted built-in arenas only when this mission still uses one.
+  const arenaView = useArenaList(db);
+  const arenaChoices = [...orderedArenas(ARENAS, arenaView), ...ARENAS.filter((a) => a.id === draft.arenaId && arenaView.hidden.includes(a.id))];
   const problems = missionProblems(draft, content);
   const siblings = content.missions.filter((m) => m.worldId === draft.worldId && m.id !== draft.id);
   const savedGoals = new Map(initial.goals.map((g) => [g.id, g]));
@@ -601,7 +605,7 @@ function MissionEditor({ db, assets, initial, content, onToast, onDone, onClose,
         {arenaOpen && (
           <>
             <ul className="arena-pick" role="listbox" aria-label="Arena wählen">
-              {ARENAS.map((a) => (
+              {arenaChoices.map((a) => (
                 <li key={a.id}>
                   <button type="button" role="option" aria-selected={a.id === draft.arenaId} className={`arena-pick-item ${a.id === draft.arenaId ? 'on' : ''} arena-st-${a.status}`}
                     onClick={() => { set({ arenaId: a.id }); setArenaOpen(false); }}>
