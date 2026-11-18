@@ -2977,3 +2977,24 @@ label.btn.disabled { opacity: .45; }
 .arena-pick-item small { font-size: 10px; opacity: 0.7; }
 .arena-pick-item.on { border-color: var(--glow); box-shadow: 0 0 12px var(--glow-soft); }
 .arena-pick-item.arena-st-disabled { opacity: 0.75; }
+
+/* Card back with the GridRune logo (pack opening) – same shape as the cards: 3 : 4, nearly square corners */
+.flip-back { overflow: hidden; border-radius: 3.5% / 2.6%; }
+.flip-back::before { border-radius: 2px; }
+.back-pattern {
+  position: absolute; inset: 9px; border-radius: 2px; opacity: 0.35; pointer-events: none;
+  background:
+    repeating-linear-gradient(45deg, transparent 0 9px, rgba(255, 241, 194, 0.16) 9px 10px),
+    repeating-linear-gradient(-45deg, transparent 0 9px, rgba(255, 241, 194, 0.16) 9px 10px);
+  -webkit-mask-image: radial-gradient(circle at 50% 45%, transparent 0 30%, #000 62%);
+  mask-image: radial-gradient(circle at 50% 45%, transparent 0 30%, #000 62%);
+}
+.back-emblem { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; width: 82%; }
+.back-halo { position: absolute; top: -22%; left: 50%; width: 120%; aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%;
+  background: radial-gradient(circle, rgba(69, 227, 207, 0.45) 0%, rgba(69, 227, 207, 0.12) 40%, transparent 68%); pointer-events: none; }
+.back-logo { position: relative; width: 64%; aspect-ratio: 1; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 10px rgba(69, 227, 207, 0.35)); }
+.back-name {
+  position: relative; font: 700 clamp(10px, 3.1vw, 15px)/1 var(--f-display); letter-spacing: 0.05em; white-space: nowrap;
+  background: linear-gradient(180deg, #fff1c2 0%, #e3b75a 55%, #a87a2a 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.9)) drop-shadow(0 0 3px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 8px rgba(255, 241, 194, 0.3));
+}

@@ -1,6 +1,7 @@
 // Postfach: rewards waiting for the player (raid rewards, gifts from the admin), 30 days to collect. Collecting pays
 // them on the server; coins and Runensteine are shown big, packs are opened like in the shop (cards face down, tap to
 // turn them over; duplicates go to the Runenschmiede).
+import { CardBack } from '../components/CardBack';
 import { CSSProperties, useEffect, useState } from 'react';
 import { Header } from './Header';
 import { Card } from '../components/Card';
@@ -84,7 +85,7 @@ export function PackReveal({ packs, cardSkin, onClose }: { packs: OpenedPack[]; 
                     style={{ animationDelay: `${0.1 + i * 0.15}s` } as CSSProperties}
                     onClick={() => setUp((u) => u.map((x, k) => x || k === i))} aria-label={up[i] ? `${getCard(c.cardId).name}, ${RARITY_LABEL[rarity]}` : `Karte ${i + 1} aufdecken`}>
                     <span className="flip-inner">
-                      <span className="flip-face flip-back" aria-hidden="true" style={{ '--b1': back[0], '--b2': back[1], '--b3': back[2] } as CSSProperties}><span className="flip-rune">ᚱ</span></span>
+                      <CardBack colors={back} />
                       <span className="flip-face flip-front"><Card id={c.cardId} size="md" showName /></span>
                     </span>
                     <span className={`reveal-tag ${c.isNew ? 'new' : ''}`} style={{ visibility: up[i] ? 'visible' : 'hidden' }}>{c.isNew ? 'NEU!' : 'Doppelt → Schmiede'}</span>

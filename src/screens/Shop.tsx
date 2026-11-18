@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { CardBack } from '../components/CardBack';
 import { GameIcon } from '../components/GameIcon';
 import { CSSProperties, useEffect, useMemo, useState } from 'react';
 import { Coin, CoinText, Stone } from '../components/Coin';
@@ -399,9 +400,7 @@ export function Shop({ save, onChange, onBack, server = null, top, player = null
                       {up && big && <span className="slot-rays" aria-hidden="true" />}
                       {up && big && !reducedMotion && <Burst x="50%" y="40%" colors={RARITY_COLORS[rarity]} count={22} spread={90} />}
                       <span className="flip-inner">
-                        <span className="flip-face flip-back" aria-hidden="true" style={{ '--b1': back[0], '--b2': back[1], '--b3': back[2] } as CSSProperties}>
-                          <span className="flip-rune">ᚱ</span>
-                        </span>
+<CardBack colors={back} />
                         <span className="flip-face flip-front"><Card id={c.cardId} size="md" showName /></span>
                       </span>
                       <span className={`reveal-tag ${c.isNew ? 'new' : ''}`} style={{ visibility: up ? 'visible' : 'hidden' }}>{c.isNew ? 'NEU!' : c.refund ? <>Doppelt +<Coin /> {c.refund}</> : 'Doppelt → Schmiede'}</span>
