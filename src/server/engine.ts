@@ -36,6 +36,7 @@ import {
   questContext, questDay, questWeek, DEFAULT_QUESTS, BIG_WIN_FIELDS,
 } from '../game/quests';
 import { EffectId } from '../game/effects';
+import { TOWER_COLLECTION, TowerFloor, canPlayFloor, floorMission, parseFloor, setTowerFloors, towerFloors, visibleFloors } from '../game/tower';
 import {
   EDITIONS_COLLECTION, EditionDef, PUZZLES_COLLECTION, PuzzleCounters, PuzzleDef, allPuzzles, earnedClaim, findEdition, ownEditions, parseEdition,
   parsePuzzle, puzzlePhase, setEditions, setPuzzles, taskViews, puzzleStages, totalPieces, stageDone, StageBase, currentStage, parseStageBase, stageBaseNow, stageIndex,
@@ -89,6 +90,8 @@ export function loadContent(rows: ContentRow[], isAdmin: boolean): void {
   // Puzzle-Events: editions and events (drafts only for admins, like everything else).
   setEditions(of<EditionDef>(EDITIONS_COLLECTION, parseEdition));
   setPuzzles(of<PuzzleDef>(PUZZLES_COLLECTION, parsePuzzle));
+  // Turm der Prüfungen: the floors (drafts only for admins).
+  setTowerFloors(of<TowerFloor>(TOWER_COLLECTION, parseFloor));
   const records = of<CardRecord>('cards', parseCardRecord);
   if (records.length > 0) {
     const catalog = buildCatalog(records, released(SETTINGS.features.abilities, isAdmin));
@@ -461,6 +464,77 @@ export function claimCampaign(saveRaw: unknown, campaignRaw: unknown, seed: stri
   if (owed.length === 0) return null;
   const paid = payRewards(sanitize(saveRaw), progress, owed, deriveRng(seed, 'rewards'));
   return { save: paid.save, campaign: paid.progress, granted: paid.granted };
+}
+
+// ---------- Turm der Prüfungen ----------
+
+/** A tower duel: the floor's opponent as it was when the ticket was handed out; `test` = admin test (never counts). */
+export type StoredTowerTicket = MissionTicket & {
+  floorId: string;
+  number: number;
+  test: boolean;
+  reward: TowerFloor['reward'];
+  snapshot: MissionSnapshot & { cpuName: string };
+};
+
+/** The floors a player sees (admin test mode: drafts too), in order. */
+export function towerView(isAdmin: boolean, test: boolean): TowerFloor[] {
+  return visibleFloors(towerFloors(), isAdmin && test);
+}
+
+/**
+ * Checks a tower start: the floor exists, is the next one or cleared before (floors are never skipped; an admin test
+ * may start any floor), the deck is the player's own. `cleared` comes from the database (tower_progress).
+ */
+export function prepareTower(saveRaw: unknown, campaignRaw: unknown, cleared: number, floorId: unknown, deck: unknown, rune: unknown, isAdmin: boolean, test: boolean):
+  { ok: true; ticket: Omit<StoredTowerTicket, 'id' | 'seed'> } | { ok: false; error: string } {
+  const isTest = isAdmin && test;
+  const floor = towerView(isAdmin, isTest).find((f) => f.id === floorId);
+  if (!floor) return { ok: false, error: 'floor' };
+  if (!isTest && !canPlayFloor(floor, cleared)) return { ok: false, error: 'locked' };
+  const save = sanitize(saveRaw);
+  if (!validDeck(save, deck)) return { ok: false, error: 'deck' };
+  const progress = sanitizeProgress(campaignRaw);
+  const o = floor.opponent;
+  return {
+    ok: true,
+    ticket: {
+      missionId: floor.id, floorId: floor.id, number: floor.number, test: isTest, reward: floor.reward,
+      deck, owned: [...save.unlocked], hand: null,
+      playerRune: allowedRune(save, progress, rune, 'campaign', isAdmin),
+      cpuRune: released(SETTINGS.features.runes, isAdmin) ? o.rune ?? null : null,
+      snapshot: { mode: 'duel', arenaId: floor.arenaId, opponentDeck: [...o.deck], level: o.level, prefer: [...o.prefer], cpuName: o.name },
+    },
+  };
+}
+
+/**
+ * Replays a tower duel with the game's own rules. A win pays the floor reward into `save` (the database stores it only
+ * if this account never got this floor's reward: tower_rewards); `save` is null when nothing is to be paid.
+ */
+export function finishTower(ticket: StoredTowerTicket, log: MissionLog, saveRaw: unknown):
+  { ok: true; outcome: Outcome; score: Record<Side, number>; won: boolean; save: SaveData | null; granted: GrantedReward[]; quest: QuestEvent } | { ok: false; error: string } {
+  const snap = ticket.snapshot;
+  if (!snap || typeof ticket.floorId !== 'string') return { ok: false, error: 'Ticket ungültig' };
+  const base = towerFloors().find((f) => f.id === ticket.floorId);
+  if (!base) return { ok: false, error: 'Etage gibt es nicht mehr' };
+  const floor: TowerFloor = {
+    ...base, arenaId: snap.arenaId, opponent: { ...base.opponent, deck: snap.opponentDeck, level: snap.level, prefer: snap.prefer },
+  };
+  const check = checkMission(ticket, log, floorMission(floor), floor.opponent);
+  if (!check.ok) return check;
+  const won = check.outcome === 'win';
+  let save: SaveData | null = null;
+  let granted: GrantedReward[] = [];
+  if (won && !ticket.test && ticket.reward && isPayable(ticket.reward)) {
+    const paid = grantRewards(sanitize(saveRaw), [{ key: `tower:${ticket.floorId}`, reward: ticket.reward, source: `Turm – Etage ${ticket.number}` }], deriveRng(ticket.seed, 'rewards'));
+    save = paid.save;
+    granted = paid.granted;
+  }
+  return {
+    ok: true, outcome: check.outcome, score: check.score, won, save, granted,
+    quest: { games: 1, wins: won ? 1 : 0, captures: check.stats.captures, effects: check.stats.effects },
+  };
 }
 
 // ---------- Shop (phase 4b) ----------

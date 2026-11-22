@@ -6,13 +6,14 @@
 // A ranked match that is never sent counts as lost (when the next one starts, or after TICKET_HOURS). "ladder-board": Bestenliste. "claim": pays rewards earned earlier (once).
 // "buy-pack" / "buy-skin": coins are taken and the cards drawn
 // here. "free-coins" / "buy-coins" / "buy-offer": Runensteine shop (free coins, coins for Runensteine, card offers).
-// "login-status" / "login-claim": Login-Kalender (one field per day). "tutorial-finish": tutorial reward (once).
+// "tower-status" / "tower-start" / "tower-finish": Turm der Prüfungen (replayed here, reward once per floor);
+// "tower-reset": admin test, own account only. "login-status" / "login-claim": Login-Kalender (one field per day). "tutorial-finish": tutorial reward (once).
 // "forge-melt" / "forge-refine" / "forge-craft" / "forge-edition" / "forge-frame": Runenschmiede (essences from duplicates).
 // Every payout goes through pay_ticket: ticket finished and save written together, never twice.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
 import {
-  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, checkTutorial, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, LEAGUE_DAILY_CARDS, ladderApplyServer, ladderSettingsServer, ladderStatusServer, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, questDelta, questPeriod, shownAvatar,
+  buyCoinsServer, buyOfferServer, buyPackServer, buySkinServer, checkTutorial, claimCampaign, forgeServer, freeCoinsServer, finishLeague, finishMission, finishTower, LEAGUE_DAILY_CARDS, ladderApplyServer, ladderSettingsServer, ladderStatusServer, loadContent, loginClaimServer, loginStatusServer, prepareLeague, prepareMission, prepareTower, questDelta, questPeriod, shownAvatar,
 } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@1b8e8691749d9a309aeb7f5aaf888981c97bd517/public/server/engine-df902064558a.js';
 
 const CORS = {
@@ -138,6 +139,68 @@ Deno.serve(async (req) => {
       return json({ ...result, save: res.save, campaign: res.campaign, version: cur.version + 1 });
     }
     return json({ error: 'busy' }, 503);
+  }
+
+  // ---------- Turm der Prüfungen ----------
+  // Progress (highest cleared floor) and the rewards paid live in the database; only tower_finish changes them, after
+  // the duel was replayed here. A floor reward is paid once per account; an admin test never counts.
+  const towerCleared = async (): Promise<number> => {
+    const { data } = await db.from('tower_progress').select('cleared').eq('player_id', uid).maybeSingle();
+    return (data?.cleared ?? 0) as number;
+  };
+
+  if (body.action === 'tower-status') {
+    const [cleared, { data: rewards }] = await Promise.all([towerCleared(), db.from('tower_rewards').select('floor_id').eq('player_id', uid)]);
+    return json({ cleared, rewarded: (rewards ?? []).map((r: { floor_id: string }) => r.floor_id) });
+  }
+
+  if (body.action === 'tower-start') {
+    const prep = prepareTower(saveRow.save, saveRow.campaign, await towerCleared(), body.floorId, body.deck, body.rune ?? null, isAdmin, body.test === true);
+    if (!prep.ok) return json({ error: prep.error }, 422);
+    const ticket = { ...prep.ticket, seed: seed() };
+    const { data, error } = await db.from('game_tickets').insert({ player_id: uid, kind: 'tower', ticket }).select('id').single();
+    if (error) return json({ error: 'database' }, 500);
+    return json({ ticket: { ...ticket, id: data.id } });
+  }
+
+  if (body.action === 'tower-finish') {
+    const id = typeof body.ticketId === 'string' ? body.ticketId : '';
+    const { data: t } = await db.from('game_tickets').select('id, ticket, created_at, finished_at, result').eq('id', id).eq('player_id', uid).eq('kind', 'tower').maybeSingle();
+    if (!t || !t.ticket?.floorId) return json({ error: 'unknown_ticket' }, 404);
+    if (t.finished_at) return json({ ...(t.result ?? {}), repeated: true, cleared: await towerCleared(), ...saveRow });
+    if (Date.now() - new Date(t.created_at).getTime() > TICKET_HOURS * 3600_000) return json({ error: 'expired' }, 410);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const cur = await readSave();
+      const res = finishTower({ ...t.ticket, id: t.id }, body.log as never, cur.save);
+      const result = res.ok
+        ? { ok: true, outcome: res.outcome, score: res.score, won: res.won, test: !!t.ticket.test, floorId: t.ticket.floorId, number: t.ticket.number }
+        : { ok: false, error: res.error };
+      const { data: out, error } = await db.rpc('tower_finish', {
+        p_ticket: t.id, p_player: uid, p_floor: t.ticket.floorId, p_number: t.ticket.number,
+        p_won: res.ok && res.won && !t.ticket.test, p_result: result, p_save: res.ok ? res.save : null, p_reward: t.ticket.reward ?? null, p_version: cur.version,
+      });
+      if (error) return json({ error: 'database' }, 500);
+      const status = (out as { status?: string } | null)?.status;
+      if (status === 'conflict') continue;
+      if (status === 'already') {
+        const { data: done } = await db.from('game_tickets').select('result').eq('id', t.id).single();
+        return json({ ...(done?.result ?? {}), repeated: true, cleared: await towerCleared(), ...(await readSave()) });
+      }
+      const o = out as { cleared: number; rewarded: boolean };
+      if (!res.ok) return json({ ...result, cleared: o.cleared, ...cur }, 422);
+      if (!t.ticket.test) await addQuest(db, uid, res.quest);
+      if (o.rewarded && res.save) return json({ ...result, cleared: o.cleared, rewarded: true, granted: res.granted, save: res.save, campaign: cur.campaign, version: cur.version + 1 });
+      return json({ ...result, cleared: o.cleared, rewarded: false, granted: [], ...cur });
+    }
+    return json({ error: 'busy' }, 503);
+  }
+
+  if (body.action === 'tower-reset') {
+    // Admin test tool: only the admin's own account, never another player's.
+    if (!isAdmin) return json({ error: 'forbidden' }, 403);
+    const { error } = await db.rpc('tower_reset', { p_player: uid, p_rewards: body.rewards === true });
+    if (error) return json({ error: 'database' }, 500);
+    return json({ ok: true, cleared: 0 });
   }
 
   // ---------- Ranglisten-Ligen ----------

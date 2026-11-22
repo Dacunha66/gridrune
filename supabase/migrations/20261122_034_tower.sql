@@ -6,6 +6,14 @@
 alter table public.game_tickets drop constraint game_tickets_kind_check;
 alter table public.game_tickets add constraint game_tickets_kind_check check (kind in ('adventure', 'campaign', 'shop', 'league', 'tower'));
 
+
+-- Floors are admin documents (content_docs tower_floors/<id>).
+alter table public.content_docs drop constraint content_docs_collection_check;
+alter table public.content_docs add constraint content_docs_collection_check check (collection in (
+  'cards', 'settings', 'arenas', 'designs', 'campaign_worlds', 'campaign_missions', 'campaign_opponents', 'runes', 'raids', 'quests', 'avatars',
+  'puzzles', 'editions', 'tower_floors'
+));
+
 create table public.tower_progress (
   player_id uuid primary key references auth.users (id) on delete cascade,
   cleared integer not null default 0 check (cleared >= 0),
