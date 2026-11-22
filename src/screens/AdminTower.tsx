@@ -8,6 +8,8 @@ import { loadFloors, saveFloor } from '../game/towerApi';
 import { resetTowerRemote, towerStatusRemote } from '../game/adventureApi';
 import { LEVEL_LABEL, rewardText } from '../game/campaign';
 import { RewardPicker } from './AdminLogin';
+import { ArenaField } from './AdminCampaign';
+import { ARENAS } from '../game/arenas';
 
 export function TowerAdminView({ db, onToast, onTest }: { db: Db; onToast: (m: string) => void; onTest: (floorId?: string) => void }) {
   const [floors, setFloors] = useState<TowerFloor[] | null>(null);
@@ -38,6 +40,23 @@ export function TowerAdminView({ db, onToast, onTest }: { db: Db; onToast: (m: s
     }
   };
 
+  /** Publishes every draft floor of one section at once. */
+  const publishSection = async (section: string) => {
+    const list = (floors ?? []).filter((f) => f.section === section && f.status === 'draft');
+    if (!list.length || !window.confirm(`${list.length} Etagen von „${section}“ veröffentlichen? Danach sehen alle Spieler sie.`)) return;
+    setBusy(true);
+    try {
+      for (const f of list) await saveFloor(db, { ...f, status: 'active' });
+      onToast(`„${section}“ ist veröffentlicht.`);
+    } catch {
+      onToast('Veröffentlichen hat nicht geklappt.');
+    } finally {
+      setBusy(false);
+      reload();
+    }
+  };
+  const draftSections = [...new Set(floors.filter((f) => f.status === 'draft').map((f) => f.section))];
+
   const reset = async (rewards: boolean) => {
     const text = rewards
       ? 'Deinen eigenen Turm-Fortschritt UND die erhaltenen Etagen-Belohnungen zurücksetzen? Du kannst die Münzen danach noch einmal verdienen. Andere Spieler sind nicht betroffen.'
@@ -67,6 +86,11 @@ export function TowerAdminView({ db, onToast, onTest }: { db: Db; onToast: (m: s
       <section className="admin-card">
         <h3>Etagen ({floors.length})</h3>
         {floors.length === 0 && <p className="muted">Noch keine Etagen.</p>}
+        {draftSections.map((sec) => (
+          <div key={sec} className="admin-actions">
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void publishSection(sec)}>„{sec}“ veröffentlichen</button>
+          </div>
+        ))}
         <ul className="admin-tower-list">
           {floors.map((f) => (
             <li key={f.id} className={f.status === 'draft' ? 'draft' : ''}>
@@ -78,6 +102,8 @@ export function TowerAdminView({ db, onToast, onTest }: { db: Db; onToast: (m: s
                       {TOWER_DIFFICULTIES.map((d) => <option key={d} value={d}>{DIFFICULTY_LABEL[d]}</option>)}
                     </select>
                   </label>
+                  <ArenaField db={db} value={edit.arenaId} onChange={(arenaId) => setEdit({ ...edit, arenaId })}
+                    note="Jede Arena ist wählbar – auch ausgeschaltete; sie gilt dann nur auf dieser Etage. Neue Arenen legst du im Reiter „Arenen“ an." />
                   <div className="admin-login-day">
                     <b>Belohnung</b>
                     <RewardPicker reward={edit.reward ?? { type: 'coins', amount: 25 }} label={`Etage ${edit.number}`} onChange={(r) => setEdit({ ...edit, reward: r })} />
@@ -98,6 +124,7 @@ export function TowerAdminView({ db, onToast, onTest }: { db: Db; onToast: (m: s
                     <b>{f.name}</b> {f.status === 'draft' && <span className="pill">Entwurf</span>}
                     <span className="muted small">
                       {DIFFICULTY_LABEL[f.difficulty]} · {f.opponent.emoji} {f.opponent.name} (KI: {LEVEL_LABEL[f.opponent.level]}){f.opponent.rune ? ' · mit Rune' : ''}
+                      {' · '}{ARENAS.find((a) => a.id === f.arenaId)?.name ?? f.arenaId}
                       {' · '}{f.reward ? rewardText(f.reward) : 'keine Belohnung'}
                     </span>
                   </span>
