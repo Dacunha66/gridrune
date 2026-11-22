@@ -3008,3 +3008,62 @@ label.btn.disabled { opacity: .45; }
 .arena-sort-row.dragging > .admin-row { border-color: var(--glow); box-shadow: 0 0 14px var(--glow-soft), 0 8px 18px rgba(0, 0, 0, 0.5); transform: scale(1.02); }
 .arena-del { flex: none; }
 .arena-del.is-off { opacity: 0.35; }
+
+/* ---------- Turm der Prüfungen ---------- */
+.btn-tower .gi { color: #f0b46a; filter: drop-shadow(0 0 6px rgba(240, 180, 106, 0.6)); }
+.tower-guest { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 16px; }
+.tower-art { width: 96px; height: 96px; fill: none; stroke: var(--gold); stroke-width: 2; stroke-linejoin: round; filter: drop-shadow(0 0 8px var(--gold-faint)); }
+.tower-head { padding: 10px 14px; margin: 0 0 8px; border: 1px solid var(--gold-line); border-radius: var(--radius); background: linear-gradient(180deg, var(--panel2), var(--panel)); text-align: center; }
+.tower-section { margin: 0; font-family: var(--f-display); color: var(--gold-light); font-size: 15px; letter-spacing: 0.04em; }
+.tower-pos { margin: 4px 0 6px; font-size: 18px; }
+.tower-bar { height: 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--gold-faint); overflow: hidden; }
+.tower-bar > div { height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold-light)); transition: width 0.4s; }
+.tower-head .muted { margin: 4px 0 0; }
+.tower-list { padding-bottom: 12px; }
+.tower-floors { list-style: none; margin: 0 auto; padding: 0 0 0; max-width: 520px; display: flex; flex-direction: column; gap: 0; position: relative; }
+/* The tower's walls: a column the floors are stacked in. */
+.tower-floors::before { content: ''; position: absolute; left: 31px; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--gold-faint), var(--gold-line)); border-radius: 2px; }
+.tower-floors li { position: relative; padding: 4px 0; }
+.tower-floor { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 10px 12px; min-height: 60px; border-radius: var(--radius);
+  border: 1px solid var(--gold-faint); background: var(--panel); color: var(--text); font: inherit; cursor: pointer; }
+.tower-floor .tf-num { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 17px;
+  background: var(--bg2); border: 2px solid var(--gold-line); position: relative; z-index: 1; }
+.tower-floor .tf-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tower-floor .tf-name { font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
+.tower-floor .tf-name .pill { margin-left: 6px; font-size: 11px; }
+.tower-floor .tf-sub { font-size: 13px; color: var(--muted); }
+.tower-floor .tf-state { flex: none; font-size: 20px; }
+.tf-got { color: #86efac; }
+.tower-floor.st-done { border-color: rgba(134, 239, 172, 0.45); }
+.tower-floor.st-done .tf-num { background: #14532d; border-color: #4ade80; }
+.tower-floor.st-done .tf-state .gi { color: #4ade80; filter: none; }
+.tower-floor.st-current { border: 2px solid var(--glow); background: linear-gradient(90deg, rgba(69, 227, 207, 0.14), var(--panel)); box-shadow: 0 0 14px var(--glow-soft); }
+.tower-floor.st-current .tf-num { border-color: var(--glow); color: var(--glow); }
+.tower-floor.st-current .tf-state .gi { color: var(--glow); }
+.tower-floor.st-locked { opacity: 0.62; }
+.tower-floor.st-locked .tf-state .gi { color: var(--muted); filter: none; }
+.tower-floor.boss { background: linear-gradient(90deg, rgba(245, 158, 11, 0.22), var(--panel)); border-color: #f59e0b; }
+.tower-floor.boss .tf-num { border-color: #f59e0b; color: #fcd34d; background: #451a03; width: 46px; height: 46px; margin-left: -3px; }
+.tower-floor.boss .tf-name .gi { color: #fcd34d; }
+.tower-floor.boss.st-current { border-color: var(--glow); }
+.tower-floor.draft { border-style: dashed; }
+.tower-base { max-width: 520px; margin: 4px auto 0; text-align: center; font-family: var(--f-display); font-size: 13px; color: var(--muted); padding: 8px; border-top: 3px double var(--gold-line); }
+.tower-floor-name { margin: 0 0 4px; font-family: var(--f-display); color: var(--gold-light); }
+.tower-detail .brief-body > section { margin-top: 12px; }
+.tower-detail h2 { font-size: 15px; margin: 0 0 4px; }
+.tower-detail .tower-reward p, .tower-detail .tower-status p, .tower-detail .tower-deck p { margin: 0 0 6px; }
+.diff-pill { font-size: 12px; font-weight: 800; padding: 4px 9px; border-radius: 999px; background: #30296a; white-space: nowrap; }
+.diff-pill.diff-very_easy, .diff-pill.diff-easy { background: #14532d; }
+.diff-pill.diff-medium { background: #1e3a8a; }
+.diff-pill.diff-hard { background: #7f1d1d; }
+.diff-pill.diff-boss { background: linear-gradient(180deg, #f59e0b, #b45309); color: #1f1300; }
+.tower-result .result-body { text-align: center; }
+.admin-tower-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.admin-tower-list li { border: 1px solid var(--gold-faint); border-radius: var(--radius); padding: 8px; background: var(--bg2); }
+.admin-tower-list li.draft { border-style: dashed; }
+.admin-tower-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.admin-tower-row .tf-num { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; border: 2px solid var(--gold-line); }
+.admin-tower-main { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 2px; }
+.admin-tower-btns { display: flex; gap: 6px; }
+.admin-tower-edit { display: flex; flex-direction: column; gap: 8px; }
+.admin-tower-edit label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }

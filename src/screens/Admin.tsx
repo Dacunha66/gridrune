@@ -30,6 +30,7 @@ import { InboxAdminView } from './AdminInbox';
 import { LoginAdminView } from './AdminLogin';
 import { NightmareAdminView } from './AdminNightmare';
 import { LadderAdminView } from './AdminLadder';
+import { TowerAdminView } from './AdminTower';
 import { ErrorsAdminView } from './AdminErrors';
 import { StatsAdminView } from './AdminStats';
 import { Design, DesignState } from '../game/designs';
@@ -46,6 +47,8 @@ interface Props {
   onCampaignChange: (content: CampaignContent) => void;
   /** Plays a mission in test mode (drafts visible, nothing saved). */
   onTestCampaign: (missionId?: string) => void;
+  /** Opens the Turm der Prüfungen in test mode (optionally at one floor). */
+  onTestTower: (floorId?: string) => void;
   /** Raid test fight on this device (nothing stored). */
   onTestRaid: (config: RaidConfig, phase: number) => void;
   /** Campaign content in use (for rune unlock conditions). */
@@ -53,8 +56,8 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'runes' | 'raids' | 'quests' | 'events' | 'avatars' | 'shop' | 'community' | 'inbox' | 'login' | 'stats' | 'errors' | 'cardstyle';
-const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', runes: 'Runen', raids: 'Raids', quests: 'Erfolge', events: 'Puzzle-Events', avatars: 'Avatare', shop: 'Shop', community: 'Community', inbox: 'Postfach', login: 'Login-Kalender', stats: 'Statistik', errors: 'Fehler', cardstyle: 'Kartendesign' };
+type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs' | 'campaign' | 'tower' | 'runes' | 'raids' | 'quests' | 'events' | 'avatars' | 'shop' | 'community' | 'inbox' | 'login' | 'stats' | 'errors' | 'cardstyle';
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer', campaign: 'Kampagnen-Editor', tower: 'Turm', runes: 'Runen', raids: 'Raids', quests: 'Erfolge', events: 'Puzzle-Events', avatars: 'Avatare', shop: 'Shop', community: 'Community', inbox: 'Postfach', login: 'Login-Kalender', stats: 'Statistik', errors: 'Fehler', cardstyle: 'Kartendesign' };
 /** Tab to come back to (e.g. after testing a mission). */
 let lastTab: Tab = 'cards';
 
@@ -67,7 +70,7 @@ const STATUS_HINT: Record<CardStatus, string> = {
   disabled: 'Vorübergehend aus dem Spiel genommen – nicht gelöscht. Spieler behalten sie; jederzeit wieder aktivierbar.',
 };
 
-export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCampaignChange, onTestCampaign, onTestRaid, campaign, onBack }: Props) {
+export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCampaignChange, onTestCampaign, onTestTower, onTestRaid, campaign, onBack }: Props) {
   const [access, setAccess] = useState<'checking' | 'denied' | 'ok'>('checking');
   const [db, setDb] = useState<Db | null>(null);
   const [assets, setAssets] = useState<Assets | null>(null);
@@ -222,6 +225,7 @@ export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onCa
       {tab === 'quests' && records && records.length > 0 && <QuestsView db={db!} onToast={setToast} />}
       {tab === 'avatars' && records && records.length > 0 && <AvatarsView db={db!} assets={assets} onToast={setToast} />}
       {tab === 'events' && records && records.length > 0 && <EventsAdminView db={db!} assets={assets} onToast={setToast} />}
+      {tab === 'tower' && db && <TowerAdminView db={db} onToast={setToast} onTest={onTestTower} />}
       {tab === 'community' && db && <CommunityAdminView db={db} onToast={setToast} />}
       {tab === 'inbox' && records && records.length > 0 && <InboxAdminView onToast={setToast} />}
       {tab === 'login' && db && <LoginAdminView db={db} onToast={setToast} />}

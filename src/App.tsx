@@ -51,6 +51,7 @@ import { GameMode, RUNES, RuneDef, availableRunes, setRunes } from './game/runes
 const Admin = lazy(() => import('./screens/Admin').then((m) => ({ default: m.Admin })));
 import { League } from './screens/League';
 import { Campaign } from './screens/Campaign';
+import { Tower } from './screens/Tower';
 import { runeUnlocked } from './game/campaignProgress';
 import { setDevTools } from './game/cardStyle';
 import { SymbolTips } from './components/SymbolTips';
@@ -65,7 +66,7 @@ import { QuestItem, claimable, questDay, rewardText } from './game/quests';
 import { NextStep } from './screens/Menu';
 import { nextMission } from './game/campaignProgress';
 import {
-  claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, loginStatusRemote, tutorialFinishRemote, readPending, startAdventure, writePending,
+  claimCampaignRewards, finishAdventureRemote, finishLeagueRemote, finishMissionRemote, finishTowerRemote, loginStatusRemote, tutorialFinishRemote, readPending, startAdventure, writePending,
 } from './game/adventureApi';
 import { grantedText } from './game/campaignRewards';
 import { AdventureLog, AdventureTicket, handPicks } from './game/verify';
@@ -74,13 +75,17 @@ import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'tutorial' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' | 'privacy' | 'inbox' }
+  | { name: 'menu' | 'tutorial' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' | 'privacy' | 'inbox' }
   /** focus = open this card's details right away. */
   | { name: 'collection'; focus?: string }
   /** Einfaches Spiel gegen Spieler: random = look for a random opponent right away. */
   | { name: 'online'; random?: boolean }
   /** tab = open on this tab (the account page opens the avatars under "Erfolge"). */
   | { name: 'quests'; tab?: 'daily' | 'weekly' | 'achievements' }
+  /** back = where "Zurück" leads (e.g. the tower, after "Deck ändern"); default the menu. */
+  | { name: 'deck'; back?: Screen }
+  /** Turm der Prüfungen; test = admin test mode (drafts, every floor open, nothing stored); floorId = open this floor. */
+  | { name: 'tower'; test?: boolean; floorId?: string }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
   | { name: 'campaign'; preview?: boolean; missionId?: string }
   /** Admin: raid test fight with the raid as it is in the editor (nothing stored). */
@@ -145,7 +150,7 @@ export function App() {
   const [features, setFeatures] = useState(SETTINGS.features);
   const applyRecords = useCallback((records: CardRecord[]) => {
     lastRecords.current = records;
-    if (screenRef.current === 'runner' || screenRef.current === 'battle' || screenRef.current === 'league' || screenRef.current === 'campaign' || screenRef.current === 'online' || screenRef.current === 'draft' || screenRef.current === 'draftPractice') {
+    if (screenRef.current === 'runner' || screenRef.current === 'battle' || screenRef.current === 'league' || screenRef.current === 'campaign' || screenRef.current === 'tower' || screenRef.current === 'online' || screenRef.current === 'draft' || screenRef.current === 'draftPractice') {
       pendingRecords.current = records;
       return;
     }
@@ -450,6 +455,11 @@ export function App() {
             if (r.kind === 'offline') break;
             if (r.cloud) cloud.adoptServer(r.cloud);
             if (r.kind === 'paid' && r.won) message = () => `Rangliste nachträglich gewertet: ${r.reward.newCard ? `neue Karte „${getCard(r.reward.newCard).name}“` : `🪙 ${r.reward.coins}`}.`;
+          } else if (p.kind === 'tower') {
+            const r = await finishTowerRemote(p.ticketId, p.log);
+            if (r.kind === 'offline') break;
+            if (r.cloud) cloud.adoptServer(r.cloud);
+            if (r.kind === 'paid' && r.won) message = () => `Turm-Kampf nachträglich gewertet${r.granted.length ? ` – ${grantedText(r.granted)}` : ''}.`;
           } else if (p.kind === 'mission') {
             const r = await finishMissionRemote(p.ticketId, p.log);
             if (r.kind === 'offline') break;
@@ -553,6 +563,7 @@ export function App() {
           onOnline={cloud.uid && cloud.phase === 'ready' ? (start) => setScreen({ name: 'online', random: start === 'random' }) : undefined}
           onDraft={() => setScreen({ name: cloud.uid && cloud.phase === 'ready' ? 'draft' : 'draftPractice' })}
           onRaid={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'raid' }) : undefined}
+          onTower={() => setScreen({ name: 'tower' })}
           onQuests={account ? () => setScreen({ name: 'quests' }) : undefined}
           questsReady={questsReady}
           shopReady={shopReady}
@@ -566,7 +577,7 @@ export function App() {
           onEvents={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'events' }) : undefined}
           onCommunity={() => setScreen({ name: 'community' })}
           inbox={cloud.uid ? inboxCount : null} onInbox={() => setScreen({ name: 'inbox' })}
-          onNavigate={(name) => setScreen(name === 'campaign' ? { name } : name === 'collection' ? { name } : { name })}
+          onNavigate={(name) => setScreen(name === 'campaign' ? { name } : name === 'collection' ? { name } : name === 'deck' ? { name } : { name })}
           runes={runesOn}
           equippedRune={equippedRune}
           onToggleReducedMotion={() =>
@@ -591,7 +602,7 @@ export function App() {
           onInbox={() => setScreen({ name: 'inbox' })} onNewCards={(c) => setNewCards((x) => [...x, ...c])} />
       )}
       {screen.name === 'deck' && (
-        <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={toMenu}
+        <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={screen.back ? () => setScreen(screen.back!) : toMenu}
           runes={runesOn ? {
             owned: ownedRunes, equipped: equippedRune, lockText: runeLockText,
             onEquip: (id) => setSave((s) => ({ ...s, runes: { ...s.runes, equipped: id } })),
@@ -695,6 +706,7 @@ export function App() {
           onDesignsChange={applyDesigns}
           onCampaignChange={applyCampaign}
           onTestCampaign={(missionId) => setScreen({ name: 'campaign', preview: true, missionId })}
+          onTestTower={(floorId) => setScreen({ name: 'tower', test: true, floorId })}
           onTestRaid={(config, phase) => setScreen({ name: 'raidTest', config, phase })}
           campaign={campaign}
           onBack={toMenu}
@@ -717,6 +729,23 @@ export function App() {
           runesOn={runesOn}
           account={cloud.uid && cloud.phase === 'ready' ? { uid: cloud.uid, adopt: cloud.adoptServer } : null}
           onExit={screen.preview ? () => setScreen({ name: 'admin' }) : toMenu}
+        />
+      )}
+      {screen.name === 'tower' && (
+        <Tower
+          key={`${screen.test ? 'test' : 'play'}-${screen.floorId ?? ''}`}
+          deck={repairDeck(save.deck, save.unlocked, CARDS).deck}
+          unlocked={save.unlocked}
+          reducedMotion={reducedMotion}
+          playerRune={duelRune('campaign')}
+          runesOn={runesOn}
+          account={cloud.uid && cloud.phase === 'ready' ? { uid: cloud.uid, adopt: cloud.adoptServer } : null}
+          signedIn={account?.kind === 'signedIn'}
+          test={screen.test && admin}
+          startFloorId={screen.floorId}
+          onDeck={() => setScreen({ name: 'deck', back: { name: 'tower', test: screen.test } })}
+          onAccount={() => setScreen({ name: 'account' })}
+          onExit={screen.test ? () => setScreen({ name: 'admin' }) : toMenu}
         />
       )}
       {screen.name === 'runner' && (

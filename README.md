@@ -138,6 +138,16 @@ Die Server-Funktionen (`supabase/functions/*`) laden die Spielregeln als eine ge
 4. `npm test` – `tests/engineBundle.test.ts` prüft: genau eine Engine, alle Funktionen auf demselben Stand, jede importierte Funktion vorhanden, die Regeln laden echte Inhalte ohne Absturz (`tests/fixtures/content-sample.json`).
 5. Committen, pushen, dann **jede** gelistete Funktion veröffentlichen und kurz prüfen, dass sie startet (Antwort `{"error":"not_signed_in"}` ohne Anmeldung).
 
+## Turm der Prüfungen
+
+Ein dauerhafter Einzelspieler-Modus (Menü „Spielen“ → „Turm der Prüfungen“, nur mit Konto). Die Etagen sind Inhalte
+(`content_docs` Sammlung `tower_floors`, Admin-Reiter „Turm“); Phase 1: 10 Etagen „Die Erwachenden Hallen“
+(Kopie: `supabase/content/turm-t001-t010.json`). Jede Etage ist ein Duell mit dem eigenen Deck. Die Server-Funktion
+`game` (`tower-start`, `tower-finish`) spielt den Kampf nach; erst dann setzt `tower_finish` den Fortschritt
+(`tower_progress`, keine Etage wird übersprungen) und zahlt die Belohnung genau einmal pro Konto und Etage
+(`tower_rewards`). Admin: Testmodus (alles offen, nichts gespeichert) und eigenen Fortschritt zurücksetzen
+(`tower-reset`, nur das eigene Konto). Migration 034.
+
 ## Layout-Prüfung für kleine Handys
 
 `node scripts/check-layout.cjs [Adresse] [Breite] [Höhe]` öffnet (bei laufendem `npx vite --port 4196`) die wichtigsten Bildschirme als Gast in iPhone-SE-Größe (375 × 667) und meldet Knöpfe, die man nicht erreichen kann, und Seiten, die breiter als der Bildschirm sind. Für sehr kleine Geräte: `… 320 480`.

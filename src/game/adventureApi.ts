@@ -219,12 +219,56 @@ export async function ladderStatusRemote(): Promise<{ ladder: LadderState; confi
   return { ladder: parseLadderState(r.data.ladder, now), config: parseLadderConfig(r.data.config), forfeited: Number(r.data.forfeited) || 0 };
 }
 
+// ---------- Turm der Prüfungen (server function "game") ----------
+
+export type TowerTicket = MissionTicket & { floorId: string; number: number; test: boolean };
+export type TowerStart = { kind: 'ticket'; ticket: TowerTicket } | { kind: 'offline' } | { kind: 'error'; error: string };
+export type TowerFinish =
+  | { kind: 'paid'; outcome: Outcome; score: Record<Side, number>; won: boolean; cleared: number; rewarded: boolean; granted: GrantedReward[]; cloud: CloudSave | null }
+  | { kind: 'rejected'; error: string; cloud: CloudSave | null }
+  | { kind: 'offline' };
+
+/** The player's tower: highest cleared floor and the floors whose reward was paid. null = no connection. */
+export async function towerStatusRemote(): Promise<{ cleared: number; rewarded: string[] } | null> {
+  const r = await call({ action: 'tower-status' }, 'game');
+  if (!r?.data || typeof r.data.cleared !== 'number') return null;
+  return { cleared: r.data.cleared, rewarded: Array.isArray(r.data.rewarded) ? (r.data.rewarded as string[]) : [] };
+}
+
+export async function startTowerRemote(floorId: string, deck: string[], rune: string | null, test: boolean): Promise<TowerStart> {
+  const r = await call({ action: 'tower-start', floorId, deck, rune, test }, 'game');
+  if (!r || !r.data || r.status >= 500) return { kind: 'offline' };
+  if (r.data.ticket) return { kind: 'ticket', ticket: r.data.ticket as TowerTicket };
+  return { kind: 'error', error: String(r.data.error ?? 'unknown') };
+}
+
+export async function finishTowerRemote(ticketId: string, log: MissionLog): Promise<TowerFinish> {
+  const r = await call({ action: 'tower-finish', ticketId, log }, 'game');
+  if (!r || !r.data || r.status >= 500) return { kind: 'offline' };
+  const d = r.data;
+  const cloud = cloudOf(d);
+  if (d.ok === true) {
+    return {
+      kind: 'paid', outcome: d.outcome as Outcome, score: d.score as Record<Side, number>, won: !!d.won, cleared: Number(d.cleared) || 0,
+      rewarded: d.rewarded === true, granted: (d.granted as GrantedReward[]) ?? [], cloud,
+    };
+  }
+  return { kind: 'rejected', error: String(d.error ?? 'unknown'), cloud };
+}
+
+/** Admin test: resets the own tower progress (rewards = also the paid floor rewards, so they can be earned again). */
+export async function resetTowerRemote(rewards: boolean): Promise<boolean> {
+  const r = await call({ action: 'tower-reset', rewards }, 'game');
+  return r?.data?.ok === true;
+}
+
 // ---------- Results waiting for a connection (per account, on this device) ----------
 
 export type PendingResult =
   | { kind?: 'adventure'; ticketId: string; log: AdventureLog; at: string }
   | { kind: 'mission'; ticketId: string; log: MissionLog; at: string }
-  | { kind: 'league'; ticketId: string; log: LeagueLog; at: string };
+  | { kind: 'league'; ticketId: string; log: LeagueLog; at: string }
+  | { kind: 'tower'; ticketId: string; log: MissionLog; at: string };
 
 const pendingKey = (uid: string) => `gridrune/pending-results/${uid}`;
 

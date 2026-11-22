@@ -243,7 +243,7 @@ export function TerrainMini({ cells }: { cells: readonly Terrain[] }) {
   );
 }
 
-function OpponentFace({ o, className = '' }: { o: Opponent; className?: string }) {
+export function OpponentFace({ o, className = '' }: { o: Opponent; className?: string }) {
   return (
     <span className={`opp-face rank-${o.rank} ${className}`} aria-hidden="true">
       {o.avatar ? <CampaignImage img={o.avatar} /> : <span className="opp-emoji">{o.emoji}</span>}
@@ -563,7 +563,7 @@ function BriefRewards({ mission, world, content, progress, runesOn, preview }: {
 
 // ---------- Boss ----------
 
-function BossIntro({ opponent, mission, reducedMotion, onGo, onBack }: { opponent: Opponent; mission: Mission; reducedMotion: boolean; onGo: () => void; onBack: () => void }) {
+export function BossIntro({ opponent, mission, reducedMotion, onGo, onBack }: { opponent: Opponent; mission: Mission; reducedMotion: boolean; onGo: () => void; onBack: () => void }) {
   return (
     <main className={`screen boss-intro rank-${opponent.rank} ${reducedMotion ? 'still' : ''}`}>
       {opponent.background && <CampaignImage img={opponent.background} className="stage-bg" />}
@@ -583,7 +583,7 @@ function BossIntro({ opponent, mission, reducedMotion, onGo, onBack }: { opponen
   );
 }
 
-function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, playerRune, runesOn, ticket, onEnd, onQuit }: {
+export function MissionBattle({ mission, opponent, picks, unlocked, reducedMotion, playerRune, runesOn, ticket, onEnd, onQuit }: {
   mission: Mission; opponent: Opponent; picks: Pick[]; unlocked: string[]; reducedMotion: boolean; playerRune: string | null; runesOn: boolean;
   ticket?: MissionTicket;
   onEnd: (outcome: Outcome, score: { player: number; cpu: number }, first: unknown, record: DuelRecord) => void; onQuit: () => void;

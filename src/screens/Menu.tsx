@@ -47,6 +47,8 @@ interface Props {
   onDraft?: () => void;
   /** Signed in: the Weltboss-Raid. */
   onRaid?: () => void;
+  /** Turm der Prüfungen (guests see a sign-in hint there). */
+  onTower?: () => void;
   /** The "Spielen" submenu is open (kept by the app, so finishing a game returns there). */
   playOpen?: boolean;
   onPlayOpen?: (open: boolean) => void;
@@ -145,7 +147,7 @@ export function MenuTop({ coins, stones = null, account = null, avatar = null, o
   );
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, playOpen = false, onPlayOpen, questsReady = 0, shopReady = false, chatNew = 0, onQuests, nextSteps = [], eventCard = null, onEvents, onCommunity, inbox = null, onInbox, avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, onTower, playOpen = false, onPlayOpen, questsReady = 0, shopReady = false, chatNew = 0, onQuests, nextSteps = [], eventCard = null, onEvents, onCommunity, inbox = null, onInbox, avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
   const equipped = findRune(equippedRune);
   const [chooseLevel, setChooseLevel] = useState(false);
   // The open tab is kept by the app, so coming back from Shop or Erfolge opens the tab chosen in the bar.
@@ -198,6 +200,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         </div>
       )}
       <button type="button" className="btn btn-campaign" onClick={() => onNavigate('campaign')}><GameIcon name="map" /> Kampagne <span className="btn-sub">Welten und Bosse</span></button>
+      {onTower && <button type="button" className="btn btn-tower" onClick={onTower}><GameIcon name="tower" /> Turm der Prüfungen</button>}
       <button type="button" className="btn btn-league" onClick={() => onNavigate('league')}><GameIcon name="trophy" /> Rangliste <span className="btn-sub">Ligen · Sieg = neue Karte</span></button>
       {onDraft && <button type="button" className="btn btn-draft" onClick={onDraft}><GameIcon name="draft" /> Draft <span className="btn-sub">gleicher Pool für beide</span></button>}
       {onRaid && <button type="button" className="btn btn-raid" onClick={onRaid}><GameIcon name="raid" /> Raid <span className="btn-sub">alle gegen einen Weltboss</span></button>}
