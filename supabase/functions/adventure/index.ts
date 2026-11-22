@@ -4,7 +4,7 @@
 // A finished ticket gives the same answer again (safe to retry after a lost connection), never a second reward.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 // The game's rules, bundled by scripts/build-engine.mjs (public/server/engine-<hash>.js), loaded from this exact commit.
-import { finishAdventure, loadContent, prepareAdventure, questDelta, questPeriod } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@63d151a65b468251ea86a8bedd2f88b8d3e49787/public/server/engine-76d1f55d82a9.js';
+import { finishAdventure, loadContent, prepareAdventure, questDelta, questPeriod } from 'https://cdn.jsdelivr.net/gh/Dacunha66/gridrune@539798f6b27dc7dd1bc9d497261d95d96605f20c/public/server/engine-003a5fa9ef2b.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
