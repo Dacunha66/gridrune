@@ -352,7 +352,7 @@ export interface MissionLog {
 }
 
 export type MissionCheck =
-  | { ok: true; outcome: Outcome; score: Record<Side, number>; stats: DuelStats }
+  | { ok: true; outcome: Outcome; score: Record<Side, number>; stats: DuelStats; played: PlayedDuel }
   | { ok: false; error: string };
 
 export function missionRngs(seed: string) {
@@ -396,5 +396,5 @@ export function checkMission(ticket: MissionTicket, log: MissionLog, mission: Mi
   }
   const duel = replayDuel(start, log.duel, rngs, { level: opponent.level, prefer: opponent.prefer });
   if (!duel.ok) return duel;
-  return { ok: true, outcome: outcome(duel.end), score: score(duel.end), stats: duelStats(duel.begin, log.duel.moves, stumbles) };
+  return { ok: true, outcome: outcome(duel.end), score: score(duel.end), stats: duelStats(duel.begin, log.duel.moves, stumbles), played: { begin: duel.begin, moves: log.duel.moves } };
 }

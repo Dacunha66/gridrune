@@ -213,8 +213,9 @@ export function raidQuestEvent(check: Extract<RaidCheck, { ok: true }>): QuestEv
   return { games: 1, raidAttacks: 1, wins: check.outcome === 'win' ? 1 : 0, ...duelTally([check.duel]) };
 }
 
-export function onlineQuestEvent(won: boolean): QuestEvent {
-  return { games: 1, onlineGames: 1, wins: won ? 1 : 0, onlineWins: won ? 1 : 0 };
+/** An online duel for the quests; `runeUsed` = this player used their rune in it (read from the final duel state). */
+export function onlineQuestEvent(won: boolean, runeUsed = false): QuestEvent {
+  return { games: 1, onlineGames: 1, wins: won ? 1 : 0, onlineWins: won ? 1 : 0, runesUsed: runeUsed ? 1 : 0 };
 }
 
 /** The player's quest board: what is active, how far, what is ready to collect. */
@@ -452,7 +453,8 @@ export function finishMission(ticket: StoredMissionTicket, log: MissionLog, save
     save: paid.save, campaign: paid.progress, granted: paid.granted,
     quest: {
       games: 1, missions: 1, wins: check.outcome === 'win' ? 1 : 0, stars: result.newStars.length,
-      captures: check.stats.captures, effects: check.stats.effects,
+      // Captures, effects, runes used, terrain bonus … exactly like the other modes count them.
+      ...duelTally([check.played]),
     },
   };
 }
@@ -533,7 +535,7 @@ export function finishTower(ticket: StoredTowerTicket, log: MissionLog, saveRaw:
   }
   return {
     ok: true, outcome: check.outcome, score: check.score, won, save, granted,
-    quest: { games: 1, wins: won ? 1 : 0, captures: check.stats.captures, effects: check.stats.effects },
+    quest: { games: 1, wins: won ? 1 : 0, ...duelTally([check.played]) },
   };
 }
 

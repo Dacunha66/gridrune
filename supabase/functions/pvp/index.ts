@@ -226,7 +226,9 @@ Deno.serve(async (req) => {
     if (error) throw error;
     // Erfolge: a played duel counts for both, a win for the winner (not for matches left right at the start).
     if (done && (reason === 'normal' || moves >= PVP_MIN_MOVES_FOR_COINS)) {
-      for (const s of ['a', 'b'] as Seat[]) if (m[`player_${s}`]) await addQuest(db, m[`player_${s}`], onlineQuestEvent(winner === s));
+      // deno-lint-ignore no-explicit-any
+      const runeUsed = (s: Seat) => !!(state as any)?.runes?.[seatSide(s)]?.used;
+      for (const s of ['a', 'b'] as Seat[]) if (m[`player_${s}`]) await addQuest(db, m[`player_${s}`], onlineQuestEvent(winner === s, runeUsed(s)));
     }
     if (done) await ladderFinish(m, winner, reason, moves);
     if (done && m.kind === 'ranked' && winner !== 'draw' && (reason === 'normal' || moves >= PVP_MIN_MOVES_FOR_COINS)) {

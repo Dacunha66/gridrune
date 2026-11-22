@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MissionLog, missionDeckPicks, missionRngs, missionStart } from '../src/game/verify';
-import { finishTower, prepareTower, StoredTowerTicket } from '../src/server/engine';
+import { finishTower, onlineQuestEvent, prepareTower, StoredTowerTicket } from '../src/server/engine';
 import { STARTER_DECK } from '../src/game/cards';
 import { defaultSave } from '../src/game/storage';
 import { emptyProgress } from '../src/game/campaignProgress';
@@ -84,6 +84,15 @@ describe('Turm der Prüfungen über den Server', () => {
       }
     }
     expect(wins).toBeGreaterThan(0);
+  });
+
+  it('Erfolge: Turm-Kämpfe und Online-Duelle zählen auch Rune-Einsätze', () => {
+    const t = ticketOf(prepareTower(defaultSave(), emptyProgress(), 0, 't001', STARTER_DECK, null, false, false), 'q1');
+    const r = finishTower(t, play(t, floor(1), 1), defaultSave());
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(typeof r.quest.runesUsed).toBe('number');
+    expect(onlineQuestEvent(true, true).runesUsed).toBe(1);
+    expect(onlineQuestEvent(false).runesUsed).toBe(0);
   });
 
   it('ein gefälschtes Protokoll wird abgelehnt', () => {
