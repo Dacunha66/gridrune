@@ -1556,18 +1556,19 @@ label.btn.disabled { opacity: .45; }
 .btn-reward { background: linear-gradient(180deg, #ffcc33, #f59e0b); color: var(--accent-text); }
 
 .reveal-overlay {
-  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px;
+  --ring: #22d3ee; --glow: rgba(34, 211, 238, 0.55);
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; overflow: hidden;
   background: radial-gradient(circle at 50% 40%, rgba(40, 30, 90, 0.92), rgba(5, 3, 15, 0.96)); animation: reveal-fade 0.35s ease-out;
 }
-.reveal-stage {
-  --ring: #22d3ee; --glow: rgba(34, 211, 238, 0.55);
-  position: relative; width: min(100%, 380px); max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+.reveal-overlay .reveal-stage {
+  position: relative; z-index: 1; width: min(100%, 380px); max-height: 100%; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
 }
-.reveal-stage.rarity-epic { --ring: #c084fc; --glow: rgba(192, 132, 252, 0.6); }
-.reveal-stage.rarity-legendary { --ring: #fbbf24; --glow: rgba(251, 191, 36, 0.65); }
-.reveal-stage.rarity-mythic { --ring: #f472b6; --glow: rgba(244, 114, 182, 0.65); }
+.reveal-overlay .reveal-stage::-webkit-scrollbar { display: none; }
+.reveal-overlay.rarity-epic { --ring: #c084fc; --glow: rgba(192, 132, 252, 0.6); }
+.reveal-overlay.rarity-legendary { --ring: #fbbf24; --glow: rgba(251, 191, 36, 0.65); }
+.reveal-overlay.rarity-mythic { --ring: #f472b6; --glow: rgba(244, 114, 182, 0.65); }
 .reveal-rays {
-  position: absolute; top: 40px; left: 50%; width: 520px; height: 520px; margin-left: -260px; z-index: -1; pointer-events: none; border-radius: 50%;
+  position: absolute; top: 50%; left: 50%; width: 520px; height: 520px; margin: -330px 0 0 -260px; z-index: 0; pointer-events: none; border-radius: 50%;
   background: repeating-conic-gradient(from 0deg, var(--glow) 0deg 9deg, transparent 9deg 24deg);
   -webkit-mask-image: radial-gradient(circle, #000 0, #000 22%, transparent 62%); mask-image: radial-gradient(circle, #000 0, #000 22%, transparent 62%);
   animation: reveal-spin 14s linear infinite, reveal-fade 0.8s ease-out;

@@ -57,9 +57,10 @@ export function RewardReveal({ items, reducedMotion, guest = false, onClose }: {
   const rarity = item.kind === 'rune' ? item.rune.rarity : item.kind === 'card' || item.kind === 'edition' ? getCard(item.cardId).rarity : 'rare';
   const title = item.kind === 'rune' ? 'Neue Rune freigespielt!' : item.kind === 'card' ? 'Neue Karte!' : item.kind === 'edition' ? 'Neue Karten-Edition!' : item.kind === 'coins' ? 'Münzen erhalten!' : item.kind === 'stones' ? 'Runensteine erhalten!' : 'Belohnung freigeschaltet!';
   return (
-    <div className={`reveal-overlay ${reducedMotion ? 'still' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
-      <div key={i} className={`reveal-stage rarity-${rarity}`}>
-        <div className="reveal-rays" aria-hidden="true" />
+    <div className={`reveal-overlay rarity-${rarity} ${reducedMotion ? 'still' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+      {/* The rays sit behind the box, not inside it: inside they made the box scrollable (scroll bars). */}
+      <div key={`rays-${i}`} className="reveal-rays" aria-hidden="true" />
+      <div key={i} className="reveal-stage">
         <p className="reveal-title">{title}</p>
         {items.length > 1 && <p className="reveal-count">{i + 1} / {items.length}</p>}
 
