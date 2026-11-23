@@ -3068,3 +3068,6 @@ label.btn.disabled { opacity: .45; }
 .admin-tower-btns { display: flex; gap: 6px; }
 .admin-tower-edit { display: flex; flex-direction: column; gap: 8px; }
 .admin-tower-edit label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+/* Mythic: the small gem before the name in rainbow colours (like the mythic frame), not pink. */
+.card.cs-klar.rarity-mythic .kl-gem { background: var(--rainbow); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 5px rgba(255, 255, 255, 0.7); }
+.rarity-dot.r-mythic { background: var(--rainbow); }
