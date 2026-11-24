@@ -1167,17 +1167,17 @@ label.btn.disabled { opacity: .45; }
 .reduced-motion .cell.element-here { animation: none; }
 
 /* Runenfeld (Magier) and Schlachtfeld (Krieger) */
-.cell.terrain-runen { --terrain: #38bdf8; background: #102a43; }
+.cell.terrain-runen { --terrain: #fbbf24; background: #3a2c08; }
 .cell.terrain-schlacht { --terrain: #f43f5e; background: #3b1219; }
-.terrain-chip.terrain-runen { --terrain: #38bdf8; }
+.terrain-chip.terrain-runen { --terrain: #fbbf24; }
 .terrain-chip.terrain-schlacht { --terrain: #f43f5e; }
-.mini-cell.terrain-runen { background: #38bdf8; }
+.mini-cell.terrain-runen { background: #fbbf24; }
 .mini-cell.terrain-schlacht { background: #f43f5e; }
-.board.has-art .cell.terrain-runen { background: rgb(16 42 67 / max(0.35, var(--cell-alpha, 1))); }
+.board.has-art .cell.terrain-runen { background: rgb(58 44 8 / max(0.35, var(--cell-alpha, 1))); }
 .board.has-art .cell.terrain-schlacht { background: rgb(59 18 25 / max(0.35, var(--cell-alpha, 1))); }
-.terrain-mini .tm-runen { background: #0c4a6e; }
+.terrain-mini .tm-runen { background: #92400e; }
 .terrain-mini .tm-schlacht { background: #881337; }
-.cell.terrain-runen .terrain-icon { font-family: 'Cinzel', serif; font-weight: 700; color: #7dd3fc; }
+.cell.terrain-runen .terrain-icon { font-family: 'Cinzel', serif; font-weight: 700; color: #fcd34d; text-shadow: 0 0 8px rgba(251, 191, 36, 0.7); }
 
 /* ---------- Kartendesign 2.0: shared parts (value plaques, class shield, ability medallion, name) ---------- */
 .card .cs-frame {
@@ -1759,7 +1759,7 @@ label.btn.disabled { opacity: .45; }
 .board:not(.has-art) .cell.terrain-lava { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #6b3216; }
 .board:not(.has-art) .cell.terrain-eis { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #26506f; }
 .board:not(.has-art) .cell.terrain-schatten { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #3d2a63; }
-.board:not(.has-art) .cell.terrain-runen { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #1d4566; }
+.board:not(.has-art) .cell.terrain-runen { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #5a4310; }
 .board:not(.has-art) .cell.terrain-schlacht { background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.18)), #5c2029; }
 .board:not(.has-art) .cell.rock { background: #222b40; }
 .board:not(.has-art) .cell.droppable { background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.1)), #24506a; box-shadow: inset 0 0 0 2px var(--glow), 0 0 14px var(--glow-soft); }
