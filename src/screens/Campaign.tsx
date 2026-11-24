@@ -243,10 +243,18 @@ export function TerrainMini({ cells }: { cells: readonly Terrain[] }) {
   );
 }
 
-export function OpponentFace({ o, className = '' }: { o: Opponent; className?: string }) {
+/** The picture of a game card as an opponent's face (Turm der Prüfungen: the opponents are cards of the game). */
+export function CardFace({ cardId, big = false }: { cardId: string; big?: boolean }) {
+  const c = getCard(cardId);
+  const src = big ? c.image ?? c.thumb : c.thumb ?? c.image;
+  return src ? <img className="card-face" src={src} alt="" draggable={false} /> : <span className={big ? 'boss-emoji' : 'opp-emoji'}>{c.art}</span>;
+}
+
+/** `card`: show this game card's picture (an uploaded avatar still wins). */
+export function OpponentFace({ o, className = '', card }: { o: Opponent; className?: string; card?: string }) {
   return (
     <span className={`opp-face rank-${o.rank} ${className}`} aria-hidden="true">
-      {o.avatar ? <CampaignImage img={o.avatar} /> : <span className="opp-emoji">{o.emoji}</span>}
+      {o.avatar ? <CampaignImage img={o.avatar} /> : card ? <CardFace cardId={card} /> : <span className="opp-emoji">{o.emoji}</span>}
     </span>
   );
 }
@@ -563,14 +571,16 @@ function BriefRewards({ mission, world, content, progress, runesOn, preview }: {
 
 // ---------- Boss ----------
 
-export function BossIntro({ opponent, mission, reducedMotion, onGo, onBack }: { opponent: Opponent; mission: Mission; reducedMotion: boolean; onGo: () => void; onBack: () => void }) {
+export function BossIntro({ opponent, mission, reducedMotion, onGo, onBack, card }: {
+  opponent: Opponent; mission: Mission; reducedMotion: boolean; onGo: () => void; onBack: () => void; card?: string;
+}) {
   return (
     <main className={`screen boss-intro rank-${opponent.rank} ${reducedMotion ? 'still' : ''}`}>
       {opponent.background && <CampaignImage img={opponent.background} className="stage-bg" />}
       <div className="boss-stage">
         <p className="boss-kicker">{mission.kind === 'boss' ? 'Endboss' : RANK_LABEL[opponent.rank]}</p>
         <div className="boss-portrait">
-          {opponent.portrait ? <CampaignImage img={opponent.portrait} /> : <span className="boss-emoji" aria-hidden="true">{opponent.emoji}</span>}
+          {opponent.portrait ? <CampaignImage img={opponent.portrait} /> : card ? <CardFace cardId={card} big /> : <span className="boss-emoji" aria-hidden="true">{opponent.emoji}</span>}
         </div>
         <h1 className="boss-name">{opponent.name}</h1>
         <p className="boss-text">{opponent.intro}</p>

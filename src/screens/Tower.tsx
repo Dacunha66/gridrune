@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from './Header';
 import { DuelRecord } from './Battle';
-import { BossIntro, MissionBattle, OpponentFace, TerrainMini } from './Campaign';
+import { BossIntro, CardFace, MissionBattle, OpponentFace, TerrainMini } from './Campaign';
 import { GameIcon } from '../components/GameIcon';
 import { RewardIcon } from '../components/Coin';
 import { ResultIcon } from '../components/ResultIcon';
@@ -170,7 +170,7 @@ export function Tower({ deck, unlocked, reducedMotion, playerRune, runesOn, acco
   }
   const mission = floorMission(floor);
   if (view.k === 'intro') {
-    return <BossIntro opponent={floor.opponent} mission={mission} reducedMotion={reducedMotion} onGo={() => void begin()} onBack={() => setView({ k: 'floor', id: floor.id })} />;
+    return <BossIntro opponent={floor.opponent} card={floor.face} mission={mission} reducedMotion={reducedMotion} onGo={() => void begin()} onBack={() => setView({ k: 'floor', id: floor.id })} />;
   }
   if (view.k === 'battle') {
     const { ticket, runId } = view;
@@ -270,6 +270,7 @@ function TowerOverview({ floors, cleared, rewarded, test, onOpen, onBack }: {
                   aria-label={`Etage ${f.number}: ${f.name}, ${DIFFICULTY_LABEL[f.difficulty]}, ${st === 'done' ? 'geschafft' : st === 'current' ? 'aktuelle Etage' : 'gesperrt'}`}
                 >
                   <span className="tf-num">{f.number}</span>
+                  {f.face && <span className="tf-face" aria-hidden="true"><CardFace cardId={f.face} /></span>}
                   <span className="tf-main">
                     <span className="tf-name">{f.difficulty === 'boss' && <GameIcon name="crown" />} {f.name}{f.status === 'draft' && <span className="pill">Entwurf</span>}</span>
                     <span className="tf-sub">
@@ -310,7 +311,7 @@ function FloorDetail({ floor, cleared, rewarded, deck, test, playerRune, runesOn
         <h2 className="tower-floor-name">{floor.name}</h2>
         {floor.description && <p className="small">{floor.description}</p>}
         <section className={`brief-opponent rank-${o.rank}`}>
-          <OpponentFace o={o} />
+          <OpponentFace o={o} card={floor.face} />
           <div>
             <p className="opp-name">{o.name} {o.rank !== 'normal' && <span className={`kind-pill kind-${o.rank}`}>{RANK_LABEL[o.rank]}</span>}</p>
             <p className="muted small">KI: {LEVEL_LABEL[o.level]}{o.prefer.length > 0 && <> · mag {o.prefer.map((c) => <ClassGlyph key={c} cls={c} />)}</>}</p>

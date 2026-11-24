@@ -28,6 +28,8 @@ export interface TowerFloor {
   arenaId: string;
   /** The computer opponent (same data as a campaign opponent: 8 cards, level, favourite classes, rune). */
   opponent: Opponent;
+  /** The game card the opponent is (its picture and name are shown); read by the game only (towerApi), not the server. */
+  face?: string;
   /** Paid once, at the first win of this floor. */
   reward: Reward | null;
   status: ContentStatus;

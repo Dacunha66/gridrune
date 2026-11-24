@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MissionLog, missionDeckPicks, missionRngs, missionStart } from '../src/game/verify';
 import { finishTower, onlineQuestEvent, prepareTower, StoredTowerTicket } from '../src/server/engine';
-import { STARTER_DECK } from '../src/game/cards';
+import { CARDS, STARTER_DECK } from '../src/game/cards';
 import { defaultSave } from '../src/game/storage';
 import { emptyProgress } from '../src/game/campaignProgress';
 import { coinToss, cpuChoosesFirst, isGameOver, legalMoves, applyMove } from '../src/game/battle';
@@ -93,6 +93,21 @@ describe('Turm der Prüfungen über den Server', () => {
     if (r.ok) expect(typeof r.quest.runesUsed).toBe('number');
     expect(onlineQuestEvent(true, true).runesUsed).toBe(1);
     expect(onlineQuestEvent(false).runesUsed).toBe(0);
+  });
+
+  it('eine Karte als Etagen-Belohnung (Etage 50/100) wird beim Sieg freigeschaltet', () => {
+    const t = ticketOf(prepareTower(defaultSave(), emptyProgress(), 0, 't001', STARTER_DECK, null, false, false), 'card');
+    const cardId = CARDS.find((c) => !defaultSave().unlocked.includes(c.id))!.id;
+    const withCard = { ...t, reward: { type: 'card' as const, cardId } };
+    for (let i = 0; i < 40; i++) {
+      const r = finishTower({ ...withCard, seed: `card${i}` }, play({ ...withCard, seed: `card${i}` }, floor(1), i), defaultSave());
+      if (r.ok && r.won) {
+        expect(r.save?.unlocked).toContain(cardId);
+        expect(r.granted[0].cards).toEqual([cardId]);
+        return;
+      }
+    }
+    throw new Error('kein Sieg in 40 Versuchen');
   });
 
   it('ein gefälschtes Protokoll wird abgelehnt', () => {

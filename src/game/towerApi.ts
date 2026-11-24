@@ -8,8 +8,12 @@ export async function loadFloors(db: Db | null): Promise<TowerFloor[] | null> {
   try {
     const snap = await db.collection(TOWER_COLLECTION).get();
     return snap.docs.flatMap((d) => {
-      const f = d.exists ? parseFloor(d.id, d.data()) : null;
-      return f ? [f] : [];
+      const raw = d.exists ? d.data() : undefined;
+      const f = raw ? parseFloor(d.id, raw) : null;
+      if (!f) return [];
+      // The opponent's card (picture and name); only the game shows it, so the server rules stay as they are.
+      const face = typeof raw?.face === 'string' && /^[a-z]\d{2,4}$/.test(raw.face) ? raw.face : undefined;
+      return [face ? { ...f, face } : f];
     });
   } catch {
     return null;

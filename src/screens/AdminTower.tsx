@@ -10,6 +10,7 @@ import { LEVEL_LABEL, rewardText } from '../game/campaign';
 import { RewardPicker } from './AdminLogin';
 import { ArenaField } from './AdminCampaign';
 import { ARENAS } from '../game/arenas';
+import { RARITY_LABEL, getCard } from '../game/cards';
 
 export function TowerAdminView({ db, onToast, onTest }: { db: Db; onToast: (m: string) => void; onTest: (floorId?: string) => void }) {
   const [floors, setFloors] = useState<TowerFloor[] | null>(null);
@@ -102,6 +103,17 @@ export function TowerAdminView({ db, onToast, onTest }: { db: Db; onToast: (m: s
                       {TOWER_DIFFICULTIES.map((d) => <option key={d} value={d}>{DIFFICULTY_LABEL[d]}</option>)}
                     </select>
                   </label>
+                  <label>Gegner-Karte (Bild und Name des Gegners)
+                    <select className="admin-input" value={edit.face ?? ''} onChange={(e) => {
+                      const id = e.target.value;
+                      setEdit(id ? { ...edit, face: id, opponent: { ...edit.opponent, name: getCard(id).name } } : { ...edit, face: undefined });
+                    }}>
+                      <option value="">Kein Kartenbild (Emoji {edit.opponent.emoji})</option>
+                      {[...new Set([...(edit.face ? [edit.face] : []), ...edit.opponent.deck])].map((id) => (
+                        <option key={id} value={id}>{getCard(id).name} ({RARITY_LABEL[getCard(id).rarity]})</option>
+                      ))}
+                    </select>
+                  </label>
                   <ArenaField db={db} value={edit.arenaId} onChange={(arenaId) => setEdit({ ...edit, arenaId })}
                     note="Jede Arena ist wählbar – auch ausgeschaltete; sie gilt dann nur auf dieser Etage. Neue Arenen legst du im Reiter „Arenen“ an." />
                   <div className="admin-login-day">
@@ -122,6 +134,7 @@ export function TowerAdminView({ db, onToast, onTest }: { db: Db; onToast: (m: s
                   <span className="tf-num">{f.number}</span>
                   <span className="admin-tower-main">
                     <b>{f.name}</b> {f.status === 'draft' && <span className="pill">Entwurf</span>}
+                    {f.face && <span className="muted small">Gegner-Karte: {getCard(f.face).name}</span>}
                     <span className="muted small">
                       {DIFFICULTY_LABEL[f.difficulty]} · {f.opponent.emoji} {f.opponent.name} (KI: {LEVEL_LABEL[f.opponent.level]}){f.opponent.rune ? ' · mit Rune' : ''}
                       {' · '}{ARENAS.find((a) => a.id === f.arenaId)?.name ?? f.arenaId}
