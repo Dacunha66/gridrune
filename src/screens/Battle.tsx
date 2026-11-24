@@ -364,6 +364,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   /** Nachhall: enemy cards that could be taken – the player picks when there are more than allowed. */
   const echoChoice = runeMode && myRuneRules?.effect === 'echo' && runeMode.cells.length === 1 ? echoCapturable(state, runeMode.cells[0], 'player') : [];
   const echoMustPick = !!myRuneRules && echoChoice.length > myRuneRules.maxTargets;
+  const echoing = !!runeMode && myRuneRules?.effect === 'echo';
   /** Cards that can be chosen right now during a rune activation. */
   const runeSelectable = (i: number): boolean => {
     if (echoMustPick && echoChoice.includes(i)) return true;
@@ -443,7 +444,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   const hint = phase === 'toss'
     ? 'Ein Münzwurf entscheidet, wer wählen darf.'
     : runeMode && myRuneRules
-      ? runeHint(myRuneRules, runeMode, echoMustPick)
+      ? runeHint(myRuneRules, runeMode, echoMustPick, echoChoice.length)
       : placing
         ? '↻ Wirbelwind: Ausrichtung wählen, dann „Legen“'
         : over
@@ -536,6 +537,10 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
             const info = cell ? cellBreakdown(twisting ? twistPreviewBoard! : state.board, state.terrain, i) : null;
             const isTarget = targeting?.targets.includes(i) || (runeMode && runeSelectable(i));
             const runePicked = runeMode?.cells.includes(i) || runeMode?.capture?.includes(i);
+            // Nachhall: after the own card, the enemy cards it can take are marked (to choose, or taken anyway).
+            const echoOwnChosen = echoing && runeMode!.cells.length === 1;
+            const echoMark = !echoOwnChosen || !echoChoice.includes(i) ? null
+              : echoMustPick ? (runeMode!.capture?.includes(i) ? 'chosen' : 'pick') : 'will';
             const ghost = placing && placing.cell === i && placingCard;
             // The selected card would get its element bonus here.
             const elementHere = canDrop && selectedDef?.cls && CLASS_TERRAIN[selectedDef.cls] === terrain;
@@ -544,11 +549,12 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
                 key={i}
                 type="button"
                 role="gridcell"
-                className={`cell terrain-${terrain} ${canDrop && !placing && !runeMode && (bubble?.cell === undefined || bubble.cell === i) ? 'droppable' : ''} ${elementHere && !placing ? 'element-here' : ''} ${isTarget ? 'targetable' : ''} ${runePicked ? 'rune-picked' : ''} ${targeting?.cell === i || ghost ? 'pending' : ''} ${bubble?.cell === i && bubble.hand !== undefined && !cell ? `guide-target ${selected === bubble.hand ? 'guide-glow' : ''}` : ''}`}
+                className={`cell terrain-${terrain} ${canDrop && !placing && !runeMode && (bubble?.cell === undefined || bubble.cell === i) ? 'droppable' : ''} ${elementHere && !placing ? 'element-here' : ''} ${isTarget && !echoMark ? (echoing && !echoOwnChosen ? 'targetable echo-own' : 'targetable') : ''} ${runePicked && !echoMark ? 'rune-picked' : ''} ${echoMark ? `echo-${echoMark}` : ''} ${echoOwnChosen && runeMode!.cells[0] === i ? 'echo-source' : ''} ${targeting?.cell === i || ghost ? 'pending' : ''} ${bubble?.cell === i && bubble.hand !== undefined && !cell ? `guide-target ${selected === bubble.hand ? 'guide-glow' : ''}` : ''}`}
                 onClick={() => tapCell(i)}
                 disabled={!cell && (over || phase !== 'play')}
                 aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei${terrain !== 'normal' ? `, ${TERRAIN_INFO[terrain].label}` : ''}`}
               >
+                {echoMark && <span className="echo-badge" aria-hidden="true">{echoMark === 'pick' ? 'Antippen' : '⟲ wird übernommen'}</span>}
                 {!cell && terrain !== 'normal' && !ghost && <span className="terrain-icon" aria-hidden="true"><TerrainGlyph terrain={terrain} /></span>}
                 {/* Tutorial: the card that belongs here, shown faintly on its field, with "Hier hin". */}
                 {!cell && !ghost && bubble?.cell === i && bubble.hand !== undefined && state.hands.player[bubble.hand] && (
@@ -824,14 +830,16 @@ function CoinToss({ reducedMotion, rng, onDecide }: { reducedMotion: boolean; rn
   );
 }
 
-function runeHint(r: RuneDef, mode: { cells: number[]; cls?: CardClass; dir?: TwistDir; capture?: number[] }, mustPick = false): string {
+function runeHint(r: RuneDef, mode: { cells: number[]; cls?: CardClass; dir?: TwistDir; capture?: number[] }, mustPick = false, echoCount = 0): string {
   switch (r.effect) {
     case 'twist':
       return mode.cells.length === 0 ? 'ᚱ Eigene Karte zum Drehen antippen' : mode.dir ? 'ᚱ ✓ bestätigt die Drehung' : 'ᚱ Richtung: ↺ links, ↻ rechts oder 180°';
     case 'echo':
-      if (mode.cells.length === 0) return 'ᚱ Eigene Karte antippen, die erneut angreift';
-      if (mustPick && !(mode.capture?.length)) return r.maxTargets === 1 ? 'ᚱ Welche Gegnerkarte übernehmen? Antippen' : `ᚱ Bis zu ${r.maxTargets} Gegnerkarten zum Übernehmen antippen`;
-      return `ᚱ ✓ greift erneut an · max. ${r.maxTargets} Übernahme${r.maxTargets > 1 ? 'n' : ''}, keine Kette`;
+      if (mode.cells.length === 0) return 'ᚱ Eigene Karte antippen, die erneut angreift (gold markiert)';
+      if (mustPick && !(mode.capture?.length)) return r.maxTargets === 1 ? 'ᚱ Mehrere Ziele möglich: rot markierte Gegnerkarte antippen' : `ᚱ Bis zu ${r.maxTargets} rot markierte Gegnerkarten antippen`;
+      if (mustPick) return 'ᚱ ✓ übernimmt die gewählte Karte · andere rote Karte antippen zum Wechseln';
+      if (echoCount === 0) return 'ᚱ Diese Karte übernimmt nichts – andere eigene Karte antippen';
+      return `ᚱ ✓ übernimmt ${echoCount === 1 ? 'die markierte Karte' : `die ${echoCount} markierten Karten`} · keine Kette`;
     case 'empower':
       return `ᚱ Eigene Karten antippen (${mode.cells.length}/${r.maxTargets}), dann ✓`;
     case 'curse':
