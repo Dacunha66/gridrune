@@ -3078,3 +3078,7 @@ label.btn.disabled { opacity: .45; }
 .tower-floor .tf-face { flex: none; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; border: 1px solid var(--gold-line); display: grid; place-items: center; background: var(--bg2); }
 .tower-floor .tf-face .opp-emoji { font-size: 22px; }
 .tower-floor.st-locked .tf-face { filter: grayscale(0.7); }
+/* Boss intro on narrow phones: the text stays inside the screen (it was cut off at both sides). */
+.boss-stage { width: 100%; }
+.boss-text { max-width: min(420px, 100%); box-sizing: border-box; padding: 0 6px; overflow-wrap: anywhere; }
+.boss-name { max-width: 100%; overflow-wrap: anywhere; }
