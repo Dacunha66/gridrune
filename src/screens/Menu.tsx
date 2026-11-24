@@ -13,6 +13,9 @@ import { aiCoins } from '../game/rewards';
 import type { EventView } from '../game/puzzleApi';
 import { timeLeftText } from '../game/puzzles';
 import { PuzzleBoard, activeStage, rewardPicture, stageEvent, stagesOf } from './Events';
+import type { RaidInfo, RaidMe } from '../game/raidApi';
+import { DesignImage } from '../components/DesignArt';
+import { imageUrl } from '../game/catalog';
 
 const LEVELS: { level: AiLevel; label: string; icon: GameIconName; text: string }[] = [
   { level: 'easy', label: 'Leicht', icon: 'leaf', text: 'spielt oft zufällig' },
@@ -69,6 +72,8 @@ interface Props {
   nextSteps?: NextStep[];
   /** Puzzle-Event shown on the start screen (signed in). */
   eventCard?: EventView | null;
+  /** Weltboss-Raid running or about to start: shown under the event, a tap opens the raid. */
+  raidCard?: { raid: RaidInfo; me: RaidMe | null } | null;
   onEvents?: () => void;
   /** Community (clans and chat) – signed-in players only. */
   onCommunity?: () => void;
@@ -147,7 +152,7 @@ export function MenuTop({ coins, stones = null, account = null, avatar = null, o
   );
 }
 
-export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, onTower, playOpen = false, onPlayOpen, questsReady = 0, shopReady = false, chatNew = 0, onQuests, nextSteps = [], eventCard = null, onEvents, onCommunity, inbox = null, onInbox, avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion, runes, equippedRune = null, account = null, onAccount, sync = null, notice = '', onNotice, onOnline, onDraft, onRaid, onTower, playOpen = false, onPlayOpen, questsReady = 0, shopReady = false, chatNew = 0, onQuests, nextSteps = [], eventCard = null, raidCard = null, onEvents, onCommunity, inbox = null, onInbox, avatar = null, tab: tabProp, onTab, onAvatars }: Props) {
   const equipped = findRune(equippedRune);
   const [chooseLevel, setChooseLevel] = useState(false);
   // The open tab is kept by the app, so coming back from Shop or Erfolge opens the tab chosen in the bar.
@@ -249,6 +254,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
                 <GameIcon name="next" className="menu-step-go" />
               </button>
             )}
+            {raidCard && onRaid && <RaidCard raid={raidCard.raid} me={raidCard.me} onOpen={onRaid} />}
             {nextSteps.length > 0 && (
               <section className="menu-next" aria-label="Dein nächster Schritt">
                 <h2>Dein nächster Schritt</h2>
@@ -319,5 +325,33 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
         onPlayOpen?.(false);
       }} />
     </main>
+  );
+}
+
+/** Home screen: the running Weltboss – life points left, phase, own attacks today; a tap opens the raid. */
+function RaidCard({ raid, me, onOpen }: { raid: RaidInfo; me: RaidMe | null; onOpen: () => void }) {
+  const pct = raid.maxHp > 0 ? Math.max(0, Math.min(100, (raid.currentHp / raid.maxHp) * 100)) : 0;
+  const img = raid.image ? imageUrl(raid.image.id) : undefined;
+  const head = raid.status === 'upcoming' ? `Raid · startet in ${timeLeftText(raid.startsAt)}`
+    : raid.status === 'paused' ? 'Raid · pausiert' : `Raid · noch ${timeLeftText(raid.endsAt)}`;
+  const phase = raid.phases.length > 1 ? `Phase ${raid.phase + 1}/${raid.phases.length} · ` : '';
+  return (
+    <button type="button" className={`menu-event menu-raid st-${raid.status}`} onClick={onOpen}>
+      <span className="menu-raid-art" aria-hidden="true">
+        {img && raid.image ? <DesignImage src={img} fit={raid.image.fit} /> : <GameIcon name="raid" />}
+      </span>
+      <span className="menu-event-text">
+        <small>{head}</small>
+        <b>{raid.bossName}</b>
+        <span className="raid-hp-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-label={`${Math.round(pct)} % Lebenspunkte übrig`}>
+          <i style={{ width: `${pct}%` }} />
+        </span>
+        <small>
+          {Math.round(pct)} % Lebenspunkte · {phase}
+          {raid.status === 'active' && me ? (me.attacksLeft > 0 ? `${me.attacksLeft} Angriff${me.attacksLeft === 1 ? '' : 'e'} heute – jetzt kämpfen!` : 'Heute keine Angriffe mehr') : `${raid.participants} Teilnehmer`}
+        </small>
+      </span>
+      <GameIcon name="next" className="menu-step-go" />
+    </button>
   );
 }

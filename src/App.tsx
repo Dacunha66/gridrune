@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { RaidInfo, RaidMe, raidOverview } from './game/raidApi';
 import { Outcome } from './game/battle';
 import { Reward, applyReward, computeReward } from './game/rewards';
 import type { AiLevel } from './game/ai';
@@ -187,6 +188,8 @@ export function App() {
   const [questDaily, setQuestDaily] = useState<QuestItem | null>(null);
   /** Puzzle-Events for the start screen (the running one with the most to do), looked up when the menu opens. */
   const [eventCard, setEventCard] = useState<EventView | null>(null);
+  /** Home screen: the Weltboss-Raid that is running or about to start (null = none). */
+  const [raidCard, setRaidCard] = useState<{ raid: RaidInfo; me: RaidMe | null } | null>(null);
   // Tutorial: offered once to new players (no game yet, never finished or skipped); a guest's finished tutorial is sent
   // after signing in (the reward goes into the Postfach).
   const [tutorialOffer, setTutorialOffer] = useState(() => tutorialState() === null);
@@ -265,6 +268,12 @@ export function App() {
   useEffect(() => {
     if (screen.name !== 'menu' || !cloud.uid || cloud.phase !== 'ready') return;
     let alive = true;
+    raidOverview().then((r) => {
+      if (!alive || r === 'offline') return;
+      const raid = r.raid && ['active', 'upcoming', 'paused'].includes(r.raid.status) ? r.raid : null;
+      setRaidCard(raid ? { raid, me: r.me ?? null } : null);
+      if (r.inboxed) inboxList().then((l) => { if (alive && l) setInboxCount(openCount(l)); });
+    });
     fetchEvents().then((r) => {
       if (!alive || r === 'offline') return;
       if (r.cloud) cloud.adoptServer(r.cloud);
@@ -574,6 +583,7 @@ export function App() {
           onAvatars={account?.kind === 'signedIn' && cloud.uid ? () => setScreen({ name: 'avatars' }) : undefined}
           nextSteps={nextSteps}
           eventCard={eventCard}
+          raidCard={raidCard}
           onEvents={cloud.uid && cloud.phase === 'ready' ? () => setScreen({ name: 'events' }) : undefined}
           onCommunity={() => setScreen({ name: 'community' })}
           inbox={cloud.uid ? inboxCount : null} onInbox={() => setScreen({ name: 'inbox' })}
