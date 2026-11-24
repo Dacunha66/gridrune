@@ -76,7 +76,7 @@ import { Avatars } from './screens/Avatars';
 import type { DuelRecord } from './screens/Battle';
 
 export type Screen =
-  | { name: 'menu' | 'tutorial' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'raid' | 'avatars' | 'events' | 'forge' | 'community' | 'privacy' | 'inbox' }
+  | { name: 'menu' | 'tutorial' | 'rules' | 'shop' | 'admin' | 'league' | 'account' | 'draft' | 'draftPractice' | 'avatars' | 'events' | 'forge' | 'community' | 'privacy' | 'inbox' }
   /** focus = open this card's details right away. */
   | { name: 'collection'; focus?: string }
   /** Einfaches Spiel gegen Spieler: random = look for a random opponent right away. */
@@ -84,7 +84,9 @@ export type Screen =
   /** tab = open on this tab (the account page opens the avatars under "Erfolge"). */
   | { name: 'quests'; tab?: 'daily' | 'weekly' | 'achievements' }
   /** back = where "Zurück" leads (e.g. the tower, after "Deck ändern"); default the menu. */
-  | { name: 'deck'; back?: Screen }
+  | { name: 'deck'; back?: Screen; tab?: 'cards' | 'rune' }
+  /** Weltboss-Raid; deck = open the deck view right away (back from the deck editor). */
+  | { name: 'raid'; deck?: boolean }
   /** Turm der Prüfungen; test = admin test mode (drafts, every floor open, nothing stored); floorId = open this floor. */
   | { name: 'tower'; test?: boolean; floorId?: string }
   /** preview = admin test (drafts visible, nothing saved); missionId = start this mission directly. */
@@ -612,7 +614,7 @@ export function App() {
           onInbox={() => setScreen({ name: 'inbox' })} onNewCards={(c) => setNewCards((x) => [...x, ...c])} />
       )}
       {screen.name === 'deck' && (
-        <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={screen.back ? () => setScreen(screen.back!) : toMenu}
+        <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={screen.back ? () => setScreen(screen.back!) : toMenu} initialTab={screen.tab}
           runes={runesOn ? {
             owned: ownedRunes, equipped: equippedRune, lockText: runeLockText,
             onEquip: (id) => setSave((s) => ({ ...s, runes: { ...s.runes, equipped: id } })),
@@ -682,7 +684,8 @@ export function App() {
       )}
       {screen.name === 'raid' && cloud.uid && (
         <Raid unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck} rune={duelRune('raid')} reducedMotion={reducedMotion}
-          onSaveChanged={cloud.retry} onExit={toMenu} onInbox={() => setScreen({ name: 'inbox' })} />
+          onSaveChanged={cloud.retry} onExit={toMenu} onInbox={() => setScreen({ name: 'inbox' })}
+          startOnDeck={screen.deck} onDeck={(tab) => setScreen({ name: 'deck', tab, back: { name: 'raid', deck: true } })} />
       )}
       {screen.name === 'raidTest' && (
         <RaidTestFight config={screen.config} phase={screen.phase} unlocked={save.unlocked} deck={repairDeck(save.deck, save.unlocked, CARDS).deck}

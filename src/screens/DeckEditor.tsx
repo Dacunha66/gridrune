@@ -18,14 +18,16 @@ interface Props {
   /** Rune choice (null = runes not released for this player). */
   runes?: RuneChoiceProps | null;
   onBack: () => void;
+  /** Open on this tab (e.g. 'rune' from the raid's "Rune ändern"). */
+  initialTab?: 'cards' | 'rune';
 }
 
 type Sort = 'rarity' | 'power' | 'name';
 const SORT_LABEL: Record<Sort, string> = { rarity: 'Seltenheit', power: 'Stärke', name: 'Name' };
 
-export function DeckEditor({ save, onSave, onBack, runes = null }: Props) {
+export function DeckEditor({ save, onSave, onBack, runes = null, initialTab = 'cards' }: Props) {
   const [deck, setDeck] = useState<string[]>(save.deck);
-  const [tab, setTab] = useState<'cards' | 'rune'>('cards');
+  const [tab, setTab] = useState<'cards' | 'rune'>(initialTab === 'rune' && runes ? 'rune' : 'cards');
   const [cls, setCls] = useState<CardClass | null>(null);
   /** Card shown large (magnifier or holding the card). */
   const [zoom, setZoom] = useState<string | null>(null);

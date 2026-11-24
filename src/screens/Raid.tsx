@@ -72,6 +72,10 @@ interface Props {
   onInbox?: () => void;
   /** Rewards were paid into the account: load the save again. */
   onSaveChanged: () => void;
+  /** Opens the deck editor (tab 'rune' = straight to the runes); it comes back to the deck view here. */
+  onDeck?: (tab: 'cards' | 'rune') => void;
+  /** Open the deck view right away (coming back from the deck editor). */
+  startOnDeck?: boolean;
   onExit: () => void;
 }
 
@@ -84,10 +88,10 @@ type View =
   | { k: 'leaderboard' }
   | { k: 'rewards' };
 
-export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExit, onInbox }: Props) {
+export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExit, onInbox, onDeck, startOnDeck = false }: Props) {
   const [data, setData] = useState<RaidOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<View>({ k: 'overview' });
+  const [view, setView] = useState<View>(startOnDeck ? { k: 'hand' } : { k: 'overview' });
   const [busy, setBusy] = useState(false);
   // Rewards just credited (milestones, community goals, boss defeated): shown big, like in the campaign.
   const [reveal, setReveal] = useState<RevealItem[] | null>(null);
@@ -216,7 +220,13 @@ export function Raid({ unlocked, deck, rune, reducedMotion, onSaveChanged, onExi
         <Header title="Dein Deck" onBack={() => setView({ k: 'overview' })} right={<span className={`pill ${hand.length === DECK_SIZE ? 'ok' : 'warn'}`}>{hand.length}/{DECK_SIZE}</span>} />
         <p className="pick-rune">{runeDef ? <>Deine Rune: <RuneBadge rune={runeDef} className="small" /> <b>{runeDef.name}</b></> : 'Ohne Rune'}</p>
         <div className="scroll">
-          <p className="muted small center">Du kämpfst mit deinem Deck: Es wird gemischt, {DRAW_HAND_SIZE} Karten hast du auf der Hand, vor jedem Zug ziehst du nach. Ändern unter „Deck bearbeiten“.</p>
+          <p className="muted small center">Du kämpfst mit deinem Deck: Es wird gemischt, {DRAW_HAND_SIZE} Karten hast du auf der Hand, vor jedem Zug ziehst du nach.</p>
+          {onDeck && (
+            <div className="row-buttons raid-deck-edit">
+              <button type="button" className="btn btn-small" onClick={() => onDeck('cards')}><GameIcon name="deck" /> Deck ändern</button>
+              <button type="button" className="btn btn-small" onClick={() => onDeck('rune')}>ᚱ Rune ändern</button>
+            </div>
+          )}
           <div className="hand-grid pool">
             {hand.map((id) => <div key={id} className="hand-pick"><Card id={id} size="sm" /></div>)}
           </div>
