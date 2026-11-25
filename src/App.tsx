@@ -1,4 +1,5 @@
-import { sfx } from './game/sound';
+import { audio, sfx } from './game/sound';
+import { isMusicOn, setMusicWanted } from './game/music';
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { RaidInfo, RaidMe, raidOverview } from './game/raidApi';
 import { Outcome } from './game/battle';
@@ -130,10 +131,17 @@ export function App() {
     const click = (e: MouseEvent) => {
       const b = (e.target as Element | null)?.closest?.('button, [role="tab"], .toggle');
       if (b && !b.closest('.cell') && !(b as HTMLButtonElement).disabled) sfx('tap');
+      // Phones and tablets only allow audio after a tap: wake it up here so the menu music can start.
+      if (isMusicOn()) audio();
     };
     document.addEventListener('click', click, true);
     return () => document.removeEventListener('click', click, true);
   }, []);
+
+  // Mystic background music only on the start screen and in the menu (never during a duel).
+  useEffect(() => {
+    setMusicWanted(screen.name === 'menu');
+  }, [screen.name]);
 
   // Accounts (web version only). Signing in or out reloads the page, so admin rights and content start fresh.
   const [account, setAccount] = useState<AccountState | null>(null);

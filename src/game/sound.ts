@@ -29,7 +29,7 @@ export function onSoundChange(l: (on: boolean) => void): () => void {
 }
 
 let ctx: AudioContext | null = null;
-function audio(): AudioContext | null {
+export function audio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   try {
     if (!ctx) {

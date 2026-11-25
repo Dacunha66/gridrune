@@ -1,3 +1,4 @@
+import { isMusicOn, onMusicChange, setMusicOn } from '../game/music';
 import { RuneBadge } from '../components/RuneBadge';
 import { meltCount } from '../game/forge';
 import { Avatar } from '../components/Avatar';
@@ -302,6 +303,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
             <button type="button" className="btn" onClick={() => onNavigate('privacy')}><GameIcon name="lock" /> Datenschutz</button>
             {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}><GameIcon name="gear" /> Kartenverwaltung</button>}
             <SoundToggle />
+            <MusicToggle />
             <label className="toggle">
               <input type="checkbox" checked={save.settings.reducedMotion} onChange={onToggleReducedMotion} />
               <span>Animationen reduzieren</span>
@@ -366,6 +368,17 @@ export function SoundToggle() {
     <label className="toggle">
       <input type="checkbox" checked={on} onChange={(e) => setSoundOn(e.target.checked)} />
       <span>Töne {on ? 'an' : 'aus'}</span>
+    </label>
+  );
+}
+
+export function MusicToggle() {
+  const [on, setOn] = useState(isMusicOn());
+  useEffect(() => onMusicChange(setOn), []);
+  return (
+    <label className="toggle">
+      <input type="checkbox" checked={on} onChange={(e) => setMusicOn(e.target.checked)} />
+      <span>Musik {on ? 'an' : 'aus'}</span>
     </label>
   );
 }
