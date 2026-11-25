@@ -45,42 +45,50 @@ export function audio(): AudioContext | null {
   }
 }
 
-// A short echo ("hall") the mystic sounds ring out in.
-let hall: DelayNode | null = null;
-function echoBus(a: AudioContext): AudioNode {
-  if (!hall) {
-    hall = a.createDelay(1);
-    hall.delayTime.value = 0.18;
-    const fb = a.createGain();
-    fb.gain.value = 0.35;
-    const lp = a.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 2600;
-    hall.connect(lp).connect(fb).connect(hall);
-    lp.connect(a.destination);
+// Noise ("air") for wind, dust and stone sounds – no pitched tones, so nothing sounds like a phone or a toy.
+let noiseBuf: AudioBuffer | null = null;
+function noise(a: AudioContext): AudioBufferSourceNode {
+  if (!noiseBuf) {
+    noiseBuf = a.createBuffer(1, a.sampleRate * 1.5, a.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
-  return hall;
+  const src = a.createBufferSource();
+  src.buffer = noiseBuf;
+  return src;
 }
 
-/** A glassy bell: two slightly detuned sines plus a quiet overtone, fast attack, long soft fade, with echo. */
-function bell(a: AudioContext, freq: number, at: number, len: number, vol: number) {
+/** Filtered air: filter type, frequency from → to (a sweep sounds like a breath of wind), length, loudness, swell time. */
+function air(a: AudioContext, type: BiquadFilterType, from: number, to: number, at: number, len: number, vol: number, q = 1, swell = 0.01) {
   const t = a.currentTime + at;
-  const out = a.createGain();
-  out.gain.setValueAtTime(0.0001, t);
-  out.gain.exponentialRampToValueAtTime(vol, t + 0.006);
-  out.gain.exponentialRampToValueAtTime(0.0001, t + len);
-  out.connect(a.destination);
-  out.connect(echoBus(a));
-  for (const [f, v] of [[freq, 1], [freq * 1.004, 0.6], [freq * 2.76, 0.12]] as const) {
-    const o = a.createOscillator();
-    const g = a.createGain();
-    o.type = 'sine';
-    o.frequency.value = f;
-    g.gain.value = v;
-    o.connect(g).connect(out);
-    o.start(t);
-    o.stop(t + len + 0.05);
-  }
+  const src = noise(a);
+  const f = a.createBiquadFilter();
+  f.type = type;
+  f.Q.value = q;
+  f.frequency.setValueAtTime(from, t);
+  f.frequency.exponentialRampToValueAtTime(to, t + len);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + swell);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  src.connect(f).connect(g).connect(a.destination);
+  src.start(t, Math.random() * 0.5);
+  src.stop(t + len + 0.05);
+}
+
+/** A deep, short body (like a stone set down): low sine that fades fast, no pitch slide. */
+function stone(a: AudioContext, freq: number, at: number, len: number, vol: number) {
+  const t = a.currentTime + at;
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.type = 'sine';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(g).connect(a.destination);
+  o.start(t);
+  o.stop(t + len + 0.05);
 }
 
 /** One soft tone: frequency (Hz), start offset and length (s), loudness 0–1 (kept low), wave form. */
@@ -106,12 +114,13 @@ export function sfx(kind: Sfx): void {
   if (!a) return;
   try {
     switch (kind) {
-      case 'tap': tone(a, 660, 0, 0.05, 0.03, 'triangle'); break;
-      // Card laid: a deep, soft hum under a glassy chime (D and A) – no pitch slide, so nothing "blubs".
-      case 'place': tone(a, 146.83, 0, 0.35, 0.04, 'sine'); bell(a, 587.33, 0, 0.7, 0.045); bell(a, 880, 0.03, 0.6, 0.025); break;
-      // Cards taken: a quick rising shimmer of three bells (D-minor pentatonic).
-      case 'flip': [698.46, 880, 1174.66].forEach((f, i) => bell(a, f, i * 0.06, 0.8, 0.035)); break;
-      case 'rune': tone(a, 146.83, 0, 0.9, 0.04, 'sine'); [587.33, 698.46, 880, 1046.5, 1396.91].forEach((f, i) => bell(a, f, i * 0.07, 1.1, 0.03)); break;
+      case 'tap': air(a, 'bandpass', 2400, 1600, 0, 0.05, 0.05, 2, 0.004); break;
+      // Card laid: a rune stone set down – a deep, soft knock with a little dust of air.
+      case 'place': stone(a, 92, 0, 0.22, 0.12); air(a, 'lowpass', 900, 300, 0, 0.14, 0.05); break;
+      // Cards taken: a breath of wind sweeping upwards, with a faint shimmer at the end.
+      case 'flip': air(a, 'bandpass', 350, 2200, 0, 0.45, 0.07, 3, 0.18); air(a, 'highpass', 6000, 9000, 0.25, 0.35, 0.012, 1, 0.05); break;
+      // Rune: a long, deep swell of wind over a low hum.
+      case 'rune': stone(a, 73.42, 0, 1.2, 0.06); air(a, 'bandpass', 200, 1600, 0, 1.1, 0.08, 4, 0.5); air(a, 'highpass', 5000, 8000, 0.5, 0.7, 0.012, 1, 0.2); break;
       case 'coin': tone(a, 988, 0, 0.08, 0.05, 'square'); tone(a, 1319, 0.07, 0.18, 0.045, 'square'); break;
       case 'reward': [523, 659, 784, 1047].forEach((f, i) => tone(a, f, i * 0.09, 0.28, 0.05, 'triangle')); break;
       case 'win': [523, 659, 784].forEach((f, i) => tone(a, f, i * 0.12, 0.35, 0.06, 'triangle')); tone(a, 1047, 0.36, 0.6, 0.05, 'triangle'); break;
