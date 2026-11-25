@@ -1,5 +1,6 @@
 // Big reveal of what a campaign result brought: one reward after the other, with a light burst behind it.
 // Runes show their artwork, rarity and what the effect does; cards are shown large; coins count up.
+import { sfx } from '../game/sound';
 import { Coin, Stone, CoinText, RewardIcon } from './Coin';
 import { useEffect, useState } from 'react';
 import { Card } from './Card';
@@ -45,6 +46,9 @@ export function RewardReveal({ items, reducedMotion, guest = false, onClose }: {
 }) {
   const [i, setI] = useState(0);
   const item = items[i];
+  useEffect(() => {
+    if (item) sfx(item.kind === 'coins' || item.kind === 'stones' ? 'coin' : 'reward');
+  }, [i, item]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();

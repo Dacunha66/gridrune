@@ -7,7 +7,8 @@ import { LogoMark } from '../components/LogoMark';
 import { GameIcon, GameIconName } from '../components/GameIcon';
 import { CARDS, ownedActiveIds } from '../game/cards';
 import { SaveData } from '../game/storage';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { isSoundOn, onSoundChange, setSoundOn } from '../game/sound';
 import type { AiLevel } from '../game/ai';
 import { aiCoins } from '../game/rewards';
 import type { EventView } from '../game/puzzleApi';
@@ -300,6 +301,7 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
             <button type="button" className="btn" onClick={() => onNavigate('rules')}><GameIcon name="scroll" /> Regeln</button>
             <button type="button" className="btn" onClick={() => onNavigate('privacy')}><GameIcon name="lock" /> Datenschutz</button>
             {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}><GameIcon name="gear" /> Kartenverwaltung</button>}
+            <SoundToggle />
             <label className="toggle">
               <input type="checkbox" checked={save.settings.reducedMotion} onChange={onToggleReducedMotion} />
               <span>Animationen reduzieren</span>
@@ -353,5 +355,17 @@ function RaidCard({ raid, me, onOpen }: { raid: RaidInfo; me: RaidMe | null; onO
       </span>
       <GameIcon name="next" className="menu-step-go" />
     </button>
+  );
+}
+
+/** Töne an/aus (a setting of this device). */
+export function SoundToggle() {
+  const [on, setOn] = useState(isSoundOn());
+  useEffect(() => onSoundChange(setOn), []);
+  return (
+    <label className="toggle">
+      <input type="checkbox" checked={on} onChange={(e) => setSoundOn(e.target.checked)} />
+      <span>Töne {on ? 'an' : 'aus'}</span>
+    </label>
   );
 }

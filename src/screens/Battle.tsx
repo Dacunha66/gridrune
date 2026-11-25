@@ -1,3 +1,4 @@
+import { sfx } from '../game/sound';
 import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from '../components/Avatar';
 import { ClassGlyph, TerrainGlyph } from '../components/GlyphIcons';
@@ -256,6 +257,21 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
     return () => clearTimeout(t);
   }, [banner]);
 
+  // Quiet sounds: a card laid down, a rune used, cards taken (after the comparison).
+  const soundRef = useRef({ moves: state.moveCount, runes: `${!!state.runes.player?.used}${!!state.runes.cpu?.used}` });
+  useEffect(() => {
+    const prev = soundRef.current;
+    const runes = `${!!state.runes.player?.used}${!!state.runes.cpu?.used}`;
+    soundRef.current = { moves: state.moveCount, runes };
+    if (state.moveCount <= prev.moves) return;
+    sfx(runes !== prev.runes ? 'rune' : 'place');
+    if (state.lastFlips.length > 0) {
+      const t = setTimeout(() => sfx('flip'), reducedMotion ? 60 : 420);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [state, reducedMotion]);
+
   // After every action: show the comparisons, then flip captured cards – a Kettenübernahme wave by wave.
   useEffect(() => {
     if (state.lastOrigin === null && state.lastEvents.length === 0) return;
@@ -436,6 +452,12 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup, r
   }
 
   const result = over && !animating ? outcome(state) : null;
+  const resultSound = useRef(false);
+  useEffect(() => {
+    if (!result || resultSound.current) return;
+    resultSound.current = true;
+    sfx(result === 'win' ? 'win' : result === 'loss' ? 'lose' : 'draw');
+  }, [result]);
   const winner: Side | null = result === 'win' ? 'player' : result === 'loss' ? 'cpu' : null;
   const selectedDef = selected !== null && state.hands.player[selected] ? getCard(state.hands.player[selected].cardId) : null;
   const selectedEffect = selectedDef?.effect ? EFFECTS[selectedDef.effect] : null;

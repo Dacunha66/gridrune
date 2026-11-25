@@ -1,3 +1,4 @@
+import { sfx } from './game/sound';
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { RaidInfo, RaidMe, raidOverview } from './game/raidApi';
 import { Outcome } from './game/battle';
@@ -123,6 +124,16 @@ export function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
   }, [reducedMotion]);
+
+  // A very soft click on buttons (the board's fields have their own sounds). Nothing when sound is off.
+  useEffect(() => {
+    const click = (e: MouseEvent) => {
+      const b = (e.target as Element | null)?.closest?.('button, [role="tab"], .toggle');
+      if (b && !b.closest('.cell') && !(b as HTMLButtonElement).disabled) sfx('tap');
+    };
+    document.addEventListener('click', click, true);
+    return () => document.removeEventListener('click', click, true);
+  }, []);
 
   // Accounts (web version only). Signing in or out reloads the page, so admin rights and content start fresh.
   const [account, setAccount] = useState<AccountState | null>(null);
